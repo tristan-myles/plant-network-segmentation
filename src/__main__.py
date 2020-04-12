@@ -11,6 +11,7 @@ logging.config.fileConfig(fname=abs_path + "/logging_configuration.ini",
                           disable_existing_loggers=False)
 LOGGER = logging.getLogger(__name__)
 
+
 def extract_masks_and_leaves():
     common_path = "/mnt/disk3/thesis/data"
 
@@ -66,8 +67,11 @@ def extract_masks_and_leaves():
         LOGGER.info(f"{len(mask_path_list)} binary mask images created")
 
         # add masks
-        file_names = sorted([f for f in glob(f"{folder_path}tristan/masks/"
-                                             + "*.png", recursive=True)])
+        file_names = [f for f in glob(f"{folder_path}tristan/masks/*.png",
+                                      recursive=True)]
+        file_names = sorted(file_names, key=lambda x: int(
+                     str.rsplit(str.rsplit(x, ".", 1)[0], "_", 1)[1]))
+
         diff_leaves_output_path = f"{folder_path}tristan/combined_masks/"
         diff_name = f"leaf_{i}_mask_overlay.png"
         diff_path_list = extract_dataset.extract_changed_sequence(
