@@ -10,5 +10,5 @@ logging.config.fileConfig(fname=abs_path + "/logging_configuration.ini",
                           disable_existing_loggers=False)
 LOGGER = logging.getLogger(__name__)
 
-if __name__ == "main":
+if __name__ == "__main__":
     pass
