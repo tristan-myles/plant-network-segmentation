@@ -12,6 +12,8 @@ __status__ = "development"
 import logging
 import numpy as np
 import matplotlib.pyplot as plt
+import pandas as pd
+import PIL.Image
 from typing import List
 
 LOGGER = logging.getLogger(__name__)
@@ -128,3 +130,46 @@ def plot_embolism_profile(embolism_percentages, intersections,
     axs[2].set_ylabel('% Embolism', fontsize=14)
     axs[2].set_title('Unique Embolism % per Mask', fontsize=16)
     plt.show()
+
+
+if __name__ == "__main__":
+    folder_path = "/mnt/disk3/thesis/data/1_qk3/tristan/"
+
+    df = pd.read_csv(
+        "/home/tristan/Documents/MSc_Dissertation/detecting-plant-network-failure/dataset_info.csv")
+    df = df.drop(["idx", "idx.1", "Unnamed: 3"], axis=1)
+    leaf_names = df[df.mask_types == "leaf_1"].mask_paths.apply(lambda x: x.rsplit("/", 1)[1])
+
+    # Reading in images as np.arrays
+    images = [np.array(PIL.Image.open(f"{folder_path}masks/{leaf_name}")) for
+              leaf_name in leaf_names]
+
+    # Unique range
+    unique_range_list = list(map(get_unique_range, images))
+
+    # Binarise images
+    images = list(map(binarise_image, images))
+
+    # Embolism percentages
+    embolism_percentages = list(map(get_embolism_percent, images))
+
+    # Extracting intersections
+    combined_image = np.empty(shape=(images[0].shape[0], images[0].shape[1]),
+                              dtype='object')
+
+    intersection_list = []
+    for image in images:
+        intersection, combined_image = get_intersection(image, combined_image)
+        intersection_list.append(intersection)
+
+    # Viewing the results
+    plot_embolism_profile(embolism_percentages, intersection_list,
+                          figsize=(10, 15))
+
+    # Saving the results
+    output_df = pd.DataFrame({"name": leaf_names,
+                              "unique_range": unique_range_list,
+                              "embolism_percent": embolism_percentages,
+                              "intersection:": intersection_list})
+
+    output_df.to_csv("out.csv")
