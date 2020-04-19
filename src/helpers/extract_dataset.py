@@ -202,6 +202,47 @@ def pad_chip(img_chip, stride_x, stride_y, target_colour=0):
     return img_chip
 
 
+def image_to_chips(folder_path, leaf_name, mask_name, input_img, label_img,
+                   stride_x=300, stride_y=300):
+    Path(f"{folder_path}/diff-chips").mkdir(parents=True, exist_ok=True)
+    Path(f"{folder_path}/mask-chips").mkdir(parents=True, exist_ok=True)
+
+    input_ysize = input_img.shape[0]  # rows = y
+    input_xsize = input_img.shape[1]  # cols = x
+
+    counter = 0
+    for y_range in chip_range(0, input_ysize, stride_y):
+        for x_range in chip_range(0, input_xsize, stride_x):
+
+            input_chip = chip_image(input_img, x_range, y_range)
+            label_chip = chip_image(label_img, x_range, y_range)
+
+            ychip_size = input_chip.shape[0]  # rows = y
+            xchip_size = input_chip.shape[1]  # cols = x
+
+            LOGGER.debug(f"{x_range} \t {y_range}")
+
+            if ychip_size < stride_y or xchip_size < stride_x:
+                input_chip = pad_chip(input_chip, stride_x, stride_y)
+                label_chip = pad_chip(label_chip, stride_x, stride_y)
+
+            new_leaf_name = leaf_name.rsplit("/", 1)[1].rsplit(".", 1)[0]
+            new_mask_name = mask_name.rsplit("/", 1)[1].rsplit(".", 1)[0]
+
+            input_chip_filename = os.path.join(folder_path,
+                                               'diff-chips',
+                                               f'{counter}_{new_leaf_name}.png')
+            label_chip_filename = os.path.join(folder_path,
+                                               'mask-chips',
+                                               f'{counter}_{new_mask_name}.png')
+
+            if not cv2.imwrite(input_chip_filename, input_chip):
+                raise Exception("sigh")
+            cv2.imwrite(label_chip_filename, label_chip)
+
+            counter += 1
+
+
 if __name__ == "__main__":
     common_path = "/mnt/disk3/thesis/data"
 
