@@ -145,6 +145,63 @@ def extract_changed_sequence(input_path_list: str,
     return output_path_list
 
 
+def chip_range(start, end, step=1):
+    """
+
+    :param start:
+    :param end:
+    :param step:
+    :return:
+    """
+    current = start
+
+    while (current + step) < end:
+        yield current, current + step
+        current += step
+
+    if end % step != 0:
+        yield current, end
+
+
+def chip_image(img, x_range, y_range):
+    """
+
+    :param img:
+    :param x_range:
+    :param y_range:
+    :return:
+    """
+    chip = img[y_range[0]:y_range[1], x_range[0]:x_range[1]]
+
+    return chip
+
+
+def pad_chip(img_chip, stride_x, stride_y, target_colour=0):
+    """
+
+    :param stride_y:
+    :param stride_x:
+    :param img_chip:
+    :param target_colour:
+    :return:
+    """
+    current_shape = img_chip.shape
+
+    # need to take into account that we may need to pad in both directions
+    if current_shape[0] < stride_y:
+        # pad y
+        pixels_missing = (stride_y - current_shape[0])
+        img_chip = np.pad(img_chip, ((0, pixels_missing), (0, 0)),
+                          constant_values=target_colour)  # pad bottom
+    if current_shape[1] < stride_x:
+        # pad x
+        pixels_missing = (stride_x - current_shape[1])
+        img_chip = np.pad(img_chip, ((0, 0), (0, pixels_missing)),
+                          constant_values=target_colour)  # pad right
+
+    return img_chip
+
+
 if __name__ == "__main__":
     common_path = "/mnt/disk3/thesis/data"
 
