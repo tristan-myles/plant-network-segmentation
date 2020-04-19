@@ -8,6 +8,7 @@ __version__ = "0.0.1"
 __email__ = "ndxtri015@myuct.ac.za"
 __status__ = "development"
 
+import argparse
 import logging.config
 import os
 from glob import glob
@@ -30,6 +31,8 @@ logging.config.fileConfig(fname=abs_path + "/../logging_configuration.ini",
 LOGGER = logging.getLogger(__name__)
 
 
+# *================================ functions ================================*
+# *----------------------- extracting complete images ------------------------*
 def extract_images_from_image_sequence(input_path: str,
                                        output_folder_path: str,
                                        output_name: str,
@@ -81,7 +84,7 @@ def extract_images_from_image_sequence(input_path: str,
     return output_path_list
 
 
-def extract_changed_sequence(input_path_list: str,
+def extract_changed_sequence(input_path_list: List[str],
                              output_folder_path: str,
                              output_name: str,
                              dif_len: int = 1,
@@ -145,8 +148,111 @@ def extract_changed_sequence(input_path_list: str,
     return output_path_list
 
 
-if __name__ == "__main__":
-    common_path = "/mnt/disk3/thesis/data"
+# *------------------------- extracting image tiles --------------------------*
+def chip_range(start, end, step=1):
+    """
+
+    :param start:
+    :param end:
+    :param step:
+    :return:
+    """
+    current = start
+
+    while (current + step) <= end:
+        yield current, current + step
+        current += step
+
+    if end % step != 0:
+        yield current, end
+
+
+def chip_image(img, x_range, y_range):
+    """
+
+    :param img:
+    :param x_range:
+    :param y_range:
+    :return:
+    """
+    chip = img[y_range[0]:y_range[1], x_range[0]:x_range[1]]
+
+    return chip
+
+
+def pad_chip(img_chip, stride_x, stride_y, target_colour=0):
+    """
+
+    :param stride_y:
+    :param stride_x:
+    :param img_chip:
+    :param target_colour:
+    :return:
+    """
+    current_shape = img_chip.shape
+
+    # need to take into account that we may need to pad in both directions
+    if current_shape[0] < stride_y:
+        # pad y
+        pixels_missing = (stride_y - current_shape[0])
+        img_chip = np.pad(img_chip, ((0, pixels_missing), (0, 0)),
+                          constant_values=target_colour)  # pad bottom
+    if current_shape[1] < stride_x:
+        # pad x
+        pixels_missing = (stride_x - current_shape[1])
+        img_chip = np.pad(img_chip, ((0, 0), (0, pixels_missing)),
+                          constant_values=target_colour)  # pad right
+
+    return img_chip
+
+
+def image_chipper(folder_path, leaf_name, mask_name, input_img, label_img,
+                  stride_x=300, stride_y=300):
+    Path(f"{folder_path}/diff-chips").mkdir(parents=True, exist_ok=True)
+    Path(f"{folder_path}/binary-mask-chips").mkdir(parents=True, exist_ok=True)
+
+    input_ysize = input_img.shape[0]  # rows = y
+    input_xsize = input_img.shape[1]  # cols = x
+
+    counter = 0
+    for y_range in chip_range(0, input_ysize, stride_y):
+        for x_range in chip_range(0, input_xsize, stride_x):
+
+            input_chip = chip_image(input_img, x_range, y_range)
+            label_chip = chip_image(label_img, x_range, y_range)
+
+            ychip_size = input_chip.shape[0]  # rows = y
+            xchip_size = input_chip.shape[1]  # cols = x
+
+            LOGGER.debug(f"{x_range} \t {y_range}")
+
+            if ychip_size < stride_y or xchip_size < stride_x:
+                input_chip = pad_chip(input_chip, stride_x, stride_y)
+                label_chip = pad_chip(label_chip, stride_x, stride_y)
+
+            new_leaf_name = leaf_name.rsplit("/", 1)[1].rsplit(".", 1)[0]
+            new_mask_name = mask_name.rsplit("/", 1)[1].rsplit(".", 1)[0]
+
+            input_chip_filename = os.path.join(folder_path,
+                                               'diff-chips',
+                                               f'{counter}_{new_leaf_name}'
+                                               f'.png')
+            label_chip_filename = os.path.join(folder_path,
+                                               'binary-mask-chips',
+                                               f'{counter}_{new_mask_name}'
+                                               f'.png')
+
+            if not cv2.imwrite(input_chip_filename, input_chip):
+                raise Exception("sigh")
+            cv2.imwrite(label_chip_filename, label_chip)
+
+            counter += 1
+
+
+# *================================== main ===================================*
+# *----------------------- extracting complete images ------------------------*
+def extract_images(folder_path):
+    common_path = folder_path.rsplit("/", 3)[0]
 
     folder_path_list = ["0_qk1_1", "1_qk3", "2_qtom1", "3_qgam1", "4_qp1",
                         "5_qp2", "6_qp4", "7_qp5"]
@@ -162,21 +268,22 @@ if __name__ == "__main__":
 
     for i, (leaf_path, mask_seq_name) in enumerate(zip(folder_path_list,
                                                        mask_seq_name_list)):
-        folder_path = f"{common_path}/{leaf_path}/"
+        folder_path_method = f"{common_path}/{leaf_path}/"
 
         # Leaf extraction
-        file_names = sorted([f for f in glob(folder_path + "2019*.tif",
+        file_names = sorted([f for f in glob(folder_path_method + "2019*.tif",
                                              recursive=True)])
-        diff_leaves_output_path = f"{folder_path}tristan/diffs/"
+        diff_leaves_output_path = f"{folder_path_method}tristan/diffs/"
         diff_name = f"leaf_{i}_diff.tif"
         diff_path_list = extract_changed_sequence(
             file_names, diff_leaves_output_path, diff_name, overwrite=True)
         LOGGER.info(f"{len(diff_path_list)} difference images created")
 
         # Leaf extraction 2
-        file_names = sorted([f for f in glob(folder_path + "2019*.tif",
+        file_names = sorted([f for f in glob(folder_path_method + "2019*.tif",
                                              recursive=True)])
-        diff_leaves_output_path = f"{folder_path}tristan/diffs_from_init/"
+        diff_leaves_output_path = f"{folder_path_method}" \
+                                  f"tristan/diffs_from_init/"
         diff_name = f"leaf_{i}_diff.tif"
         diff_path_list = extract_changed_sequence(
             file_names, diff_leaves_output_path, diff_name, dif_len=0,
@@ -184,28 +291,30 @@ if __name__ == "__main__":
         LOGGER.info(f"{len(diff_path_list)} difference images created")
 
         # Mask extraction
-        mask_output_folder_path = f"{folder_path}tristan/masks/"
+        mask_output_folder_path = f"{folder_path_method}tristan/masks/"
 
         mask_path_list = extract_images_from_image_sequence(
-            f"{folder_path}{mask_seq_name}", mask_output_folder_path,
+            f"{folder_path_method}{mask_seq_name}", mask_output_folder_path,
             f"leaf_{i}_mask.png")
         LOGGER.info(f"{len(mask_path_list)} mask images created")
 
         # Binary extraction
-        mask_output_folder_path = f"{folder_path}tristan/binary_masks/"
+        mask_output_folder_path = f"{folder_path_method}tristan/binary_masks/"
 
         mask_path_list = extract_images_from_image_sequence(
-            f"{folder_path}{mask_seq_name}", mask_output_folder_path,
+            f"{folder_path_method}{mask_seq_name}", mask_output_folder_path,
             f"leaf_{i}_binary_mask.png", binarise=True)
         LOGGER.info(f"{len(mask_path_list)} binary mask images created")
 
         # add masks
-        file_names = [f for f in glob(f"{folder_path}tristan/masks/*.png",
+        file_names = [f for f in glob(f"{folder_path_method}"
+                                      f"tristan/masks/*.png",
                                       recursive=True)]
         file_names = sorted(file_names, key=lambda x: int(
             str.rsplit(str.rsplit(x, ".", 1)[0], "_", 1)[1]))
 
-        diff_leaves_output_path = f"{folder_path}tristan/combined_masks/"
+        diff_leaves_output_path = f"{folder_path_method}" \
+                                  f"tristan/combined_masks/"
         diff_name = f"leaf_{i}_mask_overlay.png"
         diff_path_list = extract_changed_sequence(
             file_names, diff_leaves_output_path, diff_name, dif_len=0,
@@ -213,3 +322,75 @@ if __name__ == "__main__":
             sequential=True,
             overwrite=True)
         LOGGER.info(f"{len(diff_path_list)} overlaid mask images created")
+
+
+# *------------------------- extracting image tiles --------------------------*
+def extract_tiles(folder_path, stride_x, stride_y):
+    """
+
+    :param stride_y:
+    :param stride_x:
+    :param folder_path:
+    :return:
+    """
+    mask_names = [f for f in glob(f"{folder_path}/binary_masks/*.png",
+                                  recursive=True)]
+    mask_names = sorted(mask_names, key=lambda x: int(
+        str.rsplit(str.rsplit(x, ".", 1)[0], "_", 1)[1]))
+    mask_names = [str.rsplit(f, "//", 1)[1] for f in mask_names]
+
+    leaf_names = [f for f in glob(f"{folder_path}/diffs/*.tif",
+                                  recursive=True)]
+    leaf_names = sorted(leaf_names, key=lambda x: int(
+        str.rsplit(str.rsplit(x, ".", 1)[0], "_", 1)[1]))
+    leaf_names = [str.rsplit(f, "//", 1)[1] for f in leaf_names]
+
+    for ln, mn in zip(leaf_names, mask_names):
+        LOGGER.debug(f"Tiling image {ln}")
+        leaf_img = np.array(PIL.Image.open(folder_path + ln))
+        mask_img = np.array(PIL.Image.open(folder_path + mn))
+        image_chipper(folder_path, ln, mn, leaf_img, mask_img,
+                      stride_x, stride_y)
+
+
+# *-------------------------------- argparse ---------------------------------*
+def parse_arguments() -> argparse.Namespace:
+    """
+
+    :return:
+    """
+    parser = argparse.ArgumentParser("extract images for the purpose "
+                                     "of segmentation analysis")
+
+    parser.add_argument("folder", type=str,
+                        help="parent folder of respective leaf and mask "
+                             "folder")
+    parser.add_argument("-e", "--extract_images", action="store_true",
+                        help="extracts differenced images and mask sequences")
+    parser.add_argument("-t", "--tile", action="store_true",
+                        help="tiles an image into the specified size")
+    parser.add_argument("-x", "--stride_x", type=int,
+                        help="x stride size")
+    parser.add_argument("-y", "--stride_y", type=int,
+                        help="y stride size")
+    args = parser.parse_args()
+    return args
+
+
+# *-------------------------------- __main__ ---------------------------------*
+if __name__ == "__main__":
+    ARGS = parse_arguments()
+
+    if ARGS.extract_images:
+        LOGGER.info("Extracting complete images")
+        extract_images(ARGS.folder)
+
+    if ARGS.tile:
+        if ARGS.stride_y is None or ARGS.stride_x is None:
+            raise Exception("A y-stride size and x-stride size is required "
+                            "with the tile option")
+        LOGGER.info("Extracting image tiles")
+        extract_tiles(ARGS.folder, ARGS.stride_x, ARGS.stride_y)
+
+    if not ARGS.extract_images and not ARGS.tile:
+        LOGGER.info("No option was chosen...")
