@@ -242,11 +242,11 @@ def image_chipper(folder_path, leaf_name, mask_name, input_img, label_img,
 
             input_chip_filename = os.path.join(folder_path,
                                                'diff-chips',
-                                               f'{counter}_{new_leaf_name}'
+                                               f'{new_leaf_name}_{counter}'
                                                f'.png')
             label_chip_filename = os.path.join(folder_path,
                                                'binary-mask-chips',
-                                               f'{counter}_{new_mask_name}'
+                                               f'{new_mask_name}_{counter}'
                                                f'.png')
 
             if not cv2.imwrite(input_chip_filename, input_chip):
