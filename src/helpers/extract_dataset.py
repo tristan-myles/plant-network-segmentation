@@ -149,22 +149,27 @@ def extract_changed_sequence(input_path_list: List[str],
 
 
 # *------------------------- extracting image tiles --------------------------*
-def chip_range(start, end, step=1):
+def chip_range(start, end, length, step=1):
     """
 
+    :param length:
     :param start:
     :param end:
     :param step:
     :return:
     """
     current = start
-
-    while (current + step) <= end:
-        yield current, current + step
+    # Current + length is the upper end
+    # (0,length) + current = current, current + length
+    while (current + length) <= end:
+        yield current, current + length
         current += step
 
-    if end % step != 0:
-        yield current, end
+    # In order to maintain equal length we reduce the step size
+    rem_pixels = end - (current - step + length)
+    # end - (last within bounds upper boundary)
+    if rem_pixels != 0:
+        yield (current - step) + rem_pixels, end
 
 
 def chip_image(img, x_range, y_range):
@@ -180,7 +185,7 @@ def chip_image(img, x_range, y_range):
     return chip
 
 
-def pad_chip(img_chip, stride_x, stride_y, target_colour=0):
+def pad_chip(img_chip, length_x, length_y, target_colour=0):
     """
 
     :param stride_y:
@@ -192,14 +197,14 @@ def pad_chip(img_chip, stride_x, stride_y, target_colour=0):
     current_shape = img_chip.shape
 
     # need to take into account that we may need to pad in both directions
-    if current_shape[0] < stride_y:
+    if current_shape[0] < length_y:
         # pad y
-        pixels_missing = (stride_y - current_shape[0])
+        pixels_missing = (length_y - current_shape[0])
         img_chip = np.pad(img_chip, ((0, pixels_missing), (0, 0)),
                           constant_values=target_colour)  # pad bottom
-    if current_shape[1] < stride_x:
+    if current_shape[1] < length_x:
         # pad x
-        pixels_missing = (stride_x - current_shape[1])
+        pixels_missing = (length_x - current_shape[1])
         img_chip = np.pad(img_chip, ((0, 0), (0, pixels_missing)),
                           constant_values=target_colour)  # pad right
 
@@ -207,28 +212,30 @@ def pad_chip(img_chip, stride_x, stride_y, target_colour=0):
 
 
 def image_chipper(folder_path, leaf_name, mask_name, input_img, label_img,
-                  stride_x=300, stride_y=300):
+                  length_x, length_y, stride_x, stride_y):
     Path(f"{folder_path}/diff-chips").mkdir(parents=True, exist_ok=True)
     Path(f"{folder_path}/binary-mask-chips").mkdir(parents=True, exist_ok=True)
 
-    input_ysize = input_img.shape[0]  # rows = y
-    input_xsize = input_img.shape[1]  # cols = x
+    input_y_length = input_img.shape[0]  # rows = y
+    input_x_length = input_img.shape[1]  # cols = x
 
     counter = 0
-    for y_range in chip_range(0, input_ysize, stride_y):
-        for x_range in chip_range(0, input_xsize, stride_x):
+    for y_range in chip_range(0, input_y_length, length_y, stride_y):
+        for x_range in chip_range(0, input_x_length, length_x, stride_x):
 
             input_chip = chip_image(input_img, x_range, y_range)
             label_chip = chip_image(label_img, x_range, y_range)
 
-            ychip_size = input_chip.shape[0]  # rows = y
-            xchip_size = input_chip.shape[1]  # cols = x
+            ychip_length = input_chip.shape[0]  # rows = y
+            xchip_length = input_chip.shape[1]  # cols = x
 
             LOGGER.debug(f"{x_range} \t {y_range}")
 
-            if ychip_size < stride_y or xchip_size < stride_x:
-                input_chip = pad_chip(input_chip, stride_x, stride_y)
-                label_chip = pad_chip(label_chip, stride_x, stride_y)
+            if ychip_length < length_y or xchip_length < length_x:
+                # TODO: Fix duplication of if statements due to lack of
+                #  identifiability in the above if statement
+                input_chip = pad_chip(input_chip, length_x, length_y)
+                label_chip = pad_chip(label_chip, length_x, length_y)
 
             new_leaf_name = leaf_name.rsplit("/", 1)[1].rsplit(".", 1)[0]
             new_mask_name = mask_name.rsplit("/", 1)[1].rsplit(".", 1)[0]
@@ -243,9 +250,9 @@ def image_chipper(folder_path, leaf_name, mask_name, input_img, label_img,
                                                f'.png')
 
             if not cv2.imwrite(input_chip_filename, input_chip):
-                raise Exception("sigh")
-            cv2.imwrite(label_chip_filename, label_chip)
-
+                raise Exception(f"Failed to write file {input_chip_filename}")
+            if not cv2.imwrite(label_chip_filename, label_chip):
+                raise Exception(f"Failed to write file {input_chip_filename}")
             counter += 1
 
 
@@ -325,7 +332,7 @@ def extract_images(folder_path):
 
 
 # *------------------------- extracting image tiles --------------------------*
-def extract_tiles(folder_path, stride_x, stride_y):
+def extract_tiles(folder_path, length_x, length_y, stride_x, stride_y):
     """
 
     :param stride_y:
@@ -350,7 +357,7 @@ def extract_tiles(folder_path, stride_x, stride_y):
         leaf_img = np.array(PIL.Image.open(folder_path + ln))
         mask_img = np.array(PIL.Image.open(folder_path + mn))
         image_chipper(folder_path, ln, mn, leaf_img, mask_img,
-                      stride_x, stride_y)
+                      length_x, length_y, stride_x, stride_y)
 
 
 # *-------------------------------- argparse ---------------------------------*
@@ -369,10 +376,14 @@ def parse_arguments() -> argparse.Namespace:
                         help="extracts differenced images and mask sequences")
     parser.add_argument("-t", "--tile", action="store_true",
                         help="tiles an image into the specified size")
-    parser.add_argument("-x", "--stride_x", type=int,
+    parser.add_argument("-sx", "--stride_x", metavar="\b", type=int,
                         help="x stride size")
-    parser.add_argument("-y", "--stride_y", type=int,
+    parser.add_argument("-sy", "--stride_y", metavar="\b", type=int,
                         help="y stride size")
+    parser.add_argument("-lx", "--length_x", metavar="\b", type=int,
+                        help="tile x length")
+    parser.add_argument("-ly", "--length_y", metavar="\b", type=int,
+                        help="tile y length")
     args = parser.parse_args()
     return args
 
@@ -390,7 +401,8 @@ if __name__ == "__main__":
             raise Exception("A y-stride size and x-stride size is required "
                             "with the tile option")
         LOGGER.info("Extracting image tiles")
-        extract_tiles(ARGS.folder, ARGS.stride_x, ARGS.stride_y)
+        extract_tiles(ARGS.folder, ARGS.length_x, ARGS.length_y,
+                      ARGS.stride_x, ARGS.stride_y)
 
     if not ARGS.extract_images and not ARGS.tile:
         LOGGER.info("No option was chosen...")
