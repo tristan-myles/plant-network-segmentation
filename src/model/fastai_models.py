@@ -1,6 +1,6 @@
 """
 fastai_models.py
-Script to train models used for binary image segmentation
+Script to train fast-ai models used for binary image segmentation
 """
 __author__ = "Tristan Naidoo"
 __maintainer__ = "Tristan Naidoo"
@@ -10,9 +10,10 @@ __status__ = "development"
 
 from fastai.vision import *
 import matplotlib.pyplot as plt
+from src.helpers.extract_dataset import chip_range
 
 
-class fastaiUnetLearner():
+class FastaiUnetLearner():
     def __init__(self):
         self.data = None
         self.learn = None
@@ -75,6 +76,29 @@ class fastaiUnetLearner():
 
         return prediction
 
+    def predict_full_leaf(self, x_length: int, y_length: int,
+                          x_tile_length: int, y_tile_length: int):
+
+        prediction = np.zeros((y_length, x_length))
+        counter = 0
+
+        for y_range in chip_range(0, y_length, y_tile_length):
+            for x_range in chip_range(0, x_length, x_tile_length):
+                pred_tile = self.predict_tile(self.data.x[counter])
+                pred_tile = (pred_tile[0].px.numpy() * 255)
+                pred_tile = pred_tile.reshape(y_tile_length, x_tile_length)
+
+                if ((y_range[1] - y_range[0]) != y_tile_length or
+                        (x_range[1] - x_range[0]) != x_tile_length):
+                    pred_tile = pred_tile[0:(y_range[1]-y_range[0]), 0:(x_range[1]-x_range[0])]
+
+                prediction[y_range[0]:y_range[1], x_range[0]:x_range[1]] = \
+                    pred_tile
+
+                counter += 1
+
+        return prediction
+
     def plot_leaf(self, image_index: int, plot_pred: bool = False,
                   prediction: vision.image.ImageSegment = None):
 
@@ -104,7 +128,7 @@ class fastaiUnetLearner():
 
 
 if __name__ == "__main__":
-    fai_unet_learner = fastaiUnetLearner()
+    fai_unet_learner = FastaiUnetLearner()
 
     temp_df = pd.read_csv("/home/tristan/Documents/MSc_Dissertation/"
                           "plant-network-segmentation/out_leaf_train.csv")
@@ -124,3 +148,5 @@ if __name__ == "__main__":
         "/mini_train")
     prediction = fai_unet_learner.predict_tile(tile_number=4)
     fai_unet_learner.plot_leaf(4, True, prediction)
+
+    fai_unet_learner.predict_full_leaf(2616, 1949, 300, 300)
