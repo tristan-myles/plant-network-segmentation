@@ -1,10 +1,12 @@
 import PIL.Image
+import PIL.ImageSequence
 from glob import glob
 import matplotlib.pyplot as plt
 import numpy as np
 import logging
 from pathlib import Path
 from PIL import ImageChops
+import cv2
 from math import log10, floor
 import os
 
@@ -65,15 +67,51 @@ class LeafSequence(ImageSequence):
 
 
 class MaskSequence(ImageSequence):
-    def __int__(self, path: str, mpt: bool):
+    def __init__(self, folder_path=None, filename_pattern=None,
+                 mpf_path: str = None):
         """
 
         :param path:
-        :param mpt: multi-page tiff boolean
+        :param mpf: multi-page file boolean
         :return:
         """
-        super().__init__(path)
-        self.mpt = mpt
+        # Two modes either initialised with a multi-page tiff mask or a
+        # folder to a sequence of masks
+        if mpf_path is not None:
+            self.mpf_path = mpf_path
+        else:
+            super().__init__(folder_path, filename_pattern)
+
+    def extract_mask_from_multipage(self,  output_path: str,
+                                    overwrite: bool = False):
+        output_folder_path, output_file_name = output_path.rsplit("/", 1)
+
+        Path(output_folder_path).mkdir(parents=True, exist_ok=True)
+
+        try:
+            image_seq = PIL.Image.open(self.mpf_path)
+            mask_seq_list = list(PIL.ImageSequence.Iterator(image_seq))
+            # The ImageSequence "closes" after it streams so it needs to be
+            # "opened" again due to the line above
+            image_seq = PIL.Image.open(self.mpf_path)
+        except FileNotFoundError as e:
+            raise Exception(e, "Please check the mask file path that "
+                               "you provided...")
+
+        self.num_files = len(mask_seq_list)
+
+        placeholder_size = floor(log10(self.num_files)) + 1
+
+        for (i, image) in enumerate(PIL.ImageSequence.Iterator(image_seq)):
+
+            final_file_name = utilities.create_file_name(output_folder_path,
+                                                         output_file_name,
+                                                         i, placeholder_size)
+
+            self.image_objects.append(Mask(sequence_parent=self.mpf_path))
+
+            self.image_objects[i].create_mask(final_file_name, image,
+                                              overwrite)
 
     def load_members(self):
         pass
@@ -118,7 +156,7 @@ class Leaf(Image):
     mask_instance = None
 
     def __init__(self, path=None, parents=None, mask_instance=None):
-         # Can create a Leaf using parents or path
+        # Can create a Leaf using parents or path
         if path is not None:
             super().__init__(path)
         if parents is not None:
@@ -163,12 +201,34 @@ class Leaf(Image):
 
 
 class Mask(Image):
-    diff_instance = None
+    def __init__(self, path=None, sequence_parent=None):
+        if path is not None:
+            super().__init__(path)
+        if sequence_parent is not None:
+            self.sequence_parent = sequence_parent
 
-    def __init__(self, path, diff_instance=None):
-        super().__init__(path)
-        if diff_instance is not None:
-            self.diff_instance = diff_instance
+    def create_mask(self, filepath: os.path, image: PIL.Image,
+                    overwrite: bool = False, binarise: bool = False):
+        self.image_array = np.array(image)
+
+        create_file = False
+
+        if not os.path.exists(filepath):
+            create_file = True
+
+        if overwrite:
+            create_file = True
+
+        if create_file:
+            LOGGER.debug(f"Creating File: {filepath}")
+
+            if binarise:
+                self.image_array = self.image_array / 255
+
+            # using plt since image has already been converted to an array
+            cv2.imwrite(filepath, self.image_array)
+
+            self.path = filepath
 
 
 class Tile(Image):
