@@ -1,5 +1,6 @@
 import PIL.Image
 from glob import glob
+import matplotlib.pyplot as plt
 import numpy as np
 import logging
 from pathlib import Path
@@ -12,7 +13,7 @@ LOGGER = logging.getLogger(__name__)
 
 class ImageSequence:
     # Think of this as a curve
-    extracted_image_objects = []
+    image_objects = []
 
     def __init__(self, folder_path=None, filename_pattern=None):
         """
@@ -60,9 +61,9 @@ class LeafSequence(ImageSequence):
             final_file_name = os.path.join(output_folder_path,
                                             final_file_name)
 
-            self.extracted_image_objects.append(
+            self.image_objects.append(
                 Leaf(parents=[old_image, new_image]))
-            self.extracted_image_objects[i].extract_me(final_file_name)
+            self.image_objects[i].extract_me(final_file_name)
 
 
 class MaskSequence(ImageSequence):
@@ -96,6 +97,13 @@ class Image:
 
     def load_image(self):
         self.image_array = np.array(PIL.Image.open(self.path))
+
+    def show(self):
+        if self.image_array is not None:
+            plt.imshow(self.image_array, cmap="gray")
+            plt.show()
+        else:
+            LOGGER.info("Please load the image first")
 
     def tile_me(self):
         # Should this be here since a tile inherits this method
