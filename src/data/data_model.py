@@ -8,6 +8,7 @@ from PIL import ImageChops
 from math import log10, floor
 import os
 
+from src.helpers import utilities
 LOGGER = logging.getLogger(__name__)
 
 
@@ -54,12 +55,9 @@ class LeafSequence(ImageSequence):
                 old_image = self.original_file_list[i]
             new_image = self.original_file_list[i + step_size]
 
-            file_name, extension =\
-                str.rsplit(output_file_name, ".",1)
-            final_file_name = (f"{file_name}_"
-                                f"{i:0{placeholder_size}}.{extension}")
-            final_file_name = os.path.join(output_folder_path,
-                                            final_file_name)
+            final_file_name = utilities.create_file_name(output_folder_path,
+                                                          output_file_name,
+                                                          i, placeholder_size)
 
             self.image_objects.append(
                 Leaf(parents=[old_image, new_image]))
@@ -120,10 +118,10 @@ class Leaf(Image):
     mask_instance = None
 
     def __init__(self, path=None, parents=None, mask_instance=None):
-    # Can create a Leaf using parents or path
+         # Can create a Leaf using parents or path
         if path is not None:
             super().__init__(path)
-        elif parents is not None:
+        if parents is not None:
             self.parents = parents
 
         if mask_instance is not None:
@@ -142,9 +140,10 @@ class Leaf(Image):
             old_image = PIL.Image.open(self.parents[0])
             new_image = PIL.Image.open(self.parents[1])
         except FileNotFoundError as e:
-            raise Exception(e, "you gave the wrong filename DUMMY!")
+            raise Exception(e, "Please check the parent file paths that "
+                                "you provided...")
 
-        self.image_array = combination_function(new_image, old_image)
+        combined_image = combination_function(new_image, old_image)
 
         create_file = False
 
@@ -157,9 +156,10 @@ class Leaf(Image):
         if create_file:
             LOGGER.debug(f"Creating File: {filepath}")
             with open(filepath, "w") as f:
-                self.image_array.save(filepath)
+                combined_image.save(filepath)
 
-        self.image_array = np.array(self.image_array)
+        self.image_array = np.array(combined_image)
+        self.path = filepath
 
 
 class Mask(Image):
