@@ -9,8 +9,11 @@ from PIL import ImageChops
 import cv2
 from math import log10, floor
 import os
+import sys
+from tqdm import tqdm
 
 from src.helpers import utilities
+
 LOGGER = logging.getLogger(__name__)
 
 
@@ -18,34 +21,50 @@ class ImageSequence:
     # Think of this as a curve
     image_objects = []
 
-    def __init__(self, folder_path=None, filename_pattern=None):
+    def __init__(self, folder_path=None, filename_pattern=None,
+                 original_images: bool = False):
         """
         :param folder_path: path that contains the image sequence
         """
         self.folder_path = folder_path
         self.filename_pattern = filename_pattern
 
-        # original leafs
-        self.original_file_list = sorted(
+        self.file_list = sorted(
             [f for f in glob(self.folder_path +
                              self.filename_pattern,
                              recursive=True)])
 
-        self.num_files = len(self.original_file_list)
+        self.num_files = len(self.file_list)
 
         if self.num_files == 0:
             LOGGER.info("There were no files in that folder...")
+
+        # two modes - orignal mode | extracted mode:
+        self.original_images = original_images
+
+    def load_extracted_images(self, load_image: bool = False):
+        if self.original_images:
+            raise Exception("The file list contains original images, "
+                            "not extracted images. This function is not "
+                            "applicable...")
+
+        with tqdm(total=self.num_files, file=sys.stdout) as pbar:
+            for i, filename in enumerate(self.file_list):
+                self.image_objects.append(Image(filename))
+                if load_image:
+                    self.image_objects[i].load_image()
+                pbar.update(5)
 
 
 class LeafSequence(ImageSequence):
     mask_file_list = []
 
-    def extract_changed_leafs(self,  output_path: str, dif_len: int = 1):
+    def extract_changed_leaves(self,  output_path: str, dif_len: int = 1):
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
         Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 
         if dif_len == 0:
-            old_image = self.original_file_list[0]
+            old_image = self.file_list[0]
             step_size = 1
         else:
             step_size = dif_len
@@ -54,12 +73,12 @@ class LeafSequence(ImageSequence):
 
         for i in range(0, self.num_files - step_size):
             if dif_len != 0:
-                old_image = self.original_file_list[i]
-            new_image = self.original_file_list[i + step_size]
+                old_image = self.file_list[i]
+            new_image = self.file_list[i + step_size]
 
             final_file_name = utilities.create_file_name(output_folder_path,
-                                                          output_file_name,
-                                                          i, placeholder_size)
+                                                         output_file_name,
+                                                         i, placeholder_size)
 
             self.image_objects.append(
                 Leaf(parents=[old_image, new_image]))
@@ -112,9 +131,6 @@ class MaskSequence(ImageSequence):
 
             self.image_objects[i].create_mask(final_file_name, image,
                                               overwrite)
-
-    def load_members(self):
-        pass
 
 
 ###############################################################################
