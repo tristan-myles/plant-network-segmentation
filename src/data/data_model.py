@@ -19,7 +19,6 @@ LOGGER = logging.getLogger(__name__)
 
 class ImageSequence:
     # Think of this as a curve
-    image_objects = []
 
     def __init__(self, folder_path=None, filename_pattern=None,
                  original_images: bool = False):
@@ -33,7 +32,7 @@ class ImageSequence:
             [f for f in glob(self.folder_path +
                              self.filename_pattern,
                              recursive=True)])
-
+        self.image_objects = []
         self.num_files = len(self.file_list)
 
         if self.num_files == 0:
@@ -55,10 +54,36 @@ class ImageSequence:
                     self.image_objects[i].load_image()
                 pbar.update(5)
 
+    def sort_image_objects_by_filename(self):
+        self.image_objects = sorted(self.image_objects,
+                                    key=lambda image: image.path)
+
+    def link_sequences(self, image_sequence, sort_by_filename: bool = True):
+        index_self = list(range(len(self.image_objects)))
+        index_input = list(range(len(image_sequence)))
+
+        if sort_by_filename:
+            path_list_self_sequence = [image.path for image in
+                                       self.image_objects]
+            path_list_input_sequence = [image.path for image in image_sequence]
+
+            # if the input is an original file folder then num_files will be
+            # incorrect => len(self.image_objects)
+            # don't want to mutate the existing object
+            index_self = [i for _, i in
+                          sorted(zip(path_list_self_sequence, index_self),
+                                 key=lambda pair: pair[0])]
+            index_input = [i for _, i in
+                           sorted(zip(path_list_input_sequence, index_input),
+                                  key=lambda pair: pair[0])]
+
+        for i, j in zip(index_self, index_input):
+            # Do we need a two-way link?
+            self.image_objects[i].link_me(image_sequence[j])
+            image_sequence[j].link_me(self.image_objects[i])
+
 
 class LeafSequence(ImageSequence):
-    mask_file_list = []
-
     def extract_changed_leaves(self,  output_path: str, dif_len: int = 1):
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
         Path(output_folder_path).mkdir(parents=True, exist_ok=True)
@@ -140,6 +165,7 @@ class Image:
     unique_embolism_perc = None
     image_array = None
     parents = []
+    link = None
 
     def __init__(self, path=None):
         self.path = path
@@ -161,6 +187,9 @@ class Image:
         # Should this be here since a tile inherits this method
         pass
 
+    def link_me(self, image):
+        self.link = image
+
     def extract_embolism_perc(self):
         pass
 
@@ -169,8 +198,6 @@ class Image:
 
 
 class Leaf(Image):
-    mask_instance = None
-
     def __init__(self, path=None, parents=None, mask_instance=None):
         # Can create a Leaf using parents or path
         if path is not None:
