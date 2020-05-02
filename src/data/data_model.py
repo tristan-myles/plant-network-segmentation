@@ -7,14 +7,17 @@ import logging
 from pathlib import Path
 from PIL import ImageChops
 import cv2
-from math import log10, floor
+from math import log10, floor, ceil
 import os
 import sys
 from tqdm import tqdm
+from typing import Tuple
 
 from src.helpers import utilities
+from src.helpers.extract_dataset import chip_image, pad_chip, chip_range
 
 LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.INFO)
 
 
 class ImageSequence:
@@ -41,7 +44,8 @@ class ImageSequence:
         # two modes - orignal mode | extracted mode:
         self.original_images = original_images
 
-    def load_extracted_images(self, load_image: bool = False):
+    def load_extracted_images(self, ImageClass,
+                              load_image: bool = False):
         if self.original_images:
             raise Exception("The file list contains original images, "
                             "not extracted images. This function is not "
@@ -49,7 +53,7 @@ class ImageSequence:
 
         with tqdm(total=self.num_files, file=sys.stdout) as pbar:
             for i, filename in enumerate(self.file_list):
-                self.image_objects.append(Image(filename))
+                self.image_objects.append(ImageClass(filename))
                 if load_image:
                     self.image_objects[i].load_image()
                 pbar.update(5)
@@ -101,13 +105,16 @@ class LeafSequence(ImageSequence):
                 old_image = self.file_list[i]
             new_image = self.file_list[i + step_size]
 
-            final_file_name = utilities.create_file_name(output_folder_path,
-                                                         output_file_name,
-                                                         i, placeholder_size)
+            final_filename = utilities.create_file_name(output_folder_path,
+                                                        output_file_name,
+                                                        i, placeholder_size)
 
             self.image_objects.append(
                 Leaf(parents=[old_image, new_image]))
-            self.image_objects[i].extract_me(final_file_name)
+            self.image_objects[i].extract_me(final_filename)
+
+    def load_extracted_images(self, load_image: bool = False):
+        super().load_extracted_images(Leaf, load_image)
 
 
 class MaskSequence(ImageSequence):
@@ -148,14 +155,17 @@ class MaskSequence(ImageSequence):
 
         for (i, image) in enumerate(PIL.ImageSequence.Iterator(image_seq)):
 
-            final_file_name = utilities.create_file_name(output_folder_path,
-                                                         output_file_name,
-                                                         i, placeholder_size)
+            final_filename = utilities.create_file_name(output_folder_path,
+                                                        output_file_name,
+                                                        i, placeholder_size)
 
             self.image_objects.append(Mask(sequence_parent=self.mpf_path))
 
-            self.image_objects[i].create_mask(final_file_name, image,
+            self.image_objects[i].create_mask(final_filename, image,
                                               overwrite)
+
+    def load_extracted_images(self, load_image: bool = False):
+        super().load_extracted_images(Mask, load_image)
 
 
 ###############################################################################
