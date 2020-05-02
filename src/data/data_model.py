@@ -17,7 +17,6 @@ from src.helpers import utilities
 from src.helpers.extract_dataset import chip_image, pad_chip, chip_range
 
 LOGGER = logging.getLogger(__name__)
-LOGGER.setLevel(logging.INFO)
 
 
 class ImageSequence:
@@ -85,6 +84,12 @@ class ImageSequence:
             # Do we need a two-way link?
             self.image_objects[i].link_me(image_sequence[j])
             image_sequence[j].link_me(self.image_objects[i])
+
+    def tile_sequence(self, **kwargs):
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for image in self.image_objects:
+                image.tile_me(**kwargs)
+                pbar.update(1)
 
 
 class LeafSequence(ImageSequence):
@@ -170,7 +175,7 @@ class MaskSequence(ImageSequence):
 
 ###############################################################################
 class Image:
-    tiles = None
+    # Should this have a link to a sequence_parent?
     embolism_perc = None
     unique_embolism_perc = None
     image_array = None
@@ -179,6 +184,7 @@ class Image:
 
     def __init__(self, path=None):
         self.path = path
+        self.image_objects = []
 
     def __str__(self):
         return f"This object is a {self.__class__.__name__}"
@@ -193,9 +199,45 @@ class Image:
         else:
             LOGGER.info("Please load the image first")
 
-    def tile_me(self):
-        # Should this be here since a tile inherits this method
-        pass
+    def tile_me(self, length_x: int, stride_x: int, length_y: int,
+                stride_y: int, output_path: str = None):
+
+        if output_path is None:
+            output_folder_path, output_file_name = self.path.rsplit("/", 1)
+            output_folder_path = os.path.join(
+                output_folder_path, "chips",
+                str.lower(self.__class__.__name__))
+        else:
+            output_folder_path, output_file_name = output_path.rsplit("/", 1)
+
+        if self.image_array is None:
+            self.load_image()
+
+        input_y_length = self.image_array.shape[0]  # rows = y
+        input_x_length = self.image_array.shape[1]  # cols = x
+
+        counter = 0
+
+        x_num_tiles = ceil((input_x_length - length_x) / stride_x) + 1
+        y_num_tiles = ceil((input_y_length - length_y) / stride_y) + 1
+        num_tiles = x_num_tiles * y_num_tiles
+        placeholder_size = floor(log10(num_tiles)) + 1
+
+        with tqdm(total=num_tiles, file=sys.stdout) as pbar:
+            for y_range in chip_range(0, input_y_length, length_y, stride_y):
+                for x_range in chip_range(0, input_x_length, length_x,
+                                          stride_x):
+
+                    final_filename = utilities.create_file_name(
+                        output_folder_path, output_file_name, counter,
+                        placeholder_size)
+
+                    self.image_objects.append(Tile(parent=self))
+                    self.image_objects[counter].create_tile(
+                        final_filename, length_x, length_y, x_range, y_range)
+
+                    pbar.update(1)
+                    counter += 1
 
     def link_me(self, image):
         self.link = image
@@ -285,9 +327,47 @@ class Mask(Image):
 
 
 class Tile(Image):
-    def __init__(self, path, parent):
-        super().__init__(path)
-        self.parent = parent # parent determines the type
+
+    def __init__(self, path=None, parent=None):
+        if path is not None:
+            super().__init__(path)
+        if parent is not None:
+            self.parent = parent # parent determines the type
+
+        self.padded = False
+        self.image_array = None
+
+    def create_tile(self, filepath: str,
+                    length_x: int, length_y: int,
+                    x_range: Tuple[int, int],
+                    y_range: Tuple[int, int],
+                    overwrite: bool = False):
+
+        image_chip = chip_image(self.parent.image_array, x_range, y_range)
+
+        ychip_length = image_chip.shape[0]  # rows = y
+        xchip_length = image_chip.shape[1]  # cols = x
+
+        LOGGER.debug(f"{x_range} \t {y_range}")
+
+        if ychip_length < length_y or xchip_length < length_x:
+            # TODO: Fix duplication of this if statements due to
+            #  lack of identifiability in the above if statement
+            image_chip = pad_chip(image_chip, length_x, length_y)
+            self.padded = True
+
+        create_file = False
+
+        if not os.path.exists(filepath):
+            create_file = True
+
+        if overwrite:
+            create_file = True
+
+        if create_file:
+             cv2.imwrite(filepath, image_chip)
+
+        self.image_array = image_chip
 
     def predict_me(self):
         pass
