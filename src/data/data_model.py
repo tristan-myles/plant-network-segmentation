@@ -1,18 +1,22 @@
-import PIL.Image
-import PIL.ImageSequence
-from glob import glob
-import matplotlib.pyplot as plt
-import numpy as np
 import logging
-from pathlib import Path
-from PIL import ImageChops
-import cv2
-from math import log10, floor, ceil
 import os
 import sys
-from tqdm import tqdm
+from glob import glob
+from itertools import chain
+from math import log10, floor, ceil
+from pathlib import Path
 from typing import List, Tuple
 
+import PIL.Image
+import PIL.ImageSequence
+import cv2
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+from PIL import ImageChops
+from tqdm import tqdm
+
+from src.eda.describe_leaf import binarise_image
 from src.helpers import utilities
 from src.helpers.extract_dataset import chip_image, pad_chip, chip_range
 
@@ -47,6 +51,14 @@ class ImageSequence:
                 LOGGER.debug("The file list is empty")
 
         self.image_objects = []
+
+        self.unique_range = np.array([])
+
+        self.intersection_list = []
+        self.unique_range_list = []
+        self.embolism_percent_list = []
+        self.linked_path_list = []
+
 
         # two modes - orignal mode | extracted mode:
         self.original_images = original_images
@@ -105,6 +117,98 @@ class ImageSequence:
                 image.load_tile_paths(**kwargs)
                 image.load_extracted_images()
                 pbar.update(1)
+
+    def binarise_sequence(self):
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for image in self.image_objects:
+                image.binarise_self()
+
+    def get_unique_sequence_range(self):
+        if not self.unique_range_list:
+            self.get_unique_range_list()
+
+        self.unique_range = np.unique(list(chain.from_iterable(self.unique_range_list)))
+
+    def get_intersection_list(self):
+        self.intersection_list = []
+
+        image_shape = self.image_objects[0].image_array.shape
+        # assumes images are the same size
+        combined_image = np.empty(shape=(image_shape[0], image_shape[1]),
+                                  dtype='object')
+
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for image in self.image_objects:
+                combined_image = image.extract_intersection(combined_image)
+                self.intersection_list.append(image.intersection)
+                pbar.update(1)
+
+    def get_unique_range_list(self):
+        self.unique_range_list = []
+
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for image in self.image_objects:
+                # no option to overwrite ...
+                if image.unique_range.size == 0:
+                    image.extract_unique_range()
+
+                    self.unique_range_list.append(image.unique_range)
+
+                pbar.update(1)
+
+    def get_embolism_percent_list(self):
+        self.embolism_percent_list = []
+
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for image in self.image_objects:
+                if image.embolism_percent is None:
+                    image.extract_embolism_percent()
+
+                self.embolism_percent_list.append(image.embolism_percent)
+                pbar.update(1)
+
+    def get_eda_dataframe(self, options, csv_name: str = None):
+        output_dict = {"names": list(map(
+            lambda image: image.path.rsplit("/",1)[1], self.image_objects))}
+
+        if options["linked_filename"]:
+            # assumes files have been linked
+            output_dict["links"] = []
+            for image in self.image_objects:
+                if image.link is not None:
+                    output_dict["links"].append(
+                        image.link.path.rsplit("/",1)[1])
+                else:
+                    output_dict["links"].append("")
+
+
+        # Unique range
+        if options["unique_range"]:
+            if not self.unique_range_list:
+                self.get_unique_range_list()
+
+            output_dict["unique_range"] = self.unique_range_list
+
+        # Embolism percentages
+        if options["embolism_percent"]:
+            if not self.embolism_percent_list:
+                self.get_embolism_percent_list()
+
+            output_dict["embolism_percent"] = self.embolism_percent_list
+
+        # Extracting intersections
+        if options["intersection"]:
+            if not self.intersection_list:
+                self.get_intersection_list()
+
+            output_dict["intersection"] = self.intersection_list
+
+        output_df = pd.DataFrame(output_dict)
+        # Saving the results
+        if csv_name:
+            output_df.to_csv(csv_name)
+
+        return output_df
 
 
 class LeafSequence(ImageSequence):
@@ -191,8 +295,8 @@ class MaskSequence(ImageSequence):
 ###############################################################################
 class Image(ImageSequence):
     # Should this have a link to a sequence_parent?
-    embolism_perc = None
-    unique_embolism_perc = None
+    embolism_percent = None
+    unique_range = None
     image_array = None
     parents = []
     link = None
@@ -200,6 +304,8 @@ class Image(ImageSequence):
     def __init__(self, path=None, file_list: List[str] = None):
         self.path = path
         self.image_objects = []
+
+        self.intersection = None
 
         super().__init__(file_list=file_list)
 
@@ -276,11 +382,32 @@ class Image(ImageSequence):
     def load_extracted_images(self, load_image: bool = False):
         super().load_extracted_images(Tile)
 
-    def extract_embolism_perc(self):
-        pass
+    def extract_embolism_percent(self, image: np.array):
+        self.embolism_percent = np.count_nonzero(image == 255) / image.size
 
-    def extract_unique_embolism_perc(self):
-        pass
+        return self.embolism_percent
+
+    def extract_unique_range(self, image: np.array):
+        self.unique_range = np.unique(image)
+
+        return self.unique_range
+
+    def extract_intersection(self, image: np.array, combined_image: np.array):
+        """
+        Calculates the intersection between the current mask and all embolisms
+        contained in previous masks
+        :param image: np.array of a mask
+        :param combined_image: np.array of a combined mask
+        :return: the intersection as a % of the image size and an updated
+        combined image
+        """
+        self.intersection = np.count_nonzero((combined_image == 255) & (
+                image == 255))
+        self.intersection = (self.intersection / image.size)
+
+        combined_image[image == 255] = 255
+
+        return combined_image
 
 
 class Leaf(Image):
@@ -293,6 +420,8 @@ class Leaf(Image):
 
         if mask_instance is not None:
             self.mask_instance = mask_instance
+
+        self.prediction_array = np.array([])
 
     def link_mask(self, mask_instance):
         self.mask_instance = mask_instance
@@ -328,6 +457,22 @@ class Leaf(Image):
         self.image_array = np.array(combined_image)
         self.path = filepath
 
+    def extract_embolism_percent(self):
+        super().extract_embolism_percent(self.prediction_array)
+
+    def extract_unique_range(self):
+        super().extract_unique_range(self.image_array)
+
+    def binarise_self(self, prediction):
+        if prediction:
+            self.prediction_array = binarise_image(self.prediction_array)
+        else:
+            self.image_array = binarise_image(self.image_array)
+
+    def extract_intersection(self, combined_image):
+        return super().extract_intersection(self.prediction_array,
+                                            combined_image)
+
 
 class Mask(Image):
     def __init__(self, path=None, sequence_parent=None):
@@ -358,6 +503,18 @@ class Mask(Image):
             cv2.imwrite(filepath, self.image_array)
 
             self.path = filepath
+
+    def extract_unique_range(self):
+        super().extract_unique_range(self.image_array)
+
+    def extract_embolism_percent(self):
+        super().extract_embolism_percent(self.image_array)
+
+    def binarise_self(self):
+        self.image_array = binarise_image(self.image_array)
+
+    def extract_intersection(self, combined_image):
+        return super().extract_intersection(self.image_array, combined_image)
 
 
 class Tile(Image):
