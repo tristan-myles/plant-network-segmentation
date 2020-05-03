@@ -11,7 +11,7 @@ from math import log10, floor, ceil
 import os
 import sys
 from tqdm import tqdm
-from typing import Tuple
+from typing import List, Tuple
 
 from src.helpers import utilities
 from src.helpers.extract_dataset import chip_image, pad_chip, chip_range
@@ -23,22 +23,30 @@ class ImageSequence:
     # Think of this as a curve
 
     def __init__(self, folder_path=None, filename_pattern=None,
-                 original_images: bool = False):
+                 file_list: List[str] = None, original_images: bool = False):
         """
         :param folder_path: path that contains the image sequence
         """
-        self.folder_path = folder_path
-        self.filename_pattern = filename_pattern
+        if file_list is not None:
+            self.file_list = file_list
 
-        self.file_list = sorted(
-            [f for f in glob(self.folder_path +
-                             self.filename_pattern,
-                             recursive=True)])
+            self.num_files = len(self.file_list)
+
+            if self.num_files == 0:
+                LOGGER.debug("The file list is empty")
+        elif folder_path is not None and filename_pattern is not None:
+            self.folder_path = folder_path
+            self.filename_pattern = filename_pattern
+
+            self.file_list = sorted([f for f in glob(
+                self.folder_path + self.filename_pattern, recursive=True)])
+
+            self.num_files = len(self.file_list)
+
+            if self.num_files == 0:
+                LOGGER.debug("The file list is empty")
+
         self.image_objects = []
-        self.num_files = len(self.file_list)
-
-        if self.num_files == 0:
-            LOGGER.info("There were no files in that folder...")
 
         # two modes - orignal mode | extracted mode:
         self.original_images = original_images
@@ -89,6 +97,13 @@ class ImageSequence:
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for image in self.image_objects:
                 image.tile_me(**kwargs)
+                pbar.update(1)
+
+    def load_tile_sequence(self, **kwargs):
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for image in self.image_objects:
+                image.load_tile_paths(**kwargs)
+                image.load_extracted_images()
                 pbar.update(1)
 
 
@@ -174,7 +189,7 @@ class MaskSequence(ImageSequence):
 
 
 ###############################################################################
-class Image:
+class Image(ImageSequence):
     # Should this have a link to a sequence_parent?
     embolism_perc = None
     unique_embolism_perc = None
@@ -182,9 +197,11 @@ class Image:
     parents = []
     link = None
 
-    def __init__(self, path=None):
+    def __init__(self, path=None, file_list: List[str] = None):
         self.path = path
         self.image_objects = []
+
+        super().__init__(file_list=file_list)
 
     def __str__(self):
         return f"This object is a {self.__class__.__name__}"
@@ -241,6 +258,23 @@ class Image:
 
     def link_me(self, image):
         self.link = image
+
+    def load_tile_paths(self, folder_path: str = None,
+                        filename_pattern: str = None):
+
+        if folder_path is None and filename_pattern is None:
+            folder_path, filename_pattern = self.path.rsplit("/", 1)
+            folder_path = os.path.join(folder_path, "chips",
+                                       str.lower(self.__class__.__name__))
+            filename_pattern = filename_pattern.rsplit(".")[0]+"*"
+
+        self.file_list = sorted([f for f in glob(
+            folder_path + "/" + filename_pattern, recursive=True)])
+
+        self.num_files = len(self.file_list)
+
+    def load_extracted_images(self, load_image: bool = False):
+        super().load_extracted_images(Tile)
 
     def extract_embolism_perc(self):
         pass
