@@ -76,7 +76,7 @@ class ImageSequence:
                 self.image_objects.append(ImageClass(filename))
                 if load_image:
                     self.image_objects[i].load_image()
-                pbar.update(5)
+                pbar.update(1)
 
     def unload_extracted_images(self):
         for image in self.image_objects:
@@ -221,7 +221,10 @@ class ImageSequence:
 
 
 class LeafSequence(ImageSequence):
-    def extract_changed_leaves(self,  output_path: str, dif_len: int = 1):
+    def extract_changed_leaves(self,  output_path: str, dif_len: int = 1,
+                               overwrite: bool = False,
+                               combination_function=
+                               ImageChops.subtract_modulo):
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
         Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 
@@ -230,21 +233,22 @@ class LeafSequence(ImageSequence):
             step_size = 1
         else:
             step_size = dif_len
-
         placeholder_size = floor(log10(self.num_files)) + 1
 
-        for i in range(0, self.num_files - step_size):
-            if dif_len != 0:
-                old_image = self.file_list[i]
-            new_image = self.file_list[i + step_size]
+        with tqdm(total=len(self.file_list)-dif_len, file=sys.stdout) as pbar:
+            for i in range(0, self.num_files - step_size):
+                if dif_len != 0:
+                    old_image = self.file_list[i]
+                new_image = self.file_list[i + step_size]
 
-            final_filename = utilities.create_file_name(output_folder_path,
-                                                        output_file_name,
-                                                        i, placeholder_size)
+                final_filename = utilities.create_file_name(
+                    output_folder_path, output_file_name, i, placeholder_size)
 
-            self.image_objects.append(
-                Leaf(parents=[old_image, new_image]))
-            self.image_objects[i].extract_me(final_filename)
+                self.image_objects.append(
+                    Leaf(parents=[old_image, new_image]))
+                self.image_objects[i].extract_me(
+                    final_filename,  combination_function, overwrite)
+                pbar.update(1)
 
     def load_extracted_images(self, load_image: bool = False):
         super().load_extracted_images(Leaf, load_image)
@@ -263,7 +267,7 @@ class LeafSequence(ImageSequence):
 
 class MaskSequence(ImageSequence):
     def __init__(self, folder_path=None, filename_pattern=None,
-                 mpf_path: str = None):
+                 mpf_path: str = None,  original_images: bool = False):
         """
 
         :param path:
@@ -274,8 +278,10 @@ class MaskSequence(ImageSequence):
         # folder to a sequence of masks
         if mpf_path is not None:
             self.mpf_path = mpf_path
+            super().__init__(original_images=original_images)
         else:
-            super().__init__(folder_path, filename_pattern)
+            super().__init__(folder_path, filename_pattern,
+                             original_images=original_images)
 
     def extract_mask_from_multipage(self,  output_path: str,
                                     overwrite: bool = False):
@@ -296,17 +302,18 @@ class MaskSequence(ImageSequence):
         self.num_files = len(mask_seq_list)
 
         placeholder_size = floor(log10(self.num_files)) + 1
+        with tqdm(total=self.num_files, file=sys.stdout) as pbar:
+            for (i, image) in enumerate(PIL.ImageSequence.Iterator(image_seq)):
 
-        for (i, image) in enumerate(PIL.ImageSequence.Iterator(image_seq)):
+                final_filename = utilities.create_file_name(output_folder_path,
+                                                            output_file_name,
+                                                            i, placeholder_size)
 
-            final_filename = utilities.create_file_name(output_folder_path,
-                                                        output_file_name,
-                                                        i, placeholder_size)
+                self.image_objects.append(Mask(sequence_parent=self.mpf_path))
 
-            self.image_objects.append(Mask(sequence_parent=self.mpf_path))
-
-            self.image_objects[i].create_mask(final_filename, image,
-                                              overwrite)
+                self.image_objects[i].create_mask(final_filename, image,
+                                                  overwrite)
+                pbar.update(1)
 
     def load_extracted_images(self, load_image: bool = False):
         super().load_extracted_images(Mask, load_image)
