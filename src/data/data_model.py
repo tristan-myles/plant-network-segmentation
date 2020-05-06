@@ -19,6 +19,7 @@ from tqdm import tqdm
 from src.eda.describe_leaf import binarise_image
 from src.helpers import utilities
 from src.helpers.extract_dataset import chip_image, pad_chip, chip_range
+from src.eda.describe_leaf import plot_embolism_profile
 
 LOGGER = logging.getLogger(__name__)
 
@@ -209,6 +210,10 @@ class ImageSequence:
             output_df.to_csv(csv_name)
 
         return output_df
+
+    def plot_profile(self, **kwargs):
+        plot_embolism_profile(self.embolism_percent_list,
+                              self.intersection_list, **kwargs)
 
 
 class LeafSequence(ImageSequence):
