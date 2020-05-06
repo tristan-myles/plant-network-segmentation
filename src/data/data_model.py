@@ -322,7 +322,7 @@ class Image(ImageSequence):
         else:
             LOGGER.info("Please load the image first")
 
-    def tile_me(self, length_x: int, stride_x: int, length_y: int,
+    def tile_me(self, TileClass, length_x: int, stride_x: int, length_y: int,
                 stride_y: int, output_path: str = None):
 
         if output_path is None:
@@ -355,9 +355,9 @@ class Image(ImageSequence):
                         output_folder_path, output_file_name, counter,
                         placeholder_size)
 
-                    self.image_objects.append(Tile(parent=self))
+                    self.image_objects.append(TileClass(parent=self))
                     self.image_objects[counter].create_tile(
-                        final_filename, length_x, length_y, x_range, y_range)
+                        length_x, length_y, x_range, y_range, final_filename)
 
                     pbar.update(1)
                     counter += 1
@@ -457,6 +457,11 @@ class Leaf(Image):
         self.image_array = np.array(combined_image)
         self.path = filepath
 
+    def tile_me(self, length_x: int, stride_x: int, length_y: int,
+                stride_y: int, output_path: str = None):
+        super().tile_me(LeafTile, length_x, stride_x, length_y, stride_y,
+                        output_path)
+
     def extract_embolism_percent(self):
         super().extract_embolism_percent(self.prediction_array)
 
@@ -504,6 +509,11 @@ class Mask(Image):
 
             self.path = filepath
 
+    def tile_me(self, length_x: int, stride_x: int, length_y: int,
+                stride_y: int, output_path: str = None):
+        super().tile_me(Tile, length_x, stride_x, length_y, stride_y,
+                        output_path)
+
     def extract_unique_range(self):
         super().extract_unique_range(self.image_array)
 
@@ -528,11 +538,12 @@ class Tile(Image):
         self.padded = False
         self.image_array = None
 
-    def create_tile(self, filepath: str,
+    def create_tile(self,
                     length_x: int, length_y: int,
                     x_range: Tuple[int, int],
                     y_range: Tuple[int, int],
-                    overwrite: bool = False):
+                    filepath: str = None,
+                    overwrite: bool = False,):
 
         image_chip = chip_image(self.parent.image_array, x_range, y_range)
 
@@ -547,18 +558,40 @@ class Tile(Image):
             image_chip = pad_chip(image_chip, length_x, length_y)
             self.padded = True
 
-        create_file = False
+        if filepath is not None:
+            create_file = False
 
-        if not os.path.exists(filepath):
-            create_file = True
+            if not os.path.exists(filepath):
+                create_file = True
 
-        if overwrite:
-            create_file = True
+            if overwrite:
+                create_file = True
 
-        if create_file:
-             cv2.imwrite(filepath, image_chip)
+            if create_file:
+                 cv2.imwrite(filepath, image_chip)
 
         self.image_array = image_chip
 
-    def predict_me(self):
-        pass
+
+class LeafTile(Tile):
+    def __init__(self, path=None, parent=None):
+        super().__init__(path, parent)
+        self.prediction_array = None
+
+    def predict_tile(self, model, memory_saving: bool = True, **kwargs):
+        """
+
+        :param prediction_wrapper: should take in an image_tile
+        :return:
+        """
+        # Accommodates for batch size > 1... need to update for case when
+        # batch size = 1? Also fast ai specific
+        # input = self.image_array[None, ...]
+
+        prediction_array = model.predict_tile(
+            new_tile=self.image_array, **kwargs)
+
+        if not memory_saving:
+            self.prediction_array = prediction_array
+
+        return prediction_array
