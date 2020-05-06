@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 from src.helpers.extract_dataset import chip_range
 
 
-class FastaiUnetLearner():
+class FastaiUnetLearner:
     def __init__(self):
         self.data = None
         self.learn = None
@@ -68,7 +68,13 @@ class FastaiUnetLearner():
         if tile_number:
             input_image = self.data.x[tile_number]
         elif new_tile is not None:
-            input_image = new_tile
+            input_image = Image(
+                pil2tensor(new_tile, dtype=np.float32).div_(255))
+            # confirm the roll of div_(255)
+            _, val_tfms = get_transforms()
+            input_image = input_image.apply_tfms(
+                val_tfms.append(normalize_funcs(*imagenet_stats)),
+                input_image,size=new_tile.shape)
         else:
             raise Exception("No input image :(")
 
