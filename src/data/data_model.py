@@ -240,6 +240,17 @@ class LeafSequence(ImageSequence):
     def load_extracted_images(self, load_image: bool = False):
         super().load_extracted_images(Leaf, load_image)
 
+    def predict_leaf_sequence(self, model, x_tile_length: int = None,
+                     y_tile_length: int = None, memory_saving: bool = True,
+                     overwrite: bool = False, save_prediction: bool = True,
+                     **kwargs):
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for leaf in self.image_objects:
+                leaf.predict_leaf(model, x_tile_length, y_tile_length,
+                                 memory_saving, overwrite, save_prediction,
+                                  **kwargs)
+                pbar.update(1)
+
 
 class MaskSequence(ImageSequence):
     def __init__(self, folder_path=None, filename_pattern=None,
@@ -477,6 +488,75 @@ class Leaf(Image):
     def extract_intersection(self, combined_image):
         return super().extract_intersection(self.prediction_array,
                                             combined_image)
+
+    def predict_leaf(self, model, x_tile_length: int = None,
+                     y_tile_length: int = None, memory_saving: bool = True,
+                     overwrite: bool = False, save_prediction: bool = True,
+                     **kwargs):
+
+        if self.image_array is None:
+            self.load_image()
+
+        counter = 0
+        y_length, x_length = self.image_array.shape
+
+        self.prediction_array = np.zeros((y_length, x_length))
+
+        if x_tile_length is None or y_tile_length is None:
+            y_tile_length, x_tile_length = self.image_objects[0].shape
+
+        old_upper_y = 0
+
+        for y_range in chip_range(0, y_length, y_tile_length, y_tile_length):
+            old_upper_x = 0
+
+            for x_range in chip_range(0, x_length, x_tile_length,
+                                      x_tile_length):
+                temp_tile = LeafTile(parent=self)
+                temp_tile.create_tile(x_tile_length, y_tile_length,
+                                      x_range, y_range)
+
+                pred_tile = temp_tile.predict_tile(model,
+                                                   **kwargs)
+
+                pred_tile = (pred_tile[0].px.numpy() * 255)
+                pred_tile = pred_tile.reshape(y_tile_length, x_tile_length)
+
+                if ((y_range[1] - old_upper_y) != y_tile_length or
+                        (x_range[1] - old_upper_x) != x_tile_length):
+                    pred_tile = pred_tile[
+                                (old_upper_y - y_range[0]):y_range[1],
+                                (old_upper_x - x_range[0]):x_range[1]]
+                    self.prediction_array[old_upper_y:y_range[1],
+                    old_upper_x:x_range[1]] = pred_tile
+                else:
+                    self.prediction_array[y_range[0]:y_range[1],
+                    x_range[0]:x_range[1]] = pred_tile
+
+                old_upper_x = x_range[1]
+                counter += 1
+            old_upper_y = y_range[1]
+
+        if save_prediction:
+            folder_path, filename = self.path.rsplit("/", 1)
+            filename = "pred_" + filename.rsplit(".", 1)[0] + ".png"
+            output_folder_path = os.path.join(folder_path, "predictions")
+            filepath = os.path.join(output_folder_path, filename)
+            Path(output_folder_path).mkdir(parents=True, exist_ok=True)
+
+            create_file = False
+
+            if not os.path.exists(filepath):
+                create_file = True
+
+            if overwrite:
+                create_file = True
+
+            if create_file:
+                cv2.imwrite(filepath, self.prediction_array)
+
+        if memory_saving:
+            self.image_array = None
 
 
 class Mask(Image):
