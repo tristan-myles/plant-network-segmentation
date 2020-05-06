@@ -22,7 +22,7 @@ from src.helpers.extract_dataset import chip_image, pad_chip, chip_range
 from src.eda.describe_leaf import plot_embolism_profile
 
 LOGGER = logging.getLogger(__name__)
-
+LOGGER.setLevel(logging.INFO)
 
 class ImageSequence:
     # Think of this as a curve
@@ -355,8 +355,8 @@ class Image(ImageSequence):
         if output_path is None:
             output_folder_path, output_file_name = self.path.rsplit("/", 1)
             output_folder_path = os.path.join(
-                output_folder_path, "chips",
-                str.lower(self.__class__.__name__))
+                output_folder_path,
+                "../chips-" + str.lower(self.__class__.__name__))
         else:
             output_folder_path, output_file_name = output_path.rsplit("/", 1)
 
@@ -373,21 +373,19 @@ class Image(ImageSequence):
         num_tiles = x_num_tiles * y_num_tiles
         placeholder_size = floor(log10(num_tiles)) + 1
 
-        with tqdm(total=num_tiles, file=sys.stdout) as pbar:
-            for y_range in chip_range(0, input_y_length, length_y, stride_y):
-                for x_range in chip_range(0, input_x_length, length_x,
-                                          stride_x):
+        for y_range in chip_range(0, input_y_length, length_y, stride_y):
+            for x_range in chip_range(0, input_x_length, length_x,
+                                      stride_x):
 
-                    final_filename = utilities.create_file_name(
-                        output_folder_path, output_file_name, counter,
-                        placeholder_size)
+                final_filename = utilities.create_file_name(
+                    output_folder_path, output_file_name, counter,
+                    placeholder_size)
 
-                    self.image_objects.append(TileClass(parent=self))
-                    self.image_objects[counter].create_tile(
-                        length_x, length_y, x_range, y_range, final_filename)
+                self.image_objects.append(TileClass(parent=self))
+                self.image_objects[counter].create_tile(
+                    length_x, length_y, x_range, y_range, final_filename)
 
-                    pbar.update(1)
-                    counter += 1
+                counter += 1
 
     def link_me(self, image):
         self.link = image
@@ -397,8 +395,8 @@ class Image(ImageSequence):
 
         if folder_path is None and filename_pattern is None:
             folder_path, filename_pattern = self.path.rsplit("/", 1)
-            folder_path = os.path.join(folder_path, "chips",
-                                       str.lower(self.__class__.__name__))
+            folder_path = os.path.join(
+                folder_path, "../chips-" + str.lower(self.__class__.__name__))
             filename_pattern = filename_pattern.rsplit(".")[0]+"*"
 
         self.file_list = sorted([f for f in glob(
