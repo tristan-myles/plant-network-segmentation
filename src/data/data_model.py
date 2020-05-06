@@ -78,6 +78,10 @@ class ImageSequence:
                     self.image_objects[i].load_image()
                 pbar.update(5)
 
+    def unload_extracted_images(self):
+        for image in self.image_objects:
+            image.image_array = None
+
     def sort_image_objects_by_filename(self):
         self.image_objects = sorted(self.image_objects,
                                     key=lambda image: image.path)
