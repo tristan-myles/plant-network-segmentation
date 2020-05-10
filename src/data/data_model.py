@@ -52,6 +52,7 @@ class ImageSequence:
                 LOGGER.debug("The file list is empty")
 
         self.image_objects = []
+        self.link = None
 
         self.unique_range = np.array([])
 
@@ -86,7 +87,10 @@ class ImageSequence:
         self.image_objects = sorted(self.image_objects,
                                     key=lambda image: image.path)
 
-    def link_sequences(self, image_sequence, sort_by_filename: bool = True):
+    def link_sequences(self, SequenceObject, sort_by_filename: bool = True):
+        self.link = SequenceObject
+        image_sequence = SequenceObject.image_objects
+
         index_self = list(range(len(self.image_objects)))
         index_input = list(range(len(image_sequence)))
 
@@ -109,6 +113,14 @@ class ImageSequence:
             # Do we need a two-way link?
             self.image_objects[i].link_me(image_sequence[j])
             image_sequence[j].link_me(self.image_objects[i])
+
+    def link_tiles(self, sort_by_filename: bool = True):
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for image in self.image_objects:
+                # overwrites link with itself
+                image.link_sequences(image.link,
+                                     sort_by_filename)
+                pbar.update(1)
 
     def tile_sequence(self, **kwargs):
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
