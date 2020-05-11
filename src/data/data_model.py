@@ -24,6 +24,7 @@ from src.eda.describe_leaf import plot_embolism_profile
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 
+
 class ImageSequence:
     # Think of this as a curve
 
@@ -71,13 +72,12 @@ class ImageSequence:
             raise Exception("The file list contains original images, "
                             "not extracted images. This function is not "
                             "applicable...")
-
-        with tqdm(total=self.num_files, file=sys.stdout) as pbar:
-            for i, filename in enumerate(self.file_list):
-                self.image_objects.append(ImageClass(filename))
-                if load_image:
-                    self.image_objects[i].load_image()
-                pbar.update(1)
+        LOGGER.debug("Erasing existing image objects")
+        self.image_objects = []
+        for i, filename in enumerate(self.file_list):
+            self.image_objects.append(ImageClass(filename))
+            if load_image:
+                self.image_objects[i].load_image()
 
     def unload_extracted_images(self):
         for image in self.image_objects:
@@ -128,11 +128,11 @@ class ImageSequence:
                 image.tile_me(**kwargs)
                 pbar.update(1)
 
-    def load_tile_sequence(self, **kwargs):
+    def load_tile_sequence(self, load_image: bool = False, **kwargs):
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for image in self.image_objects:
                 image.load_tile_paths(**kwargs)
-                image.load_extracted_images()
+                image.load_extracted_images(load_image)
                 pbar.update(1)
 
     def binarise_sequence(self):
@@ -331,6 +331,7 @@ class LeafSequence(ImageSequence):
 
 class MaskSequence(ImageSequence):
     def __init__(self, folder_path=None, filename_pattern=None,
+                 file_list: List[str] = None,
                  mpf_path: str = None,  original_images: bool = False):
         """
 
@@ -344,7 +345,7 @@ class MaskSequence(ImageSequence):
             self.mpf_path = mpf_path
             super().__init__(original_images=original_images)
         else:
-            super().__init__(folder_path, filename_pattern,
+            super().__init__(folder_path, filename_pattern, file_list,
                              original_images=original_images)
 
     def extract_mask_from_multipage(self,  output_path: str,
@@ -451,7 +452,8 @@ class Image(ImageSequence):
                     output_folder_path, output_file_name, counter,
                     placeholder_size)
 
-                self.image_objects.append(TileClass(parent=self))
+                self.image_objects.append(TileClass(parent=self,
+                                                    path=final_filename))
                 self.image_objects[counter].create_tile(
                     length_x, length_y, x_range, y_range, final_filename)
 
@@ -475,11 +477,11 @@ class Image(ImageSequence):
         self.num_files = len(self.file_list)
 
     def load_extracted_images(self, load_image: bool = False):
-        super().load_extracted_images(Tile)
+        ImageSequence.load_extracted_images(self, Tile, load_image)
 
-    def extract_embolism_percent(self, image: np.array):
-        self.embolism_percent = np.count_nonzero(image == 255) / image.size
-
+    def extract_embolism_percent(self, image: np.array,
+                                 embolism_px: int = 255):
+        self.embolism_percent = np.count_nonzero(image == embolism_px) / image.size
         return self.embolism_percent
 
     def extract_has_embolism(self, embolism_px: int = 255):
@@ -513,7 +515,7 @@ class Image(ImageSequence):
         return combined_image
 
 
-class Leaf(Image):
+class Leaf(Image, LeafSequence):
     def __init__(self, path=None, parents=None, mask_instance=None):
         # Can create a Leaf using parents or path
         if path is not None:
@@ -580,6 +582,9 @@ class Leaf(Image):
     def extract_intersection(self, combined_image):
         return super().extract_intersection(self.prediction_array,
                                             combined_image)
+
+    def load_extracted_images(self, load_image: bool = False):
+        ImageSequence.load_extracted_images(self, LeafTile, load_image)
 
     def predict_leaf(self, model, x_tile_length: int = None,
                      y_tile_length: int = None, memory_saving: bool = True,
@@ -651,7 +656,7 @@ class Leaf(Image):
             self.image_array = None
 
 
-class Mask(Image):
+class Mask(Image, MaskSequence):
     def __init__(self, path=None, sequence_parent=None):
         if path is not None:
             super().__init__(path)
