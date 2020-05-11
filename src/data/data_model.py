@@ -17,9 +17,9 @@ from PIL import ImageChops
 from tqdm import tqdm
 
 from src.eda.describe_leaf import binarise_image
+from src.eda.describe_leaf import plot_embolism_profile
 from src.helpers import utilities
 from src.helpers.extract_dataset import chip_image, pad_chip, chip_range
-from src.eda.describe_leaf import plot_embolism_profile
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
@@ -144,7 +144,8 @@ class ImageSequence:
         if not self.unique_range_list:
             self.get_unique_range_list()
 
-        self.unique_range = np.unique(list(chain.from_iterable(self.unique_range_list)))
+        self.unique_range = np.unique(list(chain.from_iterable(
+            self.unique_range_list)))
 
     def get_intersection_list(self):
         self.intersection_list = []
@@ -198,7 +199,7 @@ class ImageSequence:
 
     def get_eda_dataframe(self, options, csv_name: str = None):
         output_dict = {"names": list(map(
-            lambda image: image.path.rsplit("/",1)[1], self.image_objects))}
+            lambda image: image.path.rsplit("/", 1)[1], self.image_objects))}
 
         if options["linked_filename"]:
             # assumes files have been linked
@@ -206,10 +207,9 @@ class ImageSequence:
             for image in self.image_objects:
                 if image.link is not None:
                     output_dict["links"].append(
-                        image.link.path.rsplit("/",1)[1])
+                        image.link.path.rsplit("/", 1)[1])
                 else:
                     output_dict["links"].append("")
-
 
         # Unique range
         if options["unique_range"]:
@@ -279,7 +279,7 @@ class ImageSequence:
 
 
 class LeafSequence(ImageSequence):
-    def extract_changed_leaves(self,  output_path: str, dif_len: int = 1,
+    def extract_changed_leaves(self, output_path: str, dif_len: int = 1,
                                overwrite: bool = False,
                                combination_function=
                                ImageChops.subtract_modulo):
@@ -293,7 +293,8 @@ class LeafSequence(ImageSequence):
             step_size = dif_len
         placeholder_size = floor(log10(self.num_files)) + 1
 
-        with tqdm(total=len(self.file_list)-dif_len, file=sys.stdout) as pbar:
+        with tqdm(total=len(self.file_list) - dif_len,
+                  file=sys.stdout) as pbar:
             for i in range(0, self.num_files - step_size):
                 if dif_len != 0:
                     old_image = self.file_list[i]
@@ -305,34 +306,36 @@ class LeafSequence(ImageSequence):
                 self.image_objects.append(
                     Leaf(parents=[old_image, new_image]))
                 self.image_objects[i].extract_me(
-                    final_filename,  combination_function, overwrite)
+                    final_filename, combination_function, overwrite)
                 pbar.update(1)
 
     def load_extracted_images(self, load_image: bool = False):
         super().load_extracted_images(Leaf, load_image)
 
     def predict_leaf_sequence(self, model, x_tile_length: int = None,
-                     y_tile_length: int = None, memory_saving: bool = True,
-                     overwrite: bool = False, save_prediction: bool = True,
-                     **kwargs):
+                              y_tile_length: int = None,
+                              memory_saving: bool = True,
+                              overwrite: bool = False,
+                              save_prediction: bool = True,
+                              **kwargs):
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for leaf in self.image_objects:
                 leaf.predict_leaf(model, x_tile_length, y_tile_length,
-                                 memory_saving, overwrite, save_prediction,
+                                  memory_saving, overwrite, save_prediction,
                                   **kwargs)
                 pbar.update(1)
 
     def get_databunch_dataframe(self, embolism_only: bool = False,
                                 csv_name: str = None):
         return super().get_databunch_dataframe(lseq=self, mseq=self.link,
-                                        embolism_only=embolism_only,
-                                        csv_name=csv_name)
+                                               embolism_only=embolism_only,
+                                               csv_name=csv_name)
 
 
 class MaskSequence(ImageSequence):
     def __init__(self, folder_path=None, filename_pattern=None,
                  file_list: List[str] = None,
-                 mpf_path: str = None,  original_images: bool = False):
+                 mpf_path: str = None, original_images: bool = False):
         """
 
         :param path:
@@ -348,7 +351,7 @@ class MaskSequence(ImageSequence):
             super().__init__(folder_path, filename_pattern, file_list,
                              original_images=original_images)
 
-    def extract_mask_from_multipage(self,  output_path: str,
+    def extract_mask_from_multipage(self, output_path: str,
                                     overwrite: bool = False):
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
 
@@ -369,10 +372,10 @@ class MaskSequence(ImageSequence):
         placeholder_size = floor(log10(self.num_files)) + 1
         with tqdm(total=self.num_files, file=sys.stdout) as pbar:
             for (i, image) in enumerate(PIL.ImageSequence.Iterator(image_seq)):
-
                 final_filename = utilities.create_file_name(output_folder_path,
                                                             output_file_name,
-                                                            i, placeholder_size)
+                                                            i,
+                                                            placeholder_size)
 
                 self.image_objects.append(Mask(sequence_parent=self.mpf_path))
 
@@ -386,8 +389,8 @@ class MaskSequence(ImageSequence):
     def get_databunch_dataframe(self, embolism_only: bool = False,
                                 csv_name: str = None):
         return super().get_databunch_dataframe(lseq=self.link, mseq=self,
-                                        embolism_only=embolism_only,
-                                        csv_name=csv_name)
+                                               embolism_only=embolism_only,
+                                               csv_name=csv_name)
 
 
 ###############################################################################
@@ -447,7 +450,6 @@ class Image(ImageSequence):
         for y_range in chip_range(0, input_y_length, length_y, stride_y):
             for x_range in chip_range(0, input_x_length, length_x,
                                       stride_x):
-
                 final_filename = utilities.create_file_name(
                     output_folder_path, output_file_name, counter,
                     placeholder_size)
@@ -469,7 +471,7 @@ class Image(ImageSequence):
             folder_path, filename_pattern = self.path.rsplit("/", 1)
             folder_path = os.path.join(
                 folder_path, "../chips-" + str.lower(self.__class__.__name__))
-            filename_pattern = filename_pattern.rsplit(".")[0]+"*"
+            filename_pattern = filename_pattern.rsplit(".")[0] + "*"
 
         self.file_list = sorted([f for f in glob(
             folder_path + "/" + filename_pattern, recursive=True)])
@@ -481,8 +483,8 @@ class Image(ImageSequence):
 
     def extract_embolism_percent(self, image: np.array,
                                  embolism_px: int = 255):
-        self.embolism_percent = np.count_nonzero(image == embolism_px) / image.size
-        return self.embolism_percent
+        self.embolism_percent = (np.count_nonzero(image == embolism_px) /
+                                 image.size)
 
     def extract_has_embolism(self, embolism_px: int = 255):
         if self.embolism_percent > 0:
@@ -494,8 +496,6 @@ class Image(ImageSequence):
 
     def extract_unique_range(self, image: np.array):
         self.unique_range = np.unique(image)
-
-        return self.unique_range
 
     def extract_intersection(self, image: np.array, combined_image: np.array):
         """
@@ -531,9 +531,6 @@ class Leaf(Image, LeafSequence):
     def link_mask(self, mask_instance):
         self.mask_instance = mask_instance
 
-    def predict_me(self):
-        pass
-
     def extract_me(self, filepath: os.path,
                    combination_function=ImageChops.subtract_modulo,
                    overwrite: bool = False):
@@ -542,7 +539,7 @@ class Leaf(Image, LeafSequence):
             new_image = PIL.Image.open(self.parents[1])
         except FileNotFoundError as e:
             raise Exception(e, "Please check the parent file paths that "
-                                "you provided...")
+                               "you provided...")
 
         combined_image = combination_function(new_image, old_image)
 
@@ -710,7 +707,7 @@ class Tile(Image):
         if path is not None:
             super().__init__(path)
         if parent is not None:
-            self.parent = parent # parent determines the type
+            self.parent = parent  # parent determines the type
 
         self.padded = False
         self.image_array = None
@@ -720,7 +717,7 @@ class Tile(Image):
                     x_range: Tuple[int, int],
                     y_range: Tuple[int, int],
                     filepath: str = None,
-                    overwrite: bool = False,):
+                    overwrite: bool = False, ):
 
         image_chip = chip_image(self.parent.image_array, x_range, y_range)
 
@@ -745,7 +742,7 @@ class Tile(Image):
                 create_file = True
 
             if create_file:
-                 cv2.imwrite(filepath, image_chip)
+                cv2.imwrite(filepath, image_chip)
 
         self.image_array = image_chip
 
