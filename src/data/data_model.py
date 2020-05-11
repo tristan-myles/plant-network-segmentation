@@ -749,6 +749,12 @@ class Tile(Image):
 
         self.image_array = image_chip
 
+    def extract_embolism_percent(self):
+        super().extract_embolism_percent(self.image_array)
+
+    def extract_unique_range(self):
+        super().extract_unique_range(self.image_array)
+
 
 class LeafTile(Tile):
     def __init__(self, path=None, parent=None):
@@ -772,3 +778,9 @@ class LeafTile(Tile):
             self.prediction_array = prediction_array
 
         return prediction_array
+
+    def extract_unique_range(self):
+        super().extract_unique_range(self.prediction_array)
+
+    def extract_embolism_percent(self):
+        super().extract_embolism_percent(self.prediction_array)
