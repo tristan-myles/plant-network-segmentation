@@ -60,7 +60,7 @@ class ImageSequence:
         self.unique_range_list = []
         self.embolism_percent_list = []
         self.linked_path_list = []
-
+        self.has_embolism_list = []
 
         # two modes - orignal mode | extracted mode:
         self.original_images = original_images
@@ -184,6 +184,18 @@ class ImageSequence:
                 self.embolism_percent_list.append(image.embolism_percent)
                 pbar.update(1)
 
+    def get_has_embolism_list(self):
+        self.has_embolism_list = []
+
+        with tqdm(total=len(self.image_objects),
+                  file=sys.stdout) as pbar:
+            for image in self.image_objects:
+                if image.has_embolism is None:
+                    image.extract_has_embolism()
+
+                self.has_embolism_list.append(image.has_embolism)
+                pbar.update(1)
+
     def get_eda_dataframe(self, options, csv_name: str = None):
         output_dict = {"names": list(map(
             lambda image: image.path.rsplit("/",1)[1], self.image_objects))}
@@ -219,6 +231,13 @@ class ImageSequence:
                 self.get_intersection_list()
 
             output_dict["intersection"] = self.intersection_list
+
+            # Extracting intersections
+        if options["has_embolism"]:
+            if not self.has_embolism_list:
+                self.get_has_embolism_list()
+
+            output_dict["has_embolism"] = self.has_embolism_list
 
         output_df = pd.DataFrame(output_dict)
         # Saving the results
@@ -343,7 +362,7 @@ class Image(ImageSequence):
     def __init__(self, path=None, file_list: List[str] = None):
         self.path = path
         self.image_objects = []
-
+        self.has_embolism = None
         self.intersection = None
 
         super().__init__(file_list=file_list)
@@ -423,6 +442,14 @@ class Image(ImageSequence):
         self.embolism_percent = np.count_nonzero(image == 255) / image.size
 
         return self.embolism_percent
+
+    def extract_has_embolism(self, embolism_px: int = 255):
+        if self.embolism_percent > 0:
+            self.has_embolism = True
+        elif embolism_px in self.unique_range:
+            self.has_embolism = True
+        else:
+            self.has_embolism = False
 
     def extract_unique_range(self, image: np.array):
         self.unique_range = np.unique(image)
