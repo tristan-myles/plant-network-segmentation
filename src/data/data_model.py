@@ -250,6 +250,33 @@ class ImageSequence:
         plot_embolism_profile(self.embolism_percent_list,
                               self.intersection_list, **kwargs)
 
+    def get_databunch_dataframe(self, lseq, mseq,
+                                embolism_only: bool = False,
+                                csv_name: str = None):
+
+        output_dict = {"leaf_names":
+                           list(map(lambda image: image.path.rsplit("/", 1)[1],
+                                    lseq.image_objects)),
+                       "masks": []}
+
+        for image in lseq.image_objects:
+            if image.link is not None:
+                output_dict["masks"].append(image.link.path)
+            else:
+                output_dict["masks"].append("")
+
+        output_df = pd.DataFrame(output_dict)
+        folder_path = lseq.image_objects[0].path.rsplit("/", 1)[0]
+
+        if embolism_only:
+            output_df = output_df[mseq.has_embolism_list]
+
+        # Saving the results
+        if csv_name:
+            output_df.to_csv(csv_name)
+
+        return output_df, folder_path
+
 
 class LeafSequence(ImageSequence):
     def extract_changed_leaves(self,  output_path: str, dif_len: int = 1,
@@ -294,6 +321,12 @@ class LeafSequence(ImageSequence):
                                  memory_saving, overwrite, save_prediction,
                                   **kwargs)
                 pbar.update(1)
+
+    def get_databunch_dataframe(self, embolism_only: bool = False,
+                                csv_name: str = None):
+        return super().get_databunch_dataframe(lseq=self, mseq=self.link,
+                                        embolism_only=embolism_only,
+                                        csv_name=csv_name)
 
 
 class MaskSequence(ImageSequence):
@@ -348,6 +381,12 @@ class MaskSequence(ImageSequence):
 
     def load_extracted_images(self, load_image: bool = False):
         super().load_extracted_images(Mask, load_image)
+
+    def get_databunch_dataframe(self, embolism_only: bool = False,
+                                csv_name: str = None):
+        return super().get_databunch_dataframe(lseq=self.link, mseq=self,
+                                        embolism_only=embolism_only,
+                                        csv_name=csv_name)
 
 
 ###############################################################################
