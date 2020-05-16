@@ -11,9 +11,10 @@ __status__ = "development"
 from fastai.vision import *
 import matplotlib.pyplot as plt
 from src.helpers.extract_dataset import chip_range
+from src.model.model import Model
 
 
-class FastaiUnetLearner:
+class FastaiUnetLearner(Model):
     def __init__(self):
         self.data = None
         self.learn = None
@@ -46,9 +47,7 @@ class FastaiUnetLearner:
 
         self.learn = unet_learner(data, model)
 
-    def train_unet_fastai(self, epochs: int,
-                          lr: float,
-                          save: bool, save_path: str):
+    def train(self, epochs: int, lr: float, save: bool, save_path: str):
         if lr is None:
             lr = self.min_grad_lr
         self.learn.fit_one_cycle(epochs, lr)
