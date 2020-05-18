@@ -15,6 +15,9 @@ LOGGER = logging.getLogger(__name__)
 pil_logger = logging.getLogger('PIL')
 pil_logger.setLevel(logging.WARNING)
 
+mpl_logger = logging.getLogger('matplotlib')
+mpl_logger.setLevel(logging.WARNING)
+
 
 def create_sequence_objects(sequence_input):
     lseqs = []
@@ -80,6 +83,24 @@ def extract_tiles(seq_objects, length_x, stride_x, length_y,
                               output_path=output_path)
 
 
+def plot_mseq_profiles(mseqs):
+    for mseq in mseqs:
+        # less memory intensive for images to be loaded here
+        LOGGER.info(f"Creating {mseq.num_files} image objects for "
+                    f"{mseq.__class__.__name__} located at {mseq.folder_path}")
+        mseq.load_extracted_images(load_image=True)
+
+        LOGGER.info("Extracting the intersection list")
+        mseq.get_intersection_list()
+
+        LOGGER.info("Extracting the embolism percent list")
+        mseq.get_embolism_percent_list()
+
+        mseq.plot_profile()
+
+        mseq.unload_extracted_images()
+
+
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser("Perform operations using the "
                                      "plant-image-segmentation code base")
@@ -131,6 +152,10 @@ def parse_arguments() -> argparse.Namespace:
         help="path to json file containing output paths, if you want to use "
              "the default path enter  \"default\", if the path is the same "
              "as the input json enter  \"same\"")
+
+    parser_plot_profile = subparsers.add_parser(
+        "plot_profile", help="plot an embolism profile")
+    parser_plot_profile.set_defaults(which="plot_profile")
 
     args = parser.parse_args()
     return args
@@ -192,3 +217,7 @@ if __name__ == "__main__":
 
             extract_tiles(MSEQS, ARGS.length_x, ARGS.stride_x,
                           ARGS.length_y, ARGS.stride_y, MASK_OUTPUT_LIST)
+
+    if ARGS.which == "plot_profile":
+        plot_mseq_profiles(MSEQS)
+
