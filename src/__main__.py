@@ -13,12 +13,9 @@ logging.config.fileConfig(fname=abs_path + "/logging_configuration.ini",
 LOGGER = logging.getLogger(__name__)
 
 
-def create_sequence_objects(json_path: str):
+def create_sequence_objects(sequence_input):
     lseqs = []
     mseqs = []
-
-    with open(json_path, "r") as json_file:
-        sequence_input = json.load(json_file)
 
     leaf_dict = sequence_input["leaves"]["input"]
     if leaf_dict is not None:
@@ -86,13 +83,13 @@ def parse_arguments() -> argparse.Namespace:
 
 if __name__ == "__main__":
     ARGS = parse_arguments()
-    LSEQS, MSEQS = create_sequence_objects(ARGS.json_path)
+
+    with open(ARGS.json_path, "r") as JSON_FILE:
+        INPUT_JSON_DICT = json.load(JSON_FILE)
+
+    LSEQS, MSEQS = create_sequence_objects(INPUT_JSON_DICT)
 
     if ARGS.which == "extract_images":
-        if ARGS.mask_output_path == "same":
-            with open(ARGS.json_path, "r") as JSON_FILE:
-                INPUT_JSON_DICT = json.load(JSON_FILE)
-
         if ARGS.leaf_output_path is not None:
             if ARGS.leaf_output_path == "same":
                 LEAF_OUTPUT_LIST =\
