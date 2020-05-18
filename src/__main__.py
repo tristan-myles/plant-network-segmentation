@@ -101,6 +101,21 @@ def plot_mseq_profiles(mseqs):
         mseq.unload_extracted_images()
 
 
+def extract_eda_df(mseqs, options, output_path_list, lseqs=None):
+    for i, (mseq, csv_output_path) in enumerate(zip(mseqs, output_path_list)):
+        # less memory intensive for images to be loaded here
+        LOGGER.info(f"Creating {mseq.num_files} image objects for "
+                    f"{mseq.__class__.__name__} located at {mseq.folder_path}")
+        mseq.load_extracted_images(load_image=True)
+
+        if options["linked_filename"]:
+            mseq.link_sequences(lseqs[i])
+
+        mseq.get_eda_dataframe(options, csv_output_path)
+
+        mseq.unload_extracted_images()
+
+
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser("Perform operations using the "
                                      "plant-image-segmentation code base")
@@ -120,13 +135,13 @@ def parse_arguments() -> argparse.Namespace:
 
     parser_extract_images.add_argument(
         "--leaf_output_path", "-lo",  metavar="\b",
-        help="path to json file containing output paths, if the path is the"
-             " same as the input path enter  \"same\" ")
+        help="output paths, if the paths are in the input json enter "
+             "\"same\"")
 
     parser_extract_images.add_argument(
         "--mask_output_path", "-mo", metavar="\b",
-        help="path to json file containing output paths, if the path is the"
-             " same as the input path enter  \"same\" ")
+        help="output paths, if the paths are in the input json enter "
+             "\"same\"")
 
     parser_extract_tiles = subparsers.add_parser("extract_tiles",
                                                   help="extraction help")
@@ -143,19 +158,26 @@ def parse_arguments() -> argparse.Namespace:
 
     parser_extract_tiles.add_argument(
         "--leaf_output_path", "-lo",  metavar="\b",
-        help="path to json file containing output paths, if you want to use "
-             "the default path enter  \"default\", if the path is the same "
-             "as the input json enter  \"same\" ")
+        help="output paths, if you want to use "
+             "the default path enter  \"default\", if the paths are in "
+             "the input json enter  \"same\"")
 
     parser_extract_tiles.add_argument(
         "--mask_output_path", "-mo", metavar="\b",
-        help="path to json file containing output paths, if you want to use "
-             "the default path enter  \"default\", if the path is the same "
-             "as the input json enter  \"same\"")
+        help="output paths, if you want to use "
+             "the default path enter  \"default\", if the paths are in "
+             "the input json enter  \"same\"")
 
     parser_plot_profile = subparsers.add_parser(
         "plot_profile", help="plot an embolism profile")
     parser_plot_profile.set_defaults(which="plot_profile")
+
+    parser_eda_df = subparsers.add_parser(
+        "eda_df", help="extract an eda dataframe")
+    parser_eda_df.set_defaults(which="eda_df")
+    parser_eda_df.add_argument("csv_output_path",
+        help="output paths, if the paths are in the input json enter "
+             "\"same\"")
 
     args = parser.parse_args()
     return args
@@ -221,3 +243,14 @@ if __name__ == "__main__":
     if ARGS.which == "plot_profile":
         plot_mseq_profiles(MSEQS)
 
+    if ARGS.which == "eda_df":
+        if ARGS.csv_output_path == "same":
+            CSV_OUTPUT_LIST = INPUT_JSON_DICT["eda_df"]["output_path"]
+        else:
+            CSV_OUTPUT_LIST = str.split(ARGS.csv_output_path, " ")
+
+        if INPUT_JSON_DICT["eda_df"]["options"]:
+            load_image_objects(LSEQS)
+
+        extract_eda_df(MSEQS, INPUT_JSON_DICT["eda_df"]["options"],
+                       CSV_OUTPUT_LIST, LSEQS)
