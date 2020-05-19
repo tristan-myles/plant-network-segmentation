@@ -1,6 +1,7 @@
 import logging
 import os
 import sys
+from abc import ABC, abstractmethod
 from glob import glob
 from itertools import chain
 from math import log10, floor, ceil
@@ -25,14 +26,18 @@ LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 
 
-class ImageSequence:
-    # Think of this as a curve
-
+# *================================ Sequences ================================*
+# *----------------------------- Abstract Class ------------------------------*
+class _ImageSequence(ABC):
+    """
+    Abstract image sequence class
+    """
     def __init__(self, folder_path=None, filename_pattern=None,
-                 file_list: List[str] = None, original_images: bool = False):
+                 file_list: List[str] = None, creation_mode: bool = False):
         """
         :param folder_path: path that contains the image sequence
         """
+        # an ImageSequence can
         if file_list is not None:
             self.file_list = file_list
 
@@ -40,6 +45,7 @@ class ImageSequence:
 
             if self.num_files == 0:
                 LOGGER.debug("The file list is empty")
+
         elif folder_path is not None and filename_pattern is not None:
             self.folder_path = folder_path
             self.filename_pattern = filename_pattern
@@ -49,12 +55,16 @@ class ImageSequence:
 
             self.num_files = len(self.file_list)
 
-            if self.num_files == 0:
-                LOGGER.debug("The file list is empty")
+        else:
+            self.num_files = 0
+
+        # two modes - original mode | extracted mode:
+        self.creation_mode = creation_mode
 
         self.image_objects = []
         self.link = None
 
+        # EDA objects
         self.unique_range = np.array([])
 
         self.intersection_list = []
@@ -63,29 +73,32 @@ class ImageSequence:
         self.linked_path_list = []
         self.has_embolism_list = []
 
-        # two modes - orignal mode | extracted mode:
-        self.original_images = original_images
+    # *______________________ loading | linking Images _______________________*
+    # abstract due to signature mismatch in child classes
+    @abstractmethod
+    def load_extracted_images(self, ImageClass, load_image: bool = False):
+        """
+        Instantiates using the file_list attribute objects of class
+        ImageClass and appends to image_objects.
 
-    def load_extracted_images(self, ImageClass,
-                              load_image: bool = False):
-        if self.original_images:
+        Note: this function is intended to load extracted images and will only
+        work if the image is not instantiated in creation_mode.
+
+        :param ImageClass: The
+        :param load_image:
+        :return:
+        """
+        if self.creation_mode:
             raise Exception("The file list contains original images, "
                             "not extracted images. This function is not "
                             "applicable...")
+
         LOGGER.debug("Erasing existing image objects")
         self.image_objects = []
         for i, filename in enumerate(self.file_list):
             self.image_objects.append(ImageClass(filename))
             if load_image:
                 self.image_objects[i].load_image()
-
-    def unload_extracted_images(self):
-        for image in self.image_objects:
-            image.image_array = None
-
-    def sort_image_objects_by_filename(self):
-        self.image_objects = sorted(self.image_objects,
-                                    key=lambda image: image.path)
 
     def link_sequences(self, SequenceObject, sort_by_filename: bool = True):
         self.link = SequenceObject
@@ -114,38 +127,32 @@ class ImageSequence:
             self.image_objects[i].link_me(image_sequence[j])
             image_sequence[j].link_me(self.image_objects[i])
 
-    def link_tiles(self, sort_by_filename: bool = True):
-        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
-            for image in self.image_objects:
-                # overwrites link with itself
-                image.link_sequences(image.link,
-                                     sort_by_filename)
-                pbar.update(1)
-
-    def tile_sequence(self, **kwargs):
-        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
-            for image in self.image_objects:
-                image.tile_me(**kwargs)
-                pbar.update(1)
-
-    def load_tile_sequence(self, load_image: bool = False, **kwargs):
-        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
-            for image in self.image_objects:
-                image.load_tile_paths(**kwargs)
-                image.load_extracted_images(load_image)
-                pbar.update(1)
-
+    # *___________________________ pre-processing ____________________________*
     def binarise_sequence(self):
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for image in self.image_objects:
                 image.binarise_self()
 
+    # *_________________________________ EDA _________________________________*
     def get_unique_sequence_range(self):
         if not self.unique_range_list:
             self.get_unique_range_list()
 
         self.unique_range = np.unique(list(chain.from_iterable(
             self.unique_range_list)))
+
+    def get_unique_range_list(self):
+        self.unique_range_list = []
+
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for image in self.image_objects:
+                # no option to overwrite ...
+                if image.unique_range is None:
+                    image.extract_unique_range()
+
+                    self.unique_range_list.append(image.unique_range)
+
+                pbar.update(1)
 
     def get_intersection_list(self):
         self.intersection_list = []
@@ -159,19 +166,6 @@ class ImageSequence:
             for image in self.image_objects:
                 combined_image = image.extract_intersection(combined_image)
                 self.intersection_list.append(image.intersection)
-                pbar.update(1)
-
-    def get_unique_range_list(self):
-        self.unique_range_list = []
-
-        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
-            for image in self.image_objects:
-                # no option to overwrite ...
-                if image.unique_range.size == 0:
-                    image.extract_unique_range()
-
-                    self.unique_range_list.append(image.unique_range)
-
                 pbar.update(1)
 
     def get_embolism_percent_list(self):
@@ -188,8 +182,7 @@ class ImageSequence:
     def get_has_embolism_list(self):
         self.has_embolism_list = []
 
-        with tqdm(total=len(self.image_objects),
-                  file=sys.stdout) as pbar:
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for image in self.image_objects:
                 if image.has_embolism is None:
                     image.extract_has_embolism()
@@ -197,6 +190,7 @@ class ImageSequence:
                 self.has_embolism_list.append(image.has_embolism)
                 pbar.update(1)
 
+    # *______________________________ utilities ______________________________*
     def get_eda_dataframe(self, options, csv_name: str = None):
         output_dict = {"names": list(map(
             lambda image: image.path.rsplit("/", 1)[1], self.image_objects))}
@@ -246,12 +240,8 @@ class ImageSequence:
 
         return output_df
 
-    def plot_profile(self, **kwargs):
-        plot_embolism_profile(self.embolism_percent_list,
-                              self.intersection_list, **kwargs)
-
-    def get_databunch_dataframe(self, lseq, mseq,
-                                embolism_only: bool = False,
+    @abstractmethod
+    def get_databunch_dataframe(self, lseq, mseq, embolism_only: bool = False,
                                 csv_name: str = None):
 
         output_dict = {"leaf_names":
@@ -277,12 +267,70 @@ class ImageSequence:
 
         return output_df, folder_path
 
+    def unload_extracted_images(self):
+        for image in self.image_objects:
+            image.image_array = None
 
-class LeafSequence(ImageSequence):
-    def extract_changed_leaves(self, output_path: str, dif_len: int = 1,
-                               overwrite: bool = False,
-                               combination_function=
-                               ImageChops.subtract_modulo):
+    def sort_image_objects_by_filename(self):
+        self.image_objects = sorted(self.image_objects,
+                                    key=lambda image: image.path)
+
+    def plot_profile(self, **kwargs):
+        plot_embolism_profile(self.embolism_percent_list,
+                              self.intersection_list, **kwargs)
+
+
+# *---------------------------------- Mixin ----------------------------------*
+class _CurveSequenceMixin:
+    """
+    Adds functions to allow curve sequences to operate at a tile level
+    """
+    # *__________________ tiling & loading | linking Tiles ___________________*
+    def tile_sequence(self, **kwargs):
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for image in self.image_objects:
+                image.tile_me(**kwargs)
+                pbar.update(1)
+
+    def load_tile_sequence(self, load_image: bool = False, **kwargs):
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for image in self.image_objects:
+                image.load_tile_paths(**kwargs)
+                image.load_extracted_images(load_image)
+                pbar.update(1)
+
+    def link_tiles(self, sort_by_filename: bool = True):
+        # Requires images to be linked
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for image in self.image_objects:
+                if image.link is None:
+                    LOGGER.debug(f"Image {image.path} was not linked")
+                    raise Exception(f"Error image {image.path} was not "
+                                    "linked...")
+
+                # overwrites link with itself
+                image.link_sequences(image.link, sort_by_filename)
+                pbar.update(1)
+
+
+# *----------------------------- Implementation ------------------------------*
+# *__________________________________ Leaf ___________________________________*
+class LeafSequence(_CurveSequenceMixin, _ImageSequence):
+    """
+    A sequence of full size Leaf Images
+    """
+
+    def __init__(self, folder_path=None, filename_pattern=None,
+                 file_list: List[str] = None, creation_mode: bool = False):
+        _ImageSequence.__init__(self, folder_path, filename_pattern,
+                                file_list, creation_mode)
+        if self.num_files == 0:
+            LOGGER.warning("The file list is empty")
+
+    # *____________________________ extraction ______________________________*
+    def extract_changed_leaves(
+            self, output_path: str, dif_len: int = 1, overwrite: bool = False,
+            combination_function=ImageChops.subtract_modulo):
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
         Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 
@@ -291,6 +339,7 @@ class LeafSequence(ImageSequence):
             step_size = 1
         else:
             step_size = dif_len
+
         placeholder_size = floor(log10(self.num_files)) + 1
 
         with tqdm(total=len(self.file_list) - dif_len,
@@ -298,20 +347,24 @@ class LeafSequence(ImageSequence):
             for i in range(0, self.num_files - step_size):
                 if dif_len != 0:
                     old_image = self.file_list[i]
+
                 new_image = self.file_list[i + step_size]
 
                 final_filename = utilities.create_file_name(
                     output_folder_path, output_file_name, i, placeholder_size)
 
-                self.image_objects.append(
-                    Leaf(parents=[old_image, new_image]))
+                self.image_objects.append(Leaf(parents=[old_image, new_image],
+                                               sequence_parent=self))
                 self.image_objects[i].extract_me(
                     final_filename, combination_function, overwrite)
+
                 pbar.update(1)
 
+    # *_______________________________ loading _______________________________*
     def load_extracted_images(self, load_image: bool = False):
         super().load_extracted_images(Leaf, load_image)
 
+    # *_____________________________ prediction ______________________________*
     def predict_leaf_sequence(self, model, x_tile_length: int = None,
                               y_tile_length: int = None,
                               memory_saving: bool = True,
@@ -325,6 +378,7 @@ class LeafSequence(ImageSequence):
                                   **kwargs)
                 pbar.update(1)
 
+    # *______________________________ utilities ______________________________*
     def get_databunch_dataframe(self, embolism_only: bool = False,
                                 csv_name: str = None):
         return super().get_databunch_dataframe(lseq=self, mseq=self.link,
@@ -332,25 +386,35 @@ class LeafSequence(ImageSequence):
                                                csv_name=csv_name)
 
 
-class MaskSequence(ImageSequence):
-    def __init__(self, folder_path=None, filename_pattern=None,
-                 file_list: List[str] = None,
-                 mpf_path: str = None, original_images: bool = False):
+# *__________________________________ Mask ___________________________________*
+class MaskSequence(_CurveSequenceMixin, _ImageSequence):
+    """
+    A sequence of full size Mask Images
+    """
+    def __init__(self, mpf_path: str = None,
+                 folder_path=None, filename_pattern=None,
+                 file_list: List[str] = None, creation_mode: bool = False):
         """
 
         :param path:
         :param mpf: multi-page file boolean
         :return:
         """
-        # Two modes either initialised with a multi-page tiff mask or a
-        # folder to a sequence of masks
+        # Adds an additional way to create a sequence object - i.e. using a
+        # multi-page file
         if mpf_path is not None:
-            self.mpf_path = mpf_path
-            super().__init__(original_images=original_images)
-        else:
-            super().__init__(folder_path, filename_pattern, file_list,
-                             original_images=original_images)
+            LOGGER.info(f"Creating a MaskSequence using mpf_path: {mpf_path}")
 
+            self.mpf_path = mpf_path
+            _ImageSequence.__init__(self, creation_mode=creation_mode)
+        else:
+            _ImageSequence.__init__(self, folder_path, filename_pattern,
+                                    file_list, creation_mode=creation_mode)
+
+            if self.num_files == 0:
+                LOGGER.warning("The file list is empty")
+
+    # *_____________________________ extraction ______________________________*
     def extract_mask_from_multipage(self, output_path: str,
                                     overwrite: bool = False):
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
@@ -383,9 +447,11 @@ class MaskSequence(ImageSequence):
                                                   overwrite)
                 pbar.update(1)
 
+    # *_______________________________ loading _______________________________*
     def load_extracted_images(self, load_image: bool = False):
         super().load_extracted_images(Mask, load_image)
 
+    # *______________________________ utilities ______________________________*
     def get_databunch_dataframe(self, embolism_only: bool = False,
                                 csv_name: str = None):
         return super().get_databunch_dataframe(lseq=self.link, mseq=self,
@@ -393,37 +459,167 @@ class MaskSequence(ImageSequence):
                                                csv_name=csv_name)
 
 
-###############################################################################
-class Image(ImageSequence):
-    # Should this have a link to a sequence_parent?
-    embolism_percent = None
-    unique_range = None
-    image_array = None
-    parents = []
-    link = None
-
-    def __init__(self, path=None, file_list: List[str] = None):
+# *================================= Images ==================================*
+# *----------------------------- Abstract Class ------------------------------*
+class _Image(ABC):
+    """
+    Abstract Image class
+    """
+    def __init__(self, path=None, sequence_parent=None):
         self.path = path
+        self.sequence_parent = sequence_parent
+
         self.image_objects = []
+        self.image_array = None
+        self.link = None
+
         self.has_embolism = None
         self.intersection = None
+        self.embolism_percent = None
+        self.unique_range = np.array([])
 
-        super().__init__(file_list=file_list)
-
-    def __str__(self):
-        return f"This object is a {self.__class__.__name__}"
-
+    # *__________________________ loading | linking __________________________*
     def load_image(self):
         self.image_array = np.array(PIL.Image.open(self.path))
 
+    def link_me(self, image):
+        self.link = image
+
+    # *___________________________ pre-processing ____________________________*
+    @abstractmethod
+    def binarise_self(self, image: np.array):
+        return binarise_image(image)
+
+    # *_________________________________ EDA _________________________________*
+    @abstractmethod
+    def extract_embolism_percent(self, image: np.array,
+                                 embolism_px: int = 255):
+        self.embolism_percent = (np.count_nonzero(image == embolism_px) /
+                                 image.size)
+        return self.embolism_percent
+
+    @abstractmethod
+    def extract_unique_range(self, image: np.array):
+        self.unique_range = np.unique(image)
+
+        return self.unique_range
+
+    @abstractmethod
+    def extract_intersection(self, image: np.array, combined_image: np.array):
+        """
+        Calculates the intersection between the current mask and all embolisms
+        contained in previous masks
+        :param image: np.array of a mask
+        :param combined_image: np.array of a combined mask
+        :return: the intersection as a % of the image size and an updated
+        combined image
+        """
+        self.intersection = np.count_nonzero((combined_image == 255) & (
+                image == 255))
+        self.intersection = (self.intersection / image.size)
+
+        combined_image[image == 255] = 255
+
+        return combined_image
+
+    def extract_has_embolism(self, embolism_px: int = 255):
+        if self.embolism_percent > 0:
+            self.has_embolism = True
+        elif embolism_px in self.unique_range:
+            self.has_embolism = True
+        else:
+            self.has_embolism = False
+
+    # *______________________________ utilities ______________________________*
     def show(self):
         if self.image_array is not None:
             plt.imshow(self.image_array, cmap="gray")
             plt.show()
         else:
-            LOGGER.info("Please load the image first")
+            raise Exception("Please load the image first")
 
-    def tile_me(self, TileClass, length_x: int, stride_x: int, length_y: int,
+    def __str__(self):
+        return f"This object is a {self.__class__.__name__}"
+
+
+# *--------------------- Common Function Implementation ----------------------*
+# *__________________________________ Leaf ___________________________________*
+class _LeafImage(_Image):
+    """
+    Contains implementations of abstract functions from _Image that apply to
+    images of leafs, these functions are common between both full size
+    images and tiles
+    """
+    def __init__(self, path=None, sequence_parent=None):
+        super().__init__(path, sequence_parent)
+        self.prediction_array = np.array([])
+
+    # *___________________________ pre-processing ____________________________*
+    def binarise_self(self, prediction):
+        if prediction:
+            self.prediction_array = super().binarise_self(
+                self.prediction_array)
+        else:
+            self.image_array = super().binarise_self(self.image_array)
+
+    # *_________________________________ EDA _________________________________*
+    def extract_embolism_percent(self, prediction, embolism_px: int = 255):
+        if prediction:
+            return super().extract_embolism_percent(self.prediction_array,
+                                                    embolism_px)
+        else:
+            return super().extract_embolism_percent(self.image_array,
+                                                    embolism_px)
+
+    def extract_unique_range(self, prediction):
+        if prediction:
+            return super().extract_unique_range(self.prediction_array)
+        else:
+            return super().extract_unique_range(self.image_array)
+
+    def extract_intersection(self, prediction, combined_image):
+        if prediction:
+            return super().extract_intersection(self.prediction_array,
+                                                combined_image)
+        else:
+            return super().extract_intersection(self.image_array,
+                                                combined_image)
+
+
+# *__________________________________ Mask ___________________________________*
+class _MaskImage(_Image):
+    """
+     Contains implementations of abstract functions from _Image that apply to
+    images of masks, these functions are common between both full size
+    images and tiles
+    """
+    def __init__(self, path=None, sequence_parent=None):
+        super().__init__(path, sequence_parent)
+
+    # *___________________________ pre-processing ____________________________*
+    def binarise_self(self):
+            self.image_array = super().binarise_self(self.image_array)
+
+    # *_________________________________ EDA _________________________________*
+    def extract_unique_range(self):
+        super().extract_unique_range(self.image_array)
+
+    def extract_embolism_percent(self):
+        super().extract_embolism_percent(self.image_array)
+
+    def extract_intersection(self, combined_image):
+        return super().extract_intersection(self.image_array, combined_image)
+
+
+# *---------------------------------- Mixin ----------------------------------*
+class _FullImageMixin:
+    """
+    Allows a full leaf to be split into tiles and load a sequence of Tiles,
+    the functions add to both _Image and _ImageSequence functionality
+    """
+    # *_______________________________ tiling ________________________________*
+    def tile_me(self, TileClass, length_x: int, stride_x: int,
+                length_y: int,
                 stride_y: int, output_path: str = None):
 
         if output_path is None:
@@ -432,7 +628,8 @@ class Image(ImageSequence):
                 output_folder_path,
                 "../chips-" + str.lower(self.__class__.__name__))
         else:
-            output_folder_path, output_file_name = output_path.rsplit("/", 1)
+            output_folder_path, output_file_name = output_path.rsplit("/",
+                                                                      1)
 
         if self.image_array is None:
             self.load_image()
@@ -454,15 +651,12 @@ class Image(ImageSequence):
                     output_folder_path, output_file_name, counter,
                     placeholder_size)
 
-                self.image_objects.append(TileClass(parent=self,
+                self.image_objects.append(TileClass(sequence_parent=self,
                                                     path=final_filename))
                 self.image_objects[counter].create_tile(
                     length_x, length_y, x_range, y_range, final_filename)
 
                 counter += 1
-
-    def link_me(self, image):
-        self.link = image
 
     def load_tile_paths(self, folder_path: str = None,
                         filename_pattern: str = None):
@@ -470,67 +664,38 @@ class Image(ImageSequence):
         if folder_path is None and filename_pattern is None:
             folder_path, filename_pattern = self.path.rsplit("/", 1)
             folder_path = os.path.join(
-                folder_path, "../chips-" + str.lower(self.__class__.__name__))
+                folder_path,
+                "../chips-" + str.lower(self.__class__.__name__))
             filename_pattern = filename_pattern.rsplit(".")[0] + "*"
 
-        self.file_list = sorted([f for f in glob(
-            folder_path + "/" + filename_pattern, recursive=True)])
+        self.file_list = sorted([
+            f for f in glob(folder_path + "/" + filename_pattern,
+                            recursive=True)])
 
         self.num_files = len(self.file_list)
 
-    def load_extracted_images(self, load_image: bool = False):
-        ImageSequence.load_extracted_images(self, Tile, load_image)
 
-    def extract_embolism_percent(self, image: np.array,
-                                 embolism_px: int = 255):
-        self.embolism_percent = (np.count_nonzero(image == embolism_px) /
-                                 image.size)
-
-    def extract_has_embolism(self, embolism_px: int = 255):
-        if self.embolism_percent > 0:
-            self.has_embolism = True
-        elif embolism_px in self.unique_range:
-            self.has_embolism = True
-        else:
-            self.has_embolism = False
-
-    def extract_unique_range(self, image: np.array):
-        self.unique_range = np.unique(image)
-
-    def extract_intersection(self, image: np.array, combined_image: np.array):
-        """
-        Calculates the intersection between the current mask and all embolisms
-        contained in previous masks
-        :param image: np.array of a mask
-        :param combined_image: np.array of a combined mask
-        :return: the intersection as a % of the image size and an updated
-        combined image
-        """
-        self.intersection = np.count_nonzero((combined_image == 255) & (
-                image == 255))
-        self.intersection = (self.intersection / image.size)
-
-        combined_image[image == 255] = 255
-
-        return combined_image
-
-
-class Leaf(Image, LeafSequence):
-    def __init__(self, path=None, parents=None, mask_instance=None):
+# *----------------------------- Implementation ------------------------------*
+# *__________________________________ Leaf ___________________________________*
+class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
+    """
+    A full Leaf Image
+    """
+    def __init__(self, path=None, sequence_parent=None, parents=None,
+                 folder_path=None, filename_pattern=None,
+                 file_list: List[str] = None):
         # Can create a Leaf using parents or path
-        if path is not None:
-            super().__init__(path)
+        # Issue with using super is passing the arguments ... could find a
+        # way to use kwargs
+        _LeafImage.__init__(self, path, sequence_parent)
+        _ImageSequence.__init__(self, folder_path, filename_pattern,
+                                file_list)
+
+        # refers to the paths of the original leaf images
         if parents is not None:
             self.parents = parents
 
-        if mask_instance is not None:
-            self.mask_instance = mask_instance
-
-        self.prediction_array = np.array([])
-
-    def link_mask(self, mask_instance):
-        self.mask_instance = mask_instance
-
+    # *_____________________________ extraction ______________________________*
     def extract_me(self, filepath: os.path,
                    combination_function=ImageChops.subtract_modulo,
                    overwrite: bool = False):
@@ -559,30 +724,17 @@ class Leaf(Image, LeafSequence):
         self.image_array = np.array(combined_image)
         self.path = filepath
 
+    # *__________________________ loading | linking __________________________*
+    def load_extracted_images(self, load_image: bool = False):
+        _ImageSequence.load_extracted_images(self, LeafTile, load_image)
+
+    # *_______________________________ tiling ________________________________*
     def tile_me(self, length_x: int, stride_x: int, length_y: int,
                 stride_y: int, output_path: str = None):
         super().tile_me(LeafTile, length_x, stride_x, length_y, stride_y,
                         output_path)
 
-    def extract_embolism_percent(self):
-        super().extract_embolism_percent(self.prediction_array)
-
-    def extract_unique_range(self):
-        super().extract_unique_range(self.image_array)
-
-    def binarise_self(self, prediction):
-        if prediction:
-            self.prediction_array = binarise_image(self.prediction_array)
-        else:
-            self.image_array = binarise_image(self.image_array)
-
-    def extract_intersection(self, combined_image):
-        return super().extract_intersection(self.prediction_array,
-                                            combined_image)
-
-    def load_extracted_images(self, load_image: bool = False):
-        ImageSequence.load_extracted_images(self, LeafTile, load_image)
-
+    # *_____________________________ prediction ______________________________*
     def predict_leaf(self, model, x_tile_length: int = None,
                      y_tile_length: int = None, memory_saving: bool = True,
                      overwrite: bool = False, save_prediction: bool = True,
@@ -606,7 +758,7 @@ class Leaf(Image, LeafSequence):
 
             for x_range in chip_range(0, x_length, x_tile_length,
                                       x_tile_length):
-                temp_tile = LeafTile(parent=self)
+                temp_tile = LeafTile(sequence_parent=self)
                 temp_tile.create_tile(x_tile_length, y_tile_length,
                                       x_range, y_range)
 
@@ -652,14 +804,28 @@ class Leaf(Image, LeafSequence):
         if memory_saving:
             self.image_array = None
 
+    # *______________________________ utilities ______________________________*
+    def get_databunch_dataframe(self, embolism_only: bool = False,
+                                csv_name: str = None):
+        return super().get_databunch_dataframe(lseq=self,
+                                               mseq=self.link,
+                                               embolism_only=embolism_only,
+                                               csv_name=csv_name)
 
-class Mask(Image, MaskSequence):
-    def __init__(self, path=None, sequence_parent=None):
-        if path is not None:
-            super().__init__(path)
-        if sequence_parent is not None:
-            self.sequence_parent = sequence_parent
 
+# *__________________________________ Mask ___________________________________*
+class Mask(_FullImageMixin, _MaskImage, _ImageSequence):
+    """
+    A full Mask Image
+    """
+    def __init__(self, path=None, sequence_parent=None,
+                 folder_path=None, filename_pattern=None,
+                 file_list: List[str] = None):
+        _MaskImage.__init__(self, path, sequence_parent)
+        _ImageSequence.__init__(self, folder_path, filename_pattern,
+                                file_list)
+
+    # *_____________________________ extraction ______________________________*
     def create_mask(self, filepath: os.path, image: PIL.Image,
                     overwrite: bool = False, binarise: bool = False):
         self.image_array = np.array(image)
@@ -683,43 +849,43 @@ class Mask(Image, MaskSequence):
 
             self.path = filepath
 
+    # *__________________________ loading | linking __________________________*
+    def load_extracted_images(self, load_image: bool = False):
+        _ImageSequence.load_extracted_images(self, MaskTile, load_image)
+
+    # *_______________________________ tiling ________________________________*
     def tile_me(self, length_x: int, stride_x: int, length_y: int,
                 stride_y: int, output_path: str = None):
-        super().tile_me(Tile, length_x, stride_x, length_y, stride_y,
+        super().tile_me(MaskTile, length_x, stride_x, length_y, stride_y,
                         output_path)
 
-    def extract_unique_range(self):
-        super().extract_unique_range(self.image_array)
-
-    def extract_embolism_percent(self):
-        super().extract_embolism_percent(self.image_array)
-
-    def binarise_self(self):
-        self.image_array = binarise_image(self.image_array)
-
-    def extract_intersection(self, combined_image):
-        return super().extract_intersection(self.image_array, combined_image)
+    # *______________________________ utilities ______________________________*
+    def get_databunch_dataframe(self, embolism_only: bool = False,
+                                csv_name: str = None):
+        return super().get_databunch_dataframe(lseq=self.link, mseq=self,
+                                               embolism_only=embolism_only,
+                                               csv_name=csv_name)
 
 
-class Tile(Image):
-
-    def __init__(self, path=None, parent=None):
-        if path is not None:
-            super().__init__(path)
-        if parent is not None:
-            self.parent = parent  # parent determines the type
-
+# *================================== Tiles ==================================*
+# *---------------------------------- Mixin ----------------------------------*
+class _TileMixin:
+    """
+    Adds the ability for a Tile object to create a tile from it's parent's
+    image array
+    """
+    def __init__(self):
         self.padded = False
-        self.image_array = None
 
     def create_tile(self,
                     length_x: int, length_y: int,
                     x_range: Tuple[int, int],
                     y_range: Tuple[int, int],
                     filepath: str = None,
-                    overwrite: bool = False, ):
+                    overwrite: bool = False):
 
-        image_chip = chip_image(self.parent.image_array, x_range, y_range)
+        image_chip = chip_image(self.sequence_parent.image_array,
+                                x_range, y_range)
 
         ychip_length = image_chip.shape[0]  # rows = y
         xchip_length = image_chip.shape[1]  # cols = x
@@ -746,21 +912,27 @@ class Tile(Image):
 
         self.image_array = image_chip
 
-    def extract_embolism_percent(self):
-        super().extract_embolism_percent(self.image_array)
 
-    def extract_unique_range(self):
-        super().extract_unique_range(self.image_array)
+# *----------------------------- Implementation ------------------------------*
+# *__________________________________ Mask ___________________________________*
+class MaskTile(_TileMixin, _MaskImage):
+    def __init__(self, path=None, sequence_parent=None):
+        _MaskImage.__init__(self, path, sequence_parent)
+        _TileMixin.__init__(self)
 
 
-class LeafTile(Tile):
-    def __init__(self, path=None, parent=None):
-        super().__init__(path, parent)
-        self.prediction_array = None
+# *__________________________________ Leaf ___________________________________*
+class LeafTile(_TileMixin, _LeafImage):
+    def __init__(self, path=None, sequence_parent=None):
+        _LeafImage.__init__(self, path, sequence_parent)
+        _TileMixin.__init__(self)
 
+    # *_____________________________ prediction ______________________________*
     def predict_tile(self, model, memory_saving: bool = True, **kwargs):
         """
 
+        :param model:
+        :param memory_saving:
         :param prediction_wrapper: should take in an image_tile
         :return:
         """
@@ -775,9 +947,3 @@ class LeafTile(Tile):
             self.prediction_array = prediction_array
 
         return prediction_array
-
-    def extract_unique_range(self):
-        super().extract_unique_range(self.prediction_array)
-
-    def extract_embolism_percent(self):
-        super().extract_embolism_percent(self.prediction_array)
