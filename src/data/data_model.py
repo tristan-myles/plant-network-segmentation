@@ -312,6 +312,44 @@ class _CurveSequenceMixin:
                 image.link_sequences(image.link, sort_by_filename)
                 pbar.update(1)
 
+    def get_tile_databunch_df(self, lseq, mseq, use_lseq: bool,
+                              embolism_only: bool = False,
+                              csv_name: str = None):
+        databunch_df_list = []
+        folder_list = []
+
+        lseq.load_tile_sequence()
+        mseq.load_tile_sequence()
+
+        if use_lseq:
+            seq = lseq
+        else:
+            seq = mseq
+
+        seq.link_tiles()
+
+        for i, image in enumerate(seq.image_objects):
+            if embolism_only:
+                mask_image = mseq.image_objects[i]
+                mask_image.load_extracted_images(load_image=True)
+                mask_image.get_embolism_percent_list()
+                mask_image.get_has_embolism_list()
+                # To save memory
+                mask_image.unload_extracted_images()
+
+            df, folder_path = image.get_databunch_dataframe(embolism_only)
+            folder_list.append(folder_path)
+
+            df["folder_path"] = folder_path
+            databunch_df_list.append(df)
+
+        full_databunch_df = pd.concat(databunch_df_list)
+
+        if csv_name:
+            full_databunch_df.to_csv(csv_name)
+
+        return full_databunch_df, folder_list
+
 
 # *----------------------------- Implementation ------------------------------*
 # *__________________________________ Leaf ___________________________________*
@@ -385,6 +423,12 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
                                                embolism_only=embolism_only,
                                                csv_name=csv_name)
 
+    def get_tile_databunch_df(self, mseq, embolism_only: bool = False,
+                              csv_name: str = None):
+        super().get_tile_databunch_df(lseq=self, mseq=mseq, use_lseq=True,
+                                      embolism_only=embolism_only,
+                                      csv_name=csv_name)
+
 
 # *__________________________________ Mask ___________________________________*
 class MaskSequence(_CurveSequenceMixin, _ImageSequence):
@@ -457,6 +501,12 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
         return super().get_databunch_dataframe(lseq=self.link, mseq=self,
                                                embolism_only=embolism_only,
                                                csv_name=csv_name)
+
+    def get_tile_databunch_df(self, lseq, embolism_only: bool = False,
+                              csv_name: str = None):
+        super().get_tile_databunch_df(lseq=lseq, mseq=self, use_lseq=False,
+                                      embolism_only=embolism_only,
+                                      csv_name=csv_name)
 
 
 # *================================= Images ==================================*
