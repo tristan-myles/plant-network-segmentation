@@ -349,6 +349,34 @@ class _CurveSequenceMixin:
 
         return full_databunch_df, folder_list
 
+    def get_tile_eda_df(self, options, csv_name: str = None):
+        self.load_tile_sequence()
+        self.link.load_tile_sequence()
+
+        # Requires sequence to be linked
+        if options["linked_filename"]:
+            self.link_tiles()
+
+        eda_df_list = []
+
+        for i, image in enumerate(self.image_objects):
+            for tile in image.image_objects:
+                # image.load_extracted_images(load_image=True) overwrite the
+                # existing link
+                tile.load_image()
+
+            df = image.get_eda_dataframe(options)
+            eda_df_list.append(df)
+
+            self.unload_extracted_images()
+
+        full_eda_df = pd.concat(eda_df_list)
+
+        if csv_name:
+            full_eda_df.to_csv(csv_name)
+
+        return full_eda_df
+
 
 # *----------------------------- Implementation ------------------------------*
 # *__________________________________ Leaf ___________________________________*
