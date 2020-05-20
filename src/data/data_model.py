@@ -76,7 +76,8 @@ class _ImageSequence(ABC):
     # *______________________ loading | linking Images _______________________*
     # abstract due to signature mismatch in child classes
     @abstractmethod
-    def load_extracted_images(self, ImageClass, load_image: bool = False):
+    def load_extracted_images(self, ImageClass, load_image: bool = False,
+                              disable_pb: bool = False):
         """
         Instantiates using the file_list attribute objects of class
         ImageClass and appends to image_objects.
@@ -95,10 +96,13 @@ class _ImageSequence(ABC):
 
         LOGGER.debug("Erasing existing image objects")
         self.image_objects = []
-        for i, filename in enumerate(self.file_list):
-            self.image_objects.append(ImageClass(filename))
-            if load_image:
-                self.image_objects[i].load_image()
+        with tqdm(total=len(self.file_list), file=sys.stdout,
+                  disable=disable_pb) as pbar:
+            for i, filename in enumerate(self.file_list):
+                self.image_objects.append(ImageClass(filename))
+                if load_image:
+                    self.image_objects[i].load_image()
+                pbar.update(1)
 
     def link_sequences(self, SequenceObject, sort_by_filename: bool = True):
         self.link = SequenceObject
@@ -128,10 +132,12 @@ class _ImageSequence(ABC):
             image_sequence[j].link_me(self.image_objects[i])
 
     # *___________________________ pre-processing ____________________________*
-    def binarise_sequence(self):
-        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+    def binarise_sequence(self, disable_pb=False):
+        with tqdm(total=len(self.image_objects), file=sys.stdout,
+                  disable=disable_pb) as pbar:
             for image in self.image_objects:
                 image.binarise_self()
+                pbar.update(1)
 
     # *_________________________________ EDA _________________________________*
     def get_unique_sequence_range(self):
@@ -141,10 +147,11 @@ class _ImageSequence(ABC):
         self.unique_range = np.unique(list(chain.from_iterable(
             self.unique_range_list)))
 
-    def get_unique_range_list(self):
+    def get_unique_range_list(self, disable_pb: bool = False):
         self.unique_range_list = []
 
-        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+        with tqdm(total=len(self.image_objects), file=sys.stdout,
+                  disable=disable_pb) as pbar:
             for image in self.image_objects:
                 # no option to overwrite ...
                 if image.unique_range.size == 0:
@@ -154,7 +161,7 @@ class _ImageSequence(ABC):
 
                 pbar.update(1)
 
-    def get_intersection_list(self):
+    def get_intersection_list(self, disable_pb: bool = False):
         self.intersection_list = []
 
         image_shape = self.image_objects[0].image_array.shape
@@ -162,16 +169,18 @@ class _ImageSequence(ABC):
         combined_image = np.empty(shape=(image_shape[0], image_shape[1]),
                                   dtype='object')
 
-        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+        with tqdm(total=len(self.image_objects), file=sys.stdout,
+                  disable=disable_pb) as pbar:
             for image in self.image_objects:
                 combined_image = image.extract_intersection(combined_image)
                 self.intersection_list.append(image.intersection)
                 pbar.update(1)
 
-    def get_embolism_percent_list(self):
+    def get_embolism_percent_list(self, disable_pb: bool = False):
         self.embolism_percent_list = []
 
-        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+        with tqdm(total=len(self.image_objects), file=sys.stdout,
+                  disable=disable_pb) as pbar:
             for image in self.image_objects:
                 if image.embolism_percent is None:
                     image.extract_embolism_percent()
@@ -179,10 +188,11 @@ class _ImageSequence(ABC):
                 self.embolism_percent_list.append(image.embolism_percent)
                 pbar.update(1)
 
-    def get_has_embolism_list(self):
+    def get_has_embolism_list(self, disable_pb: bool = False):
         self.has_embolism_list = []
 
-        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+        with tqdm(total=len(self.image_objects), file=sys.stdout,
+                  disable=disable_pb) as pbar:
             for image in self.image_objects:
                 if image.has_embolism is None:
                     image.extract_has_embolism()
@@ -191,7 +201,8 @@ class _ImageSequence(ABC):
                 pbar.update(1)
 
     # *______________________________ utilities ______________________________*
-    def get_eda_dataframe(self, options, csv_name: str = None):
+    def get_eda_dataframe(self, options, csv_name: str = None,
+                          disable_pb: bool = False):
         output_dict = {"names": list(map(
             lambda image: image.path.rsplit("/", 1)[1], self.image_objects))}
 
@@ -208,28 +219,28 @@ class _ImageSequence(ABC):
         # Unique range
         if options["unique_range"]:
             if not self.unique_range_list:
-                self.get_unique_range_list()
+                self.get_unique_range_list(disable_pb)
 
             output_dict["unique_range"] = self.unique_range_list
 
         # Embolism percentages
         if options["embolism_percent"]:
             if not self.embolism_percent_list:
-                self.get_embolism_percent_list()
+                self.get_embolism_percent_list(disable_pb)
 
             output_dict["embolism_percent"] = self.embolism_percent_list
 
         # Extracting intersections
         if options["intersection"]:
             if not self.intersection_list:
-                self.get_intersection_list()
+                self.get_intersection_list(disable_pb)
 
             output_dict["intersection"] = self.intersection_list
 
             # Extracting intersections
         if options["has_embolism"]:
             if not self.has_embolism_list:
-                self.get_has_embolism_list()
+                self.get_has_embolism_list(disable_pb)
 
             output_dict["has_embolism"] = self.has_embolism_list
 
@@ -296,7 +307,7 @@ class _CurveSequenceMixin:
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for image in self.image_objects:
                 image.load_tile_paths(**kwargs)
-                image.load_extracted_images(load_image)
+                image.load_extracted_images(load_image, disable_pb=True)
                 pbar.update(1)
 
     def link_tiles(self, sort_by_filename: bool = True):
@@ -327,20 +338,24 @@ class _CurveSequenceMixin:
 
         seq.link_tiles()
 
-        for i, image in enumerate(seq.image_objects):
-            if embolism_only:
-                mask_image = mseq.image_objects[i]
-                mask_image.load_extracted_images(load_image=True)
-                mask_image.get_embolism_percent_list()
-                mask_image.get_has_embolism_list()
-                # To save memory
-                mask_image.unload_extracted_images()
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for i, image in enumerate(seq.image_objects):
+                if embolism_only:
+                    mask_image = mseq.image_objects[i]
+                    mask_image.load_extracted_images(load_image=True,
+                                                     disable_pb=True)
+                    mask_image.get_embolism_percent_list(disable_pb=True)
+                    mask_image.get_has_embolism_list(disable_pb=True)
+                    # To save memory
+                    mask_image.unload_extracted_images()
 
-            df, folder_path = image.get_databunch_dataframe(embolism_only)
-            folder_list.append(folder_path)
+                df, folder_path = image.get_databunch_dataframe(embolism_only)
+                folder_list.append(folder_path)
 
-            df["folder_path"] = folder_path
-            databunch_df_list.append(df)
+                df["folder_path"] = folder_path
+                databunch_df_list.append(df)
+
+                pbar.update(1)
 
         full_databunch_df = pd.concat(databunch_df_list)
 
@@ -358,17 +373,19 @@ class _CurveSequenceMixin:
             self.link_tiles()
 
         eda_df_list = []
+        with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
+            for i, image in enumerate(self.image_objects):
+                for tile in image.image_objects:
+                    # image.load_extracted_images(load_image=True) overwrite the
+                    # existing link
+                    tile.load_image()
 
-        for i, image in enumerate(self.image_objects):
-            for tile in image.image_objects:
-                # image.load_extracted_images(load_image=True) overwrite the
-                # existing link
-                tile.load_image()
+                df = image.get_eda_dataframe(options, disable_pb=True)
+                eda_df_list.append(df)
 
-            df = image.get_eda_dataframe(options)
-            eda_df_list.append(df)
+                self.unload_extracted_images()
 
-            self.unload_extracted_images()
+                pbar.update(1)
 
         full_eda_df = pd.concat(eda_df_list)
 
@@ -426,8 +443,9 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
                 pbar.update(1)
 
     # *_______________________________ loading _______________________________*
-    def load_extracted_images(self, load_image: bool = False):
-        super().load_extracted_images(Leaf, load_image)
+    def load_extracted_images(self, load_image: bool = False,
+                              disable_pb: bool = False):
+        super().load_extracted_images(Leaf, load_image, disable_pb)
 
     # *_____________________________ prediction ______________________________*
     def predict_leaf_sequence(self, model, x_tile_length: int = None,
@@ -519,8 +537,9 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
                 pbar.update(1)
 
     # *_______________________________ loading _______________________________*
-    def load_extracted_images(self, load_image: bool = False):
-        super().load_extracted_images(Mask, load_image)
+    def load_extracted_images(self, load_image: bool = False,
+                              disable_pb: bool = False):
+        super().load_extracted_images(Mask, load_image, disable_pb)
 
     # *______________________________ utilities ______________________________*
     def get_databunch_dataframe(self, embolism_only: bool = False,
@@ -801,8 +820,10 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
         self.path = filepath
 
     # *__________________________ loading | linking __________________________*
-    def load_extracted_images(self, load_image: bool = False):
-        _ImageSequence.load_extracted_images(self, LeafTile, load_image)
+    def load_extracted_images(self, load_image: bool = False,
+                              disable_pb=False):
+        _ImageSequence.load_extracted_images(self, LeafTile, load_image,
+                                             disable_pb)
 
     # *_______________________________ tiling ________________________________*
     def tile_me(self, length_x: int, stride_x: int, length_y: int,
@@ -926,8 +947,10 @@ class Mask(_FullImageMixin, _MaskImage, _ImageSequence):
             self.path = filepath
 
     # *__________________________ loading | linking __________________________*
-    def load_extracted_images(self, load_image: bool = False):
-        _ImageSequence.load_extracted_images(self, MaskTile, load_image)
+    def load_extracted_images(self, load_image: bool = False,
+                              disable_pb=False):
+        _ImageSequence.load_extracted_images(self, MaskTile, load_image,
+                                             disable_pb)
 
     # *_______________________________ tiling ________________________________*
     def tile_me(self, length_x: int, stride_x: int, length_y: int,
