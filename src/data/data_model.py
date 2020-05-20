@@ -147,7 +147,7 @@ class _ImageSequence(ABC):
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for image in self.image_objects:
                 # no option to overwrite ...
-                if image.unique_range is None:
+                if image.unique_range.size == 0:
                     image.extract_unique_range()
 
                     self.unique_range_list.append(image.unique_range)
@@ -305,8 +305,7 @@ class _CurveSequenceMixin:
             for image in self.image_objects:
                 if image.link is None:
                     LOGGER.debug(f"Image {image.path} was not linked")
-                    raise Exception(f"Error image {image.path} was not "
-                                    "linked...")
+                    continue
 
                 # overwrites link with itself
                 image.link_sequences(image.link, sort_by_filename)
@@ -519,7 +518,6 @@ class _Image(ABC):
         self.path = path
         self.sequence_parent = sequence_parent
 
-        self.image_objects = []
         self.image_array = None
         self.link = None
 
