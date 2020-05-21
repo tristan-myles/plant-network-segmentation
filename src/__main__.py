@@ -129,6 +129,42 @@ def extract_tiles_eda_df(mseqs, options, output_path_list, lseqs=None):
         mseq.unload_extracted_images()
 
 
+def extract_full_databunch_df(lseqs, mseqs, output_path_list,
+                               embolism_only=False):
+    for csv_output_path, lseq, mseq in zip(output_path_list, lseqs, mseqs):
+
+        mseq.load_extracted_images(load_image=True)
+        mseq.get_embolism_percent_list()
+        mseq.get_has_embolism_list()
+
+        lseq.link_sequences(mseq)
+
+
+        LOGGER.info(f"Creating DataBunch DataFrame using "
+                    f"{lseq.__class__.__name__} located at {lseq.folder_path} "
+                    f"and {mseq.__class__.__name__} located at"
+                    f" {mseq.folder_path}")
+
+        # get_databunch_dataframe written into of a lseq, i.e. will always
+        # report lseq regardless of whether it is longer or shorter
+        _ = lseq.get_databunch_dataframe(embolism_only, csv_output_path)
+
+
+def extract_tiles_databunch_df(lseqs, mseqs, output_path_list,
+                               embolism_only=False):
+    for csv_output_path, lseq, mseq in zip(output_path_list, lseqs, mseqs):
+
+        lseq.link_sequences(mseq)
+
+        LOGGER.info(f"Creating Tile DataBunch DataFrame using "
+                    f"{lseq.__class__.__name__} located at {lseq.folder_path} "
+                    f"and {mseq.__class__.__name__} located at"
+                    f" {mseq.folder_path}")
+
+        _ = lseq.get_tile_databunch_df(mseq, embolism_only,
+                                       csv_output_path)
+
+
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser("Perform operations using the "
                                      "plant-image-segmentation code base")
@@ -193,6 +229,18 @@ def parse_arguments() -> argparse.Namespace:
         "csv_output_path", help="output paths, if the paths are in the input "
                                 "json enter \"same\"")
     parser_eda_df.add_argument("--tiles", "-t", action="store_true")
+
+    parser_databunch_df = subparsers.add_parser(
+        "databunch_df", help="extract an databunch dataframe")
+    parser_databunch_df.set_defaults(which="databunch_df")
+
+    parser_databunch_df.add_argument(
+        "csv_output_path", help="output paths, if the paths are in the input"
+                                " json enter \"same\"")
+
+    parser_databunch_df.add_argument("--tiles", "-t", action="store_true")
+    parser_databunch_df.add_argument("--embolism_only", "-eo",
+                                     action="store_true")
 
     args = parser.parse_args()
     return args
@@ -277,4 +325,18 @@ if __name__ == "__main__":
             extract_full_eda_df(MSEQS, INPUT_JSON_DICT["eda_df"]["options"],
                                 CSV_OUTPUT_LIST, LSEQS)
 
+    if ARGS.which == "databunch_df":
+        load_image_objects(MSEQS)
+        load_image_objects(LSEQS)
 
+        if ARGS.csv_output_path == "same":
+            CSV_OUTPUT_LIST = INPUT_JSON_DICT["databunch_df"]["output_path"]
+        else:
+            CSV_OUTPUT_LIST = str.split(ARGS.csv_output_path, " ")
+
+        if ARGS.tiles:
+            extract_tiles_databunch_df(
+                LSEQS, MSEQS, CSV_OUTPUT_LIST, ARGS.embolism_only)
+        else:
+            extract_full_databunch_df(
+                LSEQS, MSEQS, CSV_OUTPUT_LIST, ARGS.embolism_only)
