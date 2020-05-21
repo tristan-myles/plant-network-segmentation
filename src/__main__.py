@@ -101,7 +101,7 @@ def plot_mseq_profiles(mseqs):
         mseq.unload_extracted_images()
 
 
-def extract_eda_df(mseqs, options, output_path_list, lseqs=None):
+def extract_full_eda_df(mseqs, options, output_path_list, lseqs=None):
     for i, (mseq, csv_output_path) in enumerate(zip(mseqs, output_path_list)):
         # less memory intensive for images to be loaded here
         LOGGER.info(f"Creating {mseq.num_files} image objects for "
@@ -111,7 +111,20 @@ def extract_eda_df(mseqs, options, output_path_list, lseqs=None):
         if options["linked_filename"]:
             mseq.link_sequences(lseqs[i])
 
-        mseq.get_eda_dataframe(options, csv_output_path)
+        _ = mseq.get_eda_dataframe(options, csv_output_path)
+
+        mseq.unload_extracted_images()
+
+
+def extract_tiles_eda_df(mseqs, options, output_path_list, lseqs=None):
+    for i, (mseq, csv_output_path) in enumerate(zip(mseqs, output_path_list)):
+        LOGGER.info(f"Creating {mseq.num_files} image objects for "
+                    f"{mseq.__class__.__name__} located at {mseq.folder_path}")
+
+        if options["linked_filename"]:
+            mseq.link_sequences(lseqs[i])
+
+        _ = mseq.get_tile_eda_df(options, csv_output_path)
 
         mseq.unload_extracted_images()
 
@@ -175,9 +188,11 @@ def parse_arguments() -> argparse.Namespace:
     parser_eda_df = subparsers.add_parser(
         "eda_df", help="extract an eda dataframe")
     parser_eda_df.set_defaults(which="eda_df")
-    parser_eda_df.add_argument("csv_output_path",
-        help="output paths, if the paths are in the input json enter "
-             "\"same\"")
+
+    parser_eda_df.add_argument(
+        "csv_output_path", help="output paths, if the paths are in the input "
+                                "json enter \"same\"")
+    parser_eda_df.add_argument("--tiles", "-t", action="store_true")
 
     args = parser.parse_args()
     return args
@@ -249,8 +264,17 @@ if __name__ == "__main__":
         else:
             CSV_OUTPUT_LIST = str.split(ARGS.csv_output_path, " ")
 
-        if INPUT_JSON_DICT["eda_df"]["options"]:
+
+        if INPUT_JSON_DICT["eda_df"]["options"]["linked_filename"]:
             load_image_objects(LSEQS)
 
-        extract_eda_df(MSEQS, INPUT_JSON_DICT["eda_df"]["options"],
-                       CSV_OUTPUT_LIST, LSEQS)
+        if ARGS.tiles:
+            load_image_objects(MSEQS)
+
+            extract_tiles_eda_df(MSEQS, INPUT_JSON_DICT["eda_df"]["options"],
+                                 CSV_OUTPUT_LIST, LSEQS)
+        else:
+            extract_full_eda_df(MSEQS, INPUT_JSON_DICT["eda_df"]["options"],
+                                CSV_OUTPUT_LIST, LSEQS)
+
+
