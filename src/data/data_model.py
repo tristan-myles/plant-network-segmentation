@@ -104,6 +104,12 @@ class _ImageSequence(ABC):
                     self.image_objects[i].load_image()
                 pbar.update(1)
 
+    def load_image_array(self, disable_pb=False):
+        with tqdm(total=len(self.file_list), file=sys.stdout,
+                  disable=disable_pb) as pbar:
+            for image in self.image_objects:
+                image.load_image()
+
     def link_sequences(self, SequenceObject, sort_by_filename: bool = True):
         self.link = SequenceObject
         image_sequence = SequenceObject.image_objects
@@ -322,7 +328,7 @@ class _CurveSequenceMixin:
                 image.link_sequences(image.link, sort_by_filename)
                 pbar.update(1)
 
-    def get_tile_databunch_df(self, lseq, mseq, use_lseq: bool,
+    def get_tile_databunch_df(self, lseq, mseq,
                               embolism_only: bool = False,
                               csv_name: str = None):
         databunch_df_list = []
@@ -331,21 +337,16 @@ class _CurveSequenceMixin:
         lseq.load_tile_sequence()
         mseq.load_tile_sequence()
 
-        if use_lseq:
-            seq = lseq
-        else:
-            seq = mseq
-
-        seq.link_tiles()
+        lseq.link_tiles()
 
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
-            for i, image in enumerate(seq.image_objects):
+            for image in lseq.image_objects:
                 if embolism_only:
-                    mask_image = mseq.image_objects[i]
-                    mask_image.load_extracted_images(load_image=True,
-                                                     disable_pb=True)
+                    mask_image = image.link
+                    mask_image.load_image_array(disable_pb=True)
                     mask_image.get_embolism_percent_list(disable_pb=True)
                     mask_image.get_has_embolism_list(disable_pb=True)
+
                     # To save memory
                     mask_image.unload_extracted_images()
 
@@ -375,10 +376,7 @@ class _CurveSequenceMixin:
         eda_df_list = []
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for i, image in enumerate(self.image_objects):
-                for tile in image.image_objects:
-                    # image.load_extracted_images(load_image=True) overwrite the
-                    # existing link
-                    tile.load_image()
+                image.load_image_array(disable_pb=True)
 
                 df = image.get_eda_dataframe(options, disable_pb=True)
                 eda_df_list.append(df)
@@ -470,7 +468,7 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
 
     def get_tile_databunch_df(self, mseq, embolism_only: bool = False,
                               csv_name: str = None):
-        super().get_tile_databunch_df(lseq=self, mseq=mseq, use_lseq=True,
+        super().get_tile_databunch_df(lseq=self, mseq=mseq,
                                       embolism_only=embolism_only,
                                       csv_name=csv_name)
 
@@ -550,7 +548,7 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
 
     def get_tile_databunch_df(self, lseq, embolism_only: bool = False,
                               csv_name: str = None):
-        super().get_tile_databunch_df(lseq=lseq, mseq=self, use_lseq=False,
+        super().get_tile_databunch_df(lseq=lseq, mseq=self,
                                       embolism_only=embolism_only,
                                       csv_name=csv_name)
 
