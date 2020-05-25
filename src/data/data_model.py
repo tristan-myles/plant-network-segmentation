@@ -94,7 +94,8 @@ class _ImageSequence(ABC):
                             "not extracted images. This function is not "
                             "applicable...")
 
-        LOGGER.debug("Erasing existing image objects")
+        LOGGER.debug("Erasing existing image objects. If sequences are "
+                     "linked please relink them...")
         self.image_objects = []
         with tqdm(total=len(self.file_list), file=sys.stdout,
                   disable=disable_pb) as pbar:
@@ -276,7 +277,13 @@ class _ImageSequence(ABC):
         folder_path = lseq.image_objects[0].path.rsplit("/", 1)[0]
 
         if embolism_only:
-            output_df = output_df[mseq.has_embolism_list]
+            # it's possible for there to be more mask sequence objects than
+            # leaf sequence - mseq.has_embolism would fail in these cases
+            linked_has_embolism_list = [
+                image.link.has_embolism for image in lseq.image_objects]
+            # only considers images with a corresponding mask which has an
+            # embolism
+            output_df = output_df[linked_has_embolism_list]
 
         # Saving the results
         if csv_name:
