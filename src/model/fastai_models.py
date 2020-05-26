@@ -15,37 +15,49 @@ from src.model.model import Model
 
 
 class FastaiUnetLearner(Model):
-    def __init__(self):
-        self.data = None
+    def __init__(self, data_bunch: vision.data.DataBunch = None):
+        if data_bunch:
+            self.data_bunch = data_bunch
+        else:
+            self.data_bunch = None
+
         self.learn = None
         self.min_grad_lr = None
 
+    def add_databunch(self, data_bunch: vision.data.DataBunch = None):
+        self.data_bunch = data_bunch
+
     def prep_fastai_data(self, paths_df: pd.DataFrame,
-                         leaf_folder_path: str, batch_sizes: int,
+                         leaf_folder_path: str,
+                         batch_sizes: int,
+                         split_func=ItemList.split_from_df,
                          plot: bool = False,
+                         mask_col_name:str = "mask_path",
                          codes: List[int] = [0, 1]):
+
         segmentation_image_list = (SegmentationItemList
-                                   .from_df(paths_df, leaf_folder_path)
-                                   .split_none()
-                                   .label_from_df("mask_path", classes=codes))
+                                   .from_df(paths_df, leaf_folder_path))
+        segmentation_image_list = split_func(segmentation_image_list)
+        segmentation_image_list = segmentation_image_list.label_from_df(
+            mask_col_name, classes=codes)
 
         # Note no transformations
-        data = (segmentation_image_list
-                .databunch(bs=batch_sizes)
-                .normalize(imagenet_stats))
+        data_bunch = (segmentation_image_list
+                      .databunch(bs=batch_sizes)
+                      .normalize(imagenet_stats))
 
         if plot:
-            data.show_batch(rows=2, figsize=(12, 9))
+            data_bunch.show_batch(rows=2, figsize=(10, 7))
             plt.show()
 
-        self.data = data
+        self.data_bunch = data_bunch
 
-    def create_learner(self, data: vision.data.DataBunch = None,
+    def create_learner(self, data_bunch: vision.data.DataBunch = None,
                        model: vision.models = models.resnet18):
-        if data is None:
-            data = self.data
+        if data_bunch is None:
+            data_bunch = self.data_bunch
 
-        self.learn = unet_learner(data, model)
+        self.learn = unet_learner(data_bunch, model)
 
     def train(self, epochs: int, lr: float, save: bool, save_path: str):
         if lr is None:
