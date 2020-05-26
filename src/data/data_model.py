@@ -262,16 +262,16 @@ class _ImageSequence(ABC):
     def get_databunch_dataframe(self, lseq, mseq, embolism_only: bool = False,
                                 csv_name: str = None):
 
-        output_dict = {"leaf_names":
+        output_dict = {"leaf_name":
                            list(map(lambda image: image.path.rsplit("/", 1)[1],
                                     lseq.image_objects)),
-                       "masks": []}
+                       "mask_path": []}
 
         for image in lseq.image_objects:
             if image.link is not None:
-                output_dict["masks"].append(image.link.path)
+                output_dict["mask_path"].append(image.link.path)
             else:
-                output_dict["masks"].append("")
+                output_dict["mask_path"].append("")
 
         output_df = pd.DataFrame(output_dict)
         folder_path = lseq.image_objects[0].path.rsplit("/", 1)[0]
