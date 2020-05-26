@@ -94,7 +94,8 @@ class _ImageSequence(ABC):
                             "not extracted images. This function is not "
                             "applicable...")
 
-        LOGGER.debug("Erasing existing image objects")
+        LOGGER.debug("Erasing existing image objects. If sequences are "
+                     "linked please relink them...")
         self.image_objects = []
         with tqdm(total=len(self.file_list), file=sys.stdout,
                   disable=disable_pb) as pbar:
@@ -103,6 +104,12 @@ class _ImageSequence(ABC):
                 if load_image:
                     self.image_objects[i].load_image()
                 pbar.update(1)
+
+    def load_image_array(self, disable_pb=False):
+        with tqdm(total=len(self.file_list), file=sys.stdout,
+                  disable=disable_pb) as pbar:
+            for image in self.image_objects:
+                image.load_image()
 
     def link_sequences(self, SequenceObject, sort_by_filename: bool = True):
         self.link = SequenceObject
@@ -255,22 +262,28 @@ class _ImageSequence(ABC):
     def get_databunch_dataframe(self, lseq, mseq, embolism_only: bool = False,
                                 csv_name: str = None):
 
-        output_dict = {"leaf_names":
+        output_dict = {"leaf_name":
                            list(map(lambda image: image.path.rsplit("/", 1)[1],
                                     lseq.image_objects)),
-                       "masks": []}
+                       "mask_path": []}
 
         for image in lseq.image_objects:
             if image.link is not None:
-                output_dict["masks"].append(image.link.path)
+                output_dict["mask_path"].append(image.link.path)
             else:
-                output_dict["masks"].append("")
+                output_dict["mask_path"].append("")
 
         output_df = pd.DataFrame(output_dict)
         folder_path = lseq.image_objects[0].path.rsplit("/", 1)[0]
 
         if embolism_only:
-            output_df = output_df[mseq.has_embolism_list]
+            # it's possible for there to be more mask sequence objects than
+            # leaf sequence - mseq.has_embolism would fail in these cases
+            linked_has_embolism_list = [
+                image.link.has_embolism for image in lseq.image_objects]
+            # only considers images with a corresponding mask which has an
+            # embolism
+            output_df = output_df[linked_has_embolism_list]
 
         # Saving the results
         if csv_name:
@@ -322,7 +335,7 @@ class _CurveSequenceMixin:
                 image.link_sequences(image.link, sort_by_filename)
                 pbar.update(1)
 
-    def get_tile_databunch_df(self, lseq, mseq, use_lseq: bool,
+    def get_tile_databunch_df(self, lseq, mseq,
                               embolism_only: bool = False,
                               csv_name: str = None):
         databunch_df_list = []
@@ -331,21 +344,16 @@ class _CurveSequenceMixin:
         lseq.load_tile_sequence()
         mseq.load_tile_sequence()
 
-        if use_lseq:
-            seq = lseq
-        else:
-            seq = mseq
-
-        seq.link_tiles()
+        lseq.link_tiles()
 
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
-            for i, image in enumerate(seq.image_objects):
+            for image in lseq.image_objects:
                 if embolism_only:
-                    mask_image = mseq.image_objects[i]
-                    mask_image.load_extracted_images(load_image=True,
-                                                     disable_pb=True)
+                    mask_image = image.link
+                    mask_image.load_image_array(disable_pb=True)
                     mask_image.get_embolism_percent_list(disable_pb=True)
                     mask_image.get_has_embolism_list(disable_pb=True)
+
                     # To save memory
                     mask_image.unload_extracted_images()
 
@@ -375,10 +383,7 @@ class _CurveSequenceMixin:
         eda_df_list = []
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for i, image in enumerate(self.image_objects):
-                for tile in image.image_objects:
-                    # image.load_extracted_images(load_image=True) overwrite the
-                    # existing link
-                    tile.load_image()
+                image.load_image_array(disable_pb=True)
 
                 df = image.get_eda_dataframe(options, disable_pb=True)
                 eda_df_list.append(df)
@@ -470,7 +475,7 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
 
     def get_tile_databunch_df(self, mseq, embolism_only: bool = False,
                               csv_name: str = None):
-        super().get_tile_databunch_df(lseq=self, mseq=mseq, use_lseq=True,
+        super().get_tile_databunch_df(lseq=self, mseq=mseq,
                                       embolism_only=embolism_only,
                                       csv_name=csv_name)
 
@@ -550,7 +555,7 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
 
     def get_tile_databunch_df(self, lseq, embolism_only: bool = False,
                               csv_name: str = None):
-        super().get_tile_databunch_df(lseq=lseq, mseq=self, use_lseq=False,
+        super().get_tile_databunch_df(lseq=lseq, mseq=self,
                                       embolism_only=embolism_only,
                                       csv_name=csv_name)
 
