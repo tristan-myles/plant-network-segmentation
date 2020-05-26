@@ -114,7 +114,8 @@ class FastaiUnetLearner(Model):
 
                 if ((y_range[1] - y_range[0]) != y_tile_length or
                         (x_range[1] - x_range[0]) != x_tile_length):
-                    pred_tile = pred_tile[0:(y_range[1]-y_range[0]), 0:(x_range[1]-x_range[0])]
+                    pred_tile = pred_tile[0:(y_range[1]-y_range[0]),
+                                0:(x_range[1]-x_range[0])]
 
                 prediction[y_range[0]:y_range[1], x_range[0]:x_range[1]] = \
                     pred_tile
@@ -149,28 +150,3 @@ class FastaiUnetLearner(Model):
             prediction[0].show(ax=axs[5], title='mask only',
                                alpha=1., cmap="gray")
         plt.show()
-
-
-if __name__ == "__main__":
-    fai_unet_learner = FastaiUnetLearner()
-
-    temp_df = pd.read_csv("/home/tristan/Documents/MSc_Dissertation/"
-                          "plant-network-segmentation/out_leaf_train.csv")
-    temp_df.leaf_name = temp_df.leaf_name.apply(
-        lambda x: str.rsplit(x, "/", 1)[1])
-    paths_df = pd.DataFrame({"path": temp_df.leaf_name[2408: 2471],
-                             "mask_path": temp_df.mask_name[2408: 2471]})
-
-    fai_unet_learner.prep_fastai_data(
-        paths_df,
-        "/mnt/disk3/thesis/data/1_qk3/tristan/diff-chips/",
-        4, plot=True)
-    fai_unet_learner.create_learner()
-
-    fai_unet_learner.load_weights(
-        "/home/tristan/Documents/MSc_Dissertation/plant-network-segmentation"
-        "/mini_train")
-    prediction = fai_unet_learner.predict_tile(tile_number=4)
-    fai_unet_learner.plot_leaf(4, True, prediction)
-
-    fai_unet_learner.predict_full_leaf(2616, 1949, 300, 300)
