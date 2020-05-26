@@ -59,12 +59,19 @@ class FastaiUnetLearner(Model):
 
         self.learn = unet_learner(data_bunch, model)
 
-    def train(self, epochs: int, lr: float, save: bool, save_path: str):
+    def train(self, epochs: int, save: bool, save_path: str = None,
+              lr: float = None):
         if lr is None:
-            lr = self.min_grad_lr
+            if self.min_grad_lr:
+                lr = self.min_grad_lr
+            else:
+                raise ValueError("No lr provided and min_grad_lr "
+                                 "is also none")
         self.learn.fit_one_cycle(epochs, lr)
+
         if save:
-            self.learn.save(save_path)
+            self.learn.save(save_path, return_path=True)
+            self.learn.export(f'{save_path}.pkl')
 
     def find_lr(self, learn: vision.learner):
         self.learn.lr_find()
