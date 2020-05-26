@@ -15,44 +15,63 @@ from src.model.model import Model
 
 
 class FastaiUnetLearner(Model):
-    def __init__(self):
-        self.data = None
+    def __init__(self, data_bunch: vision.data.DataBunch = None):
+        if data_bunch:
+            self.data_bunch = data_bunch
+        else:
+            self.data_bunch = None
+
         self.learn = None
         self.min_grad_lr = None
 
+    def add_databunch(self, data_bunch: vision.data.DataBunch = None):
+        self.data_bunch = data_bunch
+
     def prep_fastai_data(self, paths_df: pd.DataFrame,
-                         leaf_folder_path: str, batch_sizes: int,
+                         leaf_folder_path: str,
+                         batch_sizes: int,
+                         split_func=ItemList.split_from_df,
                          plot: bool = False,
+                         mask_col_name:str = "mask_path",
                          codes: List[int] = [0, 1]):
+
         segmentation_image_list = (SegmentationItemList
-                                   .from_df(paths_df, leaf_folder_path)
-                                   .split_none()
-                                   .label_from_df("mask_path", classes=codes))
+                                   .from_df(paths_df, leaf_folder_path))
+        segmentation_image_list = split_func(segmentation_image_list)
+        segmentation_image_list = segmentation_image_list.label_from_df(
+            mask_col_name, classes=codes)
 
         # Note no transformations
-        data = (segmentation_image_list
-                .databunch(bs=batch_sizes)
-                .normalize(imagenet_stats))
+        data_bunch = (segmentation_image_list
+                      .databunch(bs=batch_sizes)
+                      .normalize(imagenet_stats))
 
         if plot:
-            data.show_batch(rows=2, figsize=(12, 9))
+            data_bunch.show_batch(rows=2, figsize=(10, 7))
             plt.show()
 
-        self.data = data
+        self.data_bunch = data_bunch
 
-    def create_learner(self, data: vision.data.DataBunch = None,
+    def create_learner(self, data_bunch: vision.data.DataBunch = None,
                        model: vision.models = models.resnet18):
-        if data is None:
-            data = self.data
+        if data_bunch is None:
+            data_bunch = self.data_bunch
 
-        self.learn = unet_learner(data, model)
+        self.learn = unet_learner(data_bunch, model)
 
-    def train(self, epochs: int, lr: float, save: bool, save_path: str):
+    def train(self, epochs: int, save: bool, save_path: str = None,
+              lr: float = None):
         if lr is None:
-            lr = self.min_grad_lr
+            if self.min_grad_lr:
+                lr = self.min_grad_lr
+            else:
+                raise ValueError("No lr provided and min_grad_lr "
+                                 "is also none")
         self.learn.fit_one_cycle(epochs, lr)
+
         if save:
-            self.learn.save(save_path)
+            self.learn.save(save_path, return_path=True)
+            self.learn.export(f'{save_path}.pkl')
 
     def find_lr(self, learn: vision.learner):
         self.learn.lr_find()
@@ -95,7 +114,8 @@ class FastaiUnetLearner(Model):
 
                 if ((y_range[1] - y_range[0]) != y_tile_length or
                         (x_range[1] - x_range[0]) != x_tile_length):
-                    pred_tile = pred_tile[0:(y_range[1]-y_range[0]), 0:(x_range[1]-x_range[0])]
+                    pred_tile = pred_tile[0:(y_range[1]-y_range[0]),
+                                0:(x_range[1]-x_range[0])]
 
                 prediction[y_range[0]:y_range[1], x_range[0]:x_range[1]] = \
                     pred_tile
@@ -130,28 +150,3 @@ class FastaiUnetLearner(Model):
             prediction[0].show(ax=axs[5], title='mask only',
                                alpha=1., cmap="gray")
         plt.show()
-
-
-if __name__ == "__main__":
-    fai_unet_learner = FastaiUnetLearner()
-
-    temp_df = pd.read_csv("/home/tristan/Documents/MSc_Dissertation/"
-                          "plant-network-segmentation/out_leaf_train.csv")
-    temp_df.leaf_name = temp_df.leaf_name.apply(
-        lambda x: str.rsplit(x, "/", 1)[1])
-    paths_df = pd.DataFrame({"path": temp_df.leaf_name[2408: 2471],
-                             "mask_path": temp_df.mask_name[2408: 2471]})
-
-    fai_unet_learner.prep_fastai_data(
-        paths_df,
-        "/mnt/disk3/thesis/data/1_qk3/tristan/diff-chips/",
-        4, plot=True)
-    fai_unet_learner.create_learner()
-
-    fai_unet_learner.load_weights(
-        "/home/tristan/Documents/MSc_Dissertation/plant-network-segmentation"
-        "/mini_train")
-    prediction = fai_unet_learner.predict_tile(tile_number=4)
-    fai_unet_learner.plot_leaf(4, True, prediction)
-
-    fai_unet_learner.predict_full_leaf(2616, 1949, 300, 300)
