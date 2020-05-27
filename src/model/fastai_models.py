@@ -62,7 +62,7 @@ class FastaiUnetLearner(Model):
             data_bunch, model, metrics=
             [Precision(), Recall(), FBeta(beta=1), accuracy])
 
-    def train(self, epochs: int, save: bool, save_path: str = None,
+    def train(self, epochs: int, save_path: str = None,
               lr: float = None):
         if lr is None:
             if self.min_grad_lr:
@@ -72,7 +72,7 @@ class FastaiUnetLearner(Model):
                                  "is also none")
         self.learn.fit_one_cycle(epochs, lr)
 
-        if save:
+        if save_path:
             self.learn.save(save_path, return_path=True)
             self.learn.export(f'{save_path}.pkl')
 

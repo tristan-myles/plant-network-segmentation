@@ -4,6 +4,8 @@ import logging.config
 from os import path
 
 from src.data.data_model import *
+from src.model.fastai_models import FastaiUnetLearner
+from src.helpers.utilities import *
 
 abs_path = path.dirname(path.abspath(__file__))
 
@@ -165,6 +167,24 @@ def extract_tiles_databunch_df(lseqs, mseqs, output_path_list,
                                        csv_output_path)
 
 
+def train_fastai_unet(train_df_paths, val_df_paths, save_path, bs, epochs,
+                      lr):
+
+    training_dfs = [pd.read_csv(path, index_col=0) for path in train_df_paths]
+    validation_dfs = [pd.read_csv(path, index_col=0) for path in val_df_paths]
+
+    combined_df = combine_and_add_valid(training_dfs, validation_dfs)
+    combined_df, folder_name_path = format_databunch_df(
+        combined_df, "folder_path", "leaf_names", create_copy=True)
+
+    fai = FastaiUnetLearner()
+    fai.prep_fastai_data(combined_df, folder_name_path, bs, plot=False,
+                         mask_col_name="masks")
+    fai.create_learner()
+
+    fai.train(epochs=epochs, save_path=save_path, lr=lr)
+
+
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser("Perform operations using the "
                                      "plant-image-segmentation code base")
@@ -242,6 +262,21 @@ def parse_arguments() -> argparse.Namespace:
     parser_databunch_df.add_argument("--embolism_only", "-eo",
                                      action="store_true")
 
+    parser_train_fastai = subparsers.add_parser(
+        "train_fastai", help="train a fastai unet model")
+    parser_train_fastai.set_defaults(which="train_fastai")
+    parser_train_fastai.add_argument("--batch_size", "-bs", type=int,
+                                     metavar="\b", help="batch size")
+    parser_train_fastai.add_argument("--save_path", "-sp", type=str,
+                                     metavar="\b",
+                                     help="path to save model weights and "
+                                     "model pickle")
+    parser_train_fastai.add_argument("--epochs", "-e", type=int,
+                                     metavar="\b", help="number of epochs")
+    parser_train_fastai.add_argument("--learning_rate", "-lr", type=float,
+                                     metavar="\b", help="learning rate")
+
+
     args = parser.parse_args()
     return args
 
@@ -253,7 +288,8 @@ if __name__ == "__main__":
     with open(ARGS.json_path, "r") as JSON_FILE:
         INPUT_JSON_DICT = json.load(JSON_FILE)
 
-    LSEQS, MSEQS = create_sequence_objects(INPUT_JSON_DICT)
+    if ARGS.which != "train_fastai":
+        LSEQS, MSEQS = create_sequence_objects(INPUT_JSON_DICT)
 
     if ARGS.which == "extract_images":
         if ARGS.leaf_output_path is not None:
@@ -340,3 +376,11 @@ if __name__ == "__main__":
         else:
             extract_full_databunch_df(
                 LSEQS, MSEQS, CSV_OUTPUT_LIST, ARGS.embolism_only)
+
+    if ARGS.which == "train_fastai":
+        TRAIN_CSV_INPUT_LIST = INPUT_JSON_DICT["fastai"]["train"]
+        VAL_CSV_INPUT_LIST = INPUT_JSON_DICT["fastai"]["validation"]
+
+        train_fastai_unet(TRAIN_CSV_INPUT_LIST, VAL_CSV_INPUT_LIST,
+                          save_path=ARGS.save_path, bs =ARGS.batch_size,
+                          epochs=ARGS.epochs, lr=ARGS.learning_rate)
