@@ -2,6 +2,7 @@ import argparse
 import json
 import logging.config
 from os import path
+from fastai.vision import *
 
 from src.data.data_model import *
 from src.model.fastai_models import FastaiUnetLearner
@@ -188,6 +189,13 @@ def train_fastai_unet(train_df_paths, val_df_paths, save_path, bs, epochs,
     fai.train(epochs=epochs, save_path=save_path, lr=lr)
 
 
+def predict_fastai_unet(lseqs, length_x, length_y, model_pkl_path):
+    fai_unet_learner = FastaiUnetLearner(model_pkl_path=model_pkl_path)
+
+    for lseq in lseqs:
+        lseq.predict_leaf_sequence(fai_unet_learner, length_x, length_y)
+
+
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser("Perform operations using the "
                                      "plant-image-segmentation code base")
@@ -285,6 +293,16 @@ def parse_arguments() -> argparse.Namespace:
     parser_train_fastai.add_argument("--learning_rate", "-lr", type=float,
                                      metavar="\b", help="learning rate")
 
+    parser_predict_fastai = subparsers.add_parser(
+        "predict_fastai", help="train a fastai unet model")
+    parser_predict_fastai.set_defaults(which="predict_fastai")
+    parser_predict_fastai.add_argument("length_x", type=int,
+                                       help="tile x length")
+    parser_predict_fastai.add_argument("length_y", type=int,
+                                       help="tile y length")
+    parser_predict_fastai.add_argument(
+        "model_path", help="path to fastai pkl, if the paths are in "
+                           "the input json enter \"same\"")
 
     args = parser.parse_args()
     return args
@@ -399,5 +417,16 @@ if __name__ == "__main__":
         VAL_CSV_INPUT_LIST = INPUT_JSON_DICT["fastai"]["validation"]
 
         train_fastai_unet(TRAIN_CSV_INPUT_LIST, VAL_CSV_INPUT_LIST,
-                          save_path=ARGS.save_path, bs =ARGS.batch_size,
+                          save_path=ARGS.save_path, bs=ARGS.batch_size,
                           epochs=ARGS.epochs, lr=ARGS.learning_rate)
+
+    if ARGS.which == "predict_fastai":
+        if ARGS.model_path == "same":
+            MODEL_PATH = INPUT_JSON_DICT["fastai"]["model"]
+        else:
+            MODEL_PATH = ARGS.model_path
+
+        load_image_objects(LSEQS)
+
+        predict_fastai_unet(LSEQS, ARGS.length_x, ARGS.length_y,
+                            MODEL_PATH)

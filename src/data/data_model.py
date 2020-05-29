@@ -962,7 +962,7 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
         if save_prediction:
             folder_path, filename = self.path.rsplit("/", 1)
             filename = "pred_" + filename.rsplit(".", 1)[0] + ".png"
-            output_folder_path = os.path.join(folder_path, "predictions")
+            output_folder_path = os.path.join(folder_path, "../predictions")
             filepath = os.path.join(output_folder_path, filename)
             Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 
