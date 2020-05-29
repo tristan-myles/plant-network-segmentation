@@ -85,8 +85,8 @@ def extract_tiles(seq_objects, length_x, stride_x, length_y,
                               output_path=output_path)
 
 
-def plot_mseq_profiles(mseqs):
-    for mseq in mseqs:
+def plot_mseq_profiles(mseqs,  show, output_path_list):
+    for i, mseq in enumerate(mseqs):
         # less memory intensive for images to be loaded here
         LOGGER.info(f"Creating {mseq.num_files} image objects for "
                     f"{mseq.__class__.__name__} located at {mseq.folder_path}")
@@ -98,7 +98,10 @@ def plot_mseq_profiles(mseqs):
         LOGGER.info("Extracting the embolism percent list")
         mseq.get_embolism_percent_list()
 
-        mseq.plot_profile()
+        if output_path_list is not None:
+            mseq.plot_profile(show, output_path_list[i])
+        else:
+            mseq.plot_profile(show)
 
         mseq.unload_extracted_images()
 
@@ -240,6 +243,12 @@ def parse_arguments() -> argparse.Namespace:
     parser_plot_profile = subparsers.add_parser(
         "plot_profile", help="plot an embolism profile")
     parser_plot_profile.set_defaults(which="plot_profile")
+    parser_plot_profile.add_argument(
+        "--output_path", "-o", type=str, metavar="\b", help="The plot output "
+                                                            "path")
+    parser_plot_profile.add_argument(
+        "--show", "-s", action="store_true", help="flag indicating if the "
+                                                  "plot should be shown")
 
     parser_eda_df = subparsers.add_parser(
         "eda_df", help="extract an eda dataframe")
@@ -340,7 +349,15 @@ if __name__ == "__main__":
                           ARGS.length_y, ARGS.stride_y, MASK_OUTPUT_LIST)
 
     if ARGS.which == "plot_profile":
-        plot_mseq_profiles(MSEQS)
+        if ARGS.output_path is not None:
+            if ARGS.output_path == "same":
+                PLOT_OUTPUT_LIST = INPUT_JSON_DICT["plots"]["output_paths"]
+            else:
+                PLOT_OUTPUT_LIST = str.split(ARGS.output_path, " ")
+        else:
+            PLOT_OUTPUT_LIST = None
+
+        plot_mseq_profiles(MSEQS, ARGS.show, PLOT_OUTPUT_LIST)
 
     if ARGS.which == "eda_df":
         if ARGS.csv_output_path == "same":

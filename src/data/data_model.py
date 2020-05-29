@@ -327,9 +327,10 @@ class _ImageSequence(ABC):
         self.image_objects = sorted(self.image_objects,
                                     key=lambda image: image.path)
 
-    def plot_profile(self, **kwargs):
+    def plot_profile(self, show=True, output_path=None, **kwargs):
         plot_embolism_profile(self.embolism_percent_list,
-                              self.intersection_list, **kwargs)
+                              self.intersection_list, output_path,
+                              show, **kwargs)
 
 
 # *---------------------------------- Mixin ----------------------------------*
