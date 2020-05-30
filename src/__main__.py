@@ -2,11 +2,12 @@ import argparse
 import json
 import logging.config
 from os import path
+
 from fastai.vision import *
 
 from src.data.data_model import *
-from src.model.fastai_models import FastaiUnetLearner
 from src.helpers.utilities import *
+from src.model.fastai_models import FastaiUnetLearner
 
 abs_path = path.dirname(path.abspath(__file__))
 
@@ -86,7 +87,7 @@ def extract_tiles(seq_objects, length_x, stride_x, length_y,
                               output_path=output_path)
 
 
-def plot_mseq_profiles(mseqs,  show, output_path_list):
+def plot_mseq_profiles(mseqs, show, output_path_list):
     for i, mseq in enumerate(mseqs):
         # less memory intensive for images to be loaded here
         LOGGER.info(f"Creating {mseq.num_files} image objects for "
@@ -136,15 +137,13 @@ def extract_tiles_eda_df(mseqs, options, output_path_list, lseqs=None):
 
 
 def extract_full_databunch_df(lseqs, mseqs, output_path_list,
-                               embolism_only=False):
+                              embolism_only=False):
     for csv_output_path, lseq, mseq in zip(output_path_list, lseqs, mseqs):
-
         mseq.load_extracted_images(load_image=True)
         mseq.get_embolism_percent_list()
         mseq.get_has_embolism_list()
 
         lseq.link_sequences(mseq)
-
 
         LOGGER.info(f"Creating DataBunch DataFrame using "
                     f"{lseq.__class__.__name__} located at {lseq.folder_path} "
@@ -159,7 +158,6 @@ def extract_full_databunch_df(lseqs, mseqs, output_path_list,
 def extract_tiles_databunch_df(lseqs, mseqs, output_path_list,
                                embolism_only=False):
     for csv_output_path, lseq, mseq in zip(output_path_list, lseqs, mseqs):
-
         lseq.link_sequences(mseq)
 
         LOGGER.info(f"Creating Tile DataBunch DataFrame using "
@@ -173,7 +171,6 @@ def extract_tiles_databunch_df(lseqs, mseqs, output_path_list,
 
 def train_fastai_unet(train_df_paths, val_df_paths, save_path, bs, epochs,
                       lr):
-
     training_dfs = [pd.read_csv(path, index_col=0) for path in train_df_paths]
     validation_dfs = [pd.read_csv(path, index_col=0) for path in val_df_paths]
 
@@ -210,11 +207,11 @@ def parse_arguments() -> argparse.Namespace:
                                                    'this module')
 
     parser_extract_images = subparsers.add_parser("extract_images",
-                                              help="extraction help")
+                                                  help="extraction help")
     parser_extract_images.set_defaults(which='extract_images')
 
     parser_extract_images.add_argument(
-        "--leaf_output_path", "-lo",  metavar="\b",
+        "--leaf_output_path", "-lo", metavar="\b",
         help="output paths, if the paths are in the input json enter "
              "\"same\"")
 
@@ -224,7 +221,7 @@ def parse_arguments() -> argparse.Namespace:
              "\"same\"")
 
     parser_extract_tiles = subparsers.add_parser("extract_tiles",
-                                                  help="extraction help")
+                                                 help="extraction help")
     parser_extract_tiles.set_defaults(which="extract_tiles")
 
     parser_extract_tiles.add_argument("-sx", "--stride_x", metavar="\b",
@@ -237,7 +234,7 @@ def parse_arguments() -> argparse.Namespace:
                                       type=int, help="tile y length")
 
     parser_extract_tiles.add_argument(
-        "--leaf_output_path", "-lo",  metavar="\b",
+        "--leaf_output_path", "-lo", metavar="\b",
         help="output paths, if you want to use "
              "the default path enter  \"default\", if the paths are in "
              "the input json enter  \"same\"")
@@ -287,7 +284,7 @@ def parse_arguments() -> argparse.Namespace:
     parser_train_fastai.add_argument("--save_path", "-sp", type=str,
                                      metavar="\b",
                                      help="path to save model weights and "
-                                     "model pickle")
+                                          "model pickle")
     parser_train_fastai.add_argument("--epochs", "-e", type=int,
                                      metavar="\b", help="number of epochs")
     parser_train_fastai.add_argument("--learning_rate", "-lr", type=float,
@@ -321,7 +318,7 @@ if __name__ == "__main__":
     if ARGS.which == "extract_images":
         if ARGS.leaf_output_path is not None:
             if ARGS.leaf_output_path == "same":
-                LEAF_OUTPUT_LIST =\
+                LEAF_OUTPUT_LIST = \
                     INPUT_JSON_DICT["leaves"]["output"]["output_path"]
             else:
                 LEAF_OUTPUT_LIST = [ARGS.leaf_output_path]
@@ -344,7 +341,7 @@ if __name__ == "__main__":
             if ARGS.leaf_output_path == "default":
                 LEAF_OUTPUT_LIST = None
             elif ARGS.leaf_output_path == "same":
-                LEAF_OUTPUT_LIST =\
+                LEAF_OUTPUT_LIST = \
                     INPUT_JSON_DICT["leaves"]["output"]["output_path"]
             else:
                 LEAF_OUTPUT_LIST = str.split(ARGS.leaf_output_path, " ")
@@ -382,7 +379,6 @@ if __name__ == "__main__":
             CSV_OUTPUT_LIST = INPUT_JSON_DICT["eda_df"]["output_path"]
         else:
             CSV_OUTPUT_LIST = str.split(ARGS.csv_output_path, " ")
-
 
         if INPUT_JSON_DICT["eda_df"]["options"]["linked_filename"]:
             load_image_objects(LSEQS)
