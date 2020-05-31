@@ -57,7 +57,10 @@ class FastaiUnetLearner(Model):
         if data_bunch is None:
             data_bunch = self.data_bunch
 
-        self.learn = unet_learner(data_bunch, model)
+        # y_idx = 1 and weighted binary by default
+        self.learn = unet_learner(
+            data_bunch, model, metrics=
+            [Precision(), Recall(), FBeta(beta=1)])
 
     def train(self, epochs: int, save: bool, save_path: str = None,
               lr: float = None):
@@ -150,3 +153,146 @@ class FastaiUnetLearner(Model):
             prediction[0].show(ax=axs[5], title='mask only',
                                alpha=1., cmap="gray")
         plt.show()
+
+
+# Copied from fastai git repo:
+# https://github.com/fastai/fastai/blob/master/fastai/metrics.py
+@dataclass
+class ConfusionMatrix(Callback):
+    """Computes the confusion matrix."""
+    # The location of the target (y) is difference for classification and
+    # semantic segmentation (-1 in the case of classification and 1 in the
+    # case of semantic segmentation). See:
+    # https://github.com/dronedeploy/dd-ml-segmentation-benchmark/blob/
+    # 284f729899495b2ea853d3c364155dd0d5cae56e/libs/util.py#L147
+    # and https://forums.fast.ai/t/
+    # confusionmatrix-metrics-dont-work-for-semantic-segmentation/45166
+    y_idx = 1
+
+    def on_train_begin(self, **kwargs):
+        self.n_classes = 0
+
+    def on_epoch_begin(self, **kwargs):
+        self.cm = None
+
+    def on_batch_end(self, last_output: Tensor, last_target: Tensor, **kwargs):
+        preds = last_output.argmax(self.y_idx).view(-1).cpu()
+        # argmax of the predicted probablites, i.t.o shapes:
+        # [batch_size, num_classes, tile_len1, tile_len2] -> [batch_size, 1,
+        # tile_len1, tile_len2] ... view(-1) squashes this all
+        # into shape [tile_len1 x tile_len2 x batch size] (i.e. a vector)
+
+        targs = last_target.view(-1).cpu()
+        # usually classification will only have target per image but in the
+        # case of semantic segmentation we have a map of pixels => we need
+        # to squash this to match the shape above.
+
+        if self.n_classes == 0:
+            self.n_classes = last_output.shape[self.y_idx]
+
+        if self.cm is None:
+            # make an empty confusion matrix
+           self.cm = torch.zeros((self.n_classes, self.n_classes),
+                                  device=torch.device('cpu'))
+
+        cm_temp_numpy = self.cm.numpy()
+
+        # use predictions and targets as indices and add 1 each time
+        np.add.at(cm_temp_numpy, (targs, preds), 1)
+
+        self.cm = torch.from_numpy(cm_temp_numpy)
+
+    def on_epoch_end(self, **kwargs):
+        self.metric = self.cm
+
+
+@dataclass
+class CMScores(ConfusionMatrix):
+    """Base class for metrics which rely on the calculation of the precision
+     and/or recall score."""
+    average: Optional[str] = "binary"
+    # `binary`, `micro`, `macro`, `weighted` or None
+    pos_label: int = 1                     # 0 or 1
+    eps: float = 1e-9
+
+    def _recall(self):
+        rec = torch.diag(self.cm) / self.cm.sum(dim=1)
+        if self.average is None:
+            return rec
+        else:
+            if self.average == "micro":
+                weights = self._weights(avg="weighted")
+            else:
+                weights = self._weights(avg=self.average)
+
+            return (rec * weights).sum()
+
+    def _precision(self):
+        prec = torch.diag(self.cm) / self.cm.sum(dim=0)
+
+        if self.average is None:
+            return prec
+        else:
+            weights = self._weights(avg=self.average)
+            return (prec * weights).sum()
+
+    def _weights(self, avg:str):
+        if self.n_classes != 2 and avg == "binary":
+            avg = self.average = "macro"
+            warn("average=`binary` was selected for a non binary case. "
+                 "Value for average has now been set to `macro` instead.")
+        if avg == "binary":
+            if self.pos_label not in (0, 1):
+                self.pos_label = 1
+                warn("Invalid value for pos_label. It has now been set to 1.")
+            if self.pos_label == 1:
+                return Tensor([0,1])
+            else:
+                return Tensor([1,0])
+        elif avg == "micro":
+            return self.cm.sum(dim=0) / self.cm.sum()
+        elif avg == "macro":
+            return torch.ones((self.n_classes,)) / self.n_classes
+        elif avg == "weighted":
+            return self.cm.sum(dim=1) / self.cm.sum()
+
+
+class Recall(CMScores):
+    """Computes the Recall."""
+    def on_epoch_end(self, last_metrics, **kwargs):
+        return add_metrics(last_metrics, self._recall())
+
+
+class Precision(CMScores):
+    """Computes the Precision."""
+    def on_epoch_end(self, last_metrics, **kwargs):
+        return add_metrics(last_metrics, self._precision())
+
+
+@dataclass
+class FBeta(CMScores):
+    """Computes the F`beta` score."""
+    beta: float = 2
+
+    def on_train_begin(self, **kwargs):
+        self.n_classes = 0
+        self.beta2 = self.beta ** 2
+        self.avg = self.average
+
+        if self.average != "micro":
+            self.average = None
+
+    def on_epoch_end(self, last_metrics, **kwargs):
+        prec = self._precision()
+        rec = self._recall()
+        metric = ((1 + self.beta2) * prec * rec /
+                  (prec * self.beta2 + rec + self.eps))
+        metric[metric != metric] = 0  # removing potential "nan"s
+
+        if self.avg:
+            metric = (self._weights(avg=self.avg) * metric).sum()
+
+        return add_metrics(last_metrics, metric)
+
+    def on_train_end(self, **kwargs):
+        self.average = self.avg
