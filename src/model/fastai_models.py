@@ -60,7 +60,7 @@ class FastaiUnetLearner(Model):
         # y_idx = 1 and weighted binary by default
         self.learn = unet_learner(
             data_bunch, model, metrics=
-            [Precision(), Recall(), FBeta(beta=1)])
+            [Precision(), Recall(), FBeta(beta=1), accuracy])
 
     def train(self, epochs: int, save: bool, save_path: str = None,
               lr: float = None):
@@ -296,3 +296,11 @@ class FBeta(CMScores):
 
     def on_train_end(self, **kwargs):
         self.average = self.avg
+
+
+# binary accuracy
+def accuracy(input: Tensor, targs: Tensor) -> Rank0Tensor:
+    """Computes accuracy with `targs` when `input` is bs * n_classes."""
+    input = input.argmax(1).view(-1)
+    targs = targs.view(-1)
+    return (input == targs).float().mean()
