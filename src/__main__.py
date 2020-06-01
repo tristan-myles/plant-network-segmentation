@@ -183,11 +183,11 @@ def train_fastai_unet(train_df_paths, val_df_paths, save_path, bs, epochs,
 
     combined_df = combine_and_add_valid(training_dfs, validation_dfs)
     combined_df, folder_name_path = format_databunch_df(
-        combined_df, "folder_path", "leaf_names", create_copy=True)
+        combined_df, "folder_path", "leaf_name", create_copy=True)
 
     fai = FastaiUnetLearner()
     fai.prep_fastai_data(combined_df, folder_name_path, bs, plot=False,
-                         mask_col_name="masks")
+                         mask_col_name="mask_path")
     fai.create_learner()
 
     fai.train(epochs=epochs, save_path=save_path, lr=lr)
@@ -314,8 +314,8 @@ def parse_arguments() -> argparse.Namespace:
     parser_predict_fastai.add_argument("length_y", type=int,
                                        help="tile y length")
     parser_predict_fastai.add_argument(
-        "model_path", help="path to fastai pkl, if the paths are in "
-                           "the input json enter \"same\"")
+        "model_path", help="path to fastai pkl (complete path), if the paths "
+                           "are in the input json enter \"same\"")
 
     args = parser.parse_args()
     return args
@@ -337,7 +337,7 @@ if __name__ == "__main__":
                 LEAF_OUTPUT_LIST = \
                     INPUT_JSON_DICT["leaves"]["output"]["output_path"]
             else:
-                LEAF_OUTPUT_LIST = [ARGS.leaf_output_path]
+                LEAF_OUTPUT_LIST = str.split(ARGS.leaf_output_path, " ")
 
             extract_leaf_images(LSEQS, LEAF_OUTPUT_LIST, ARGS.overwrite)
 
@@ -346,7 +346,7 @@ if __name__ == "__main__":
                 MASK_OUTPUT_LIST = \
                     INPUT_JSON_DICT["masks"]["output"]["output_path"]
             else:
-                MASK_OUTPUT_LIST = [ARGS.mask_output_path]
+                MASK_OUTPUT_LIST = str.split(ARGS.mask_output_path, " ")
 
             extract_multipage_mask_images(MSEQS, MASK_OUTPUT_LIST,
                                           ARGS.overwrite, ARGS.binarise)
@@ -371,7 +371,7 @@ if __name__ == "__main__":
 
             if ARGS.mask_output_path == "default":
                 MASK_OUTPUT_LIST = None
-            elif ARGS.leaf_output_path == "same":
+            elif ARGS.mask_output_path == "same":
                 MASK_OUTPUT_LIST = \
                     INPUT_JSON_DICT["masks"]["output"]["output_path"]
             else:
