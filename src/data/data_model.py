@@ -539,7 +539,8 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
 
     # *_____________________________ extraction ______________________________*
     def extract_mask_from_multipage(self, output_path: str,
-                                    overwrite: bool = False):
+                                    overwrite: bool = False,
+                                    binarise: bool = False):
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
 
         Path(output_folder_path).mkdir(parents=True, exist_ok=True)
@@ -567,7 +568,7 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
                 self.image_objects.append(Mask(sequence_parent=self.mpf_path))
 
                 self.image_objects[i].create_mask(final_filename, image,
-                                                  overwrite)
+                                                  overwrite, binarise)
                 pbar.update(1)
 
     # *_______________________________ loading _______________________________*

@@ -53,20 +53,27 @@ def load_image_objects(seq_objects, load_images=False):
         seq.load_extracted_images(load_image=load_images)
 
 
-def extract_leaf_images(lseq_list, output_path_list):
+def extract_leaf_images(lseq_list, output_path_list, overwrite):
     LOGGER.info("Extracting differenced leaf images")
     for lseq, output_path in zip(lseq_list, output_path_list):
         LOGGER.info(f"Differencing images in {lseq.folder_path} and saving "
                     f"to {output_path}")
-        lseq.extract_changed_leaves(output_path)
+        lseq.extract_changed_leaves(output_path, overwrite=overwrite)
 
 
-def extract_multipage_mask_images(mseq_list, output_path_list):
+def extract_multipage_mask_images(mseq_list, output_path_list,
+                                  overwrite, binarise):
     LOGGER.info("Extracting mask images from multipage file")
+
     for mseq, output_path in zip(mseq_list, output_path_list):
         LOGGER.info(f"Extracting images from: {mseq.mpf_path} and saving "
                     f"to {output_path}")
-        mseq.extract_mask_from_multipage(output_path)
+        mseq.extract_mask_from_multipage(output_path,
+                                         overwrite,
+                                         binarise)
+
+        # frees up ram when extracting many sequences
+        mseq.unload_extracted_images()
 
 
 def extract_tiles(seq_objects, length_x, stride_x, length_y,
@@ -220,6 +227,15 @@ def parse_arguments() -> argparse.Namespace:
         help="output paths, if the paths are in the input json enter "
              "\"same\"")
 
+    parser_extract_images.add_argument(
+        "--overwrite", "-o", action="store_true", default=False,
+        help="overwrite existing images, note this flag is applied to both "
+             "mask and leaf images")
+
+    parser_extract_images.add_argument(
+        "--binarise", "-b", action="store_true", default=False,
+        help="save binary masks")
+
     parser_extract_tiles = subparsers.add_parser("extract_tiles",
                                                  help="extraction help")
     parser_extract_tiles.set_defaults(which="extract_tiles")
@@ -323,7 +339,7 @@ if __name__ == "__main__":
             else:
                 LEAF_OUTPUT_LIST = [ARGS.leaf_output_path]
 
-            extract_leaf_images(LSEQS, LEAF_OUTPUT_LIST)
+            extract_leaf_images(LSEQS, LEAF_OUTPUT_LIST, ARGS.overwrite)
 
         if ARGS.mask_output_path is not None:
             if ARGS.mask_output_path == "same":
@@ -332,7 +348,8 @@ if __name__ == "__main__":
             else:
                 MASK_OUTPUT_LIST = [ARGS.mask_output_path]
 
-            extract_multipage_mask_images(MSEQS, MASK_OUTPUT_LIST)
+            extract_multipage_mask_images(MSEQS, MASK_OUTPUT_LIST,
+                                          ARGS.overwrite, ARGS.binarise)
 
     if ARGS.which == "extract_tiles":
         if ARGS.leaf_output_path is not None:
