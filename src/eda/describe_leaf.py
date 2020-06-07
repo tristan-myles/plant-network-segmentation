@@ -99,6 +99,7 @@ def get_intersection(image: np.array, combined_image: np.array) -> \
 
 
 def plot_embolism_profile(embolism_percentages, intersections,
+                          output_path=None, show=True,
                           **kwargs):
     """
     :param embolism_percentages:
@@ -129,7 +130,12 @@ def plot_embolism_profile(embolism_percentages, intersections,
     axs[2].set_xlabel('Steps', fontsize=14)
     axs[2].set_ylabel('% Embolism', fontsize=14)
     axs[2].set_title('Unique Embolism % per Mask', fontsize=16)
-    plt.show()
+
+    if show:
+        plt.show()
+
+    if output_path:
+        plt.savefig(output_path)
 
 
 if __name__ == "__main__":

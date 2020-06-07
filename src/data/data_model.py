@@ -327,9 +327,10 @@ class _ImageSequence(ABC):
         self.image_objects = sorted(self.image_objects,
                                     key=lambda image: image.path)
 
-    def plot_profile(self, **kwargs):
+    def plot_profile(self, show=True, output_path=None, **kwargs):
         plot_embolism_profile(self.embolism_percent_list,
-                              self.intersection_list, **kwargs)
+                              self.intersection_list, output_path,
+                              show, **kwargs)
 
 
 # *---------------------------------- Mixin ----------------------------------*
@@ -538,7 +539,8 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
 
     # *_____________________________ extraction ______________________________*
     def extract_mask_from_multipage(self, output_path: str,
-                                    overwrite: bool = False):
+                                    overwrite: bool = False,
+                                    binarise: bool = False):
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
 
         Path(output_folder_path).mkdir(parents=True, exist_ok=True)
@@ -566,7 +568,7 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
                 self.image_objects.append(Mask(sequence_parent=self.mpf_path))
 
                 self.image_objects[i].create_mask(final_filename, image,
-                                                  overwrite)
+                                                  overwrite, binarise)
                 pbar.update(1)
 
     # *_______________________________ loading _______________________________*
@@ -961,7 +963,7 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
         if save_prediction:
             folder_path, filename = self.path.rsplit("/", 1)
             filename = "pred_" + filename.rsplit(".", 1)[0] + ".png"
-            output_folder_path = os.path.join(folder_path, "predictions")
+            output_folder_path = os.path.join(folder_path, "../predictions")
             filepath = os.path.join(output_folder_path, filename)
             Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 

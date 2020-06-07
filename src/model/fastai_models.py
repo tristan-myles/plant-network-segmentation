@@ -15,13 +15,19 @@ from src.model.model import Model
 
 
 class FastaiUnetLearner(Model):
-    def __init__(self, data_bunch: vision.data.DataBunch = None):
+    def __init__(self, data_bunch: vision.data.DataBunch = None,
+                 model_pkl_path=None):
         if data_bunch:
             self.data_bunch = data_bunch
         else:
             self.data_bunch = None
 
-        self.learn = None
+        if model_pkl_path:
+            folder_path, pkl_name = str.rsplit(model_pkl_path, "/", 1)
+            self.learn = load_learner(folder_path, pkl_name)
+        else:
+            self.learn = None
+
         self.min_grad_lr = None
 
     def add_databunch(self, data_bunch: vision.data.DataBunch = None):
@@ -62,7 +68,7 @@ class FastaiUnetLearner(Model):
             data_bunch, model, metrics=
             [Precision(), Recall(), FBeta(beta=1), accuracy])
 
-    def train(self, epochs: int, save: bool, save_path: str = None,
+    def train(self, epochs: int, save_path: str = None,
               lr: float = None):
         if lr is None:
             if self.min_grad_lr:
@@ -72,7 +78,7 @@ class FastaiUnetLearner(Model):
                                  "is also none")
         self.learn.fit_one_cycle(epochs, lr)
 
-        if save:
+        if save_path:
             self.learn.save(save_path, return_path=True)
             self.learn.export(f'{save_path}.pkl')
 
