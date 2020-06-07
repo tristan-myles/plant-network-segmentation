@@ -56,3 +56,41 @@ def format_databunch_df(df_to_update, folder_col_name,
     updated_df.drop(folder_col_name, axis=1, inplace=True)
 
     return updated_df, common_folder_path
+
+
+def trim_image_array(image_array, output_size: int,
+                     axis: str, trim_dir: int):
+    """
+
+    :param axis: one of either "x", "y" or both
+    :param image_array:
+    :param output_size:
+    :param trim_dir:
+    :return:
+    """
+    image_shape = image_array.shape
+
+    if axis not in ["x", "y"]:
+        raise ValueError("Please input one of 'x', 'y' as the axis")
+
+    if trim_dir not in [-1, 1]:
+        raise ValueError("Please input one of -1 or 1 as the trim "
+                         "direction")
+
+    if axis == "y":
+        diff = image_shape[0] - output_size
+    if axis == "x":
+        diff = image_shape[1] - output_size
+        image_array = image_array.transpose()
+
+    if trim_dir == 1:
+        # exclude the first x_diff columns
+        image_array = image_array[diff:, :]
+    if trim_dir == -1:
+        # exclude the last x_diff rows
+        image_array = image_array[:-diff, :]
+
+    if axis == "x":
+        image_array = image_array.transpose()
+
+    return image_array
