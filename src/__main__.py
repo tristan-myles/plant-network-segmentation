@@ -1,7 +1,6 @@
 import argparse
-from ast import literal_eval
-import json
 import logging.config
+from ast import literal_eval
 from os import path
 
 from fastai.vision import *
@@ -270,17 +269,17 @@ def parse_arguments() -> argparse.Namespace:
         help="whether the mask sequence should be trimmed, default is for "
              "the leaf sequence to be trimmed")
     parser_trim_sequence.add_argument(
-        "--y_size_dir",  "-ysd", metavar="\b",
+        "--y_size_dir", "-ysd", metavar="\b",
         help="y output size and direction to be passed in as a tuple, "
              "where a 1 or -1 indicated to trim either top or bottom "
              "respectively")
     parser_trim_sequence.add_argument(
-        "--x_size_dir",  "-xsd", metavar="\b",
+        "--x_size_dir", "-xsd", metavar="\b",
         help="x output size and direction to be passed in as a tuple, "
              "where a 1 or -1 indicated to trim either left or right "
              "respectively")
     parser_trim_sequence.add_argument(
-        "--overwrite",  "-o", action="store_true", default=False,
+        "--overwrite", "-o", action="store_true", default=False,
         help="whether or not the image being trimmed should be overwritten")
 
     parser_extract_tiles.add_argument(
