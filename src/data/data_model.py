@@ -6,7 +6,7 @@ from glob import glob
 from itertools import chain
 from math import log10, floor, ceil
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple, Union
 
 import PIL.Image
 import PIL.ImageSequence
@@ -145,6 +145,34 @@ class _ImageSequence(ABC):
             for image in self.image_objects:
                 image.binarise_self()
                 pbar.update(1)
+
+    def trim_image_sequence(self, x_size_dir: Optional[Tuple[int, int]] = None,
+                            y_size_dir: Optional[Tuple[int, int]] = None,
+                            overwrite: bool = True) -> None:
+        """
+        Note: parameters apply to all images in the image sequence
+        :param y_size_dir: an tuple of (output size, trim_direction), where
+        trim direction is either 1 or -1, which indicates to trim from
+        either the top or bottom respectively
+        :param x_size_dir: an tuple of (output size, trim_direction), where
+        trim direction is either 1 or -1, which indicates to trim from
+        either the left or right respectively
+        :param overwrite: whether or not the image should be overwritten
+        :return: None
+        """
+        # TODO: Implement option to use either x or y mode for output size
+        for image in self.image_objects:
+            if x_size_dir and y_size_dir:
+                if image.image_array.shape != (y_size_dir[0], x_size_dir[0]):
+                    image.trim_image(x_size_dir, y_size_dir, overwrite)
+            elif y_size_dir:
+                if image.image_array.shape[0] != y_size_dir[0]:
+                    image.trim_image(y_size_dir=y_size_dir,
+                                     overwrite=overwrite)
+            elif x_size_dir:
+                if image.image_array.shape[1] != x_size_dir[0]:
+                    image.trim_image(x_size_dir=x_size_dir,
+                                     overwrite=overwrite)
 
     # *_________________________________ EDA _________________________________*
     def get_unique_sequence_range(self):
@@ -589,6 +617,51 @@ class _Image(ABC):
     @abstractmethod
     def binarise_self(self, image: np.array):
         return binarise_image(image)
+
+    def trim_image(self, x_size_dir: Optional[Tuple[int, int]] = None,
+                   y_size_dir: Optional[Tuple[int, int]] = None,
+                   overwrite: bool = True) -> None:
+        """
+
+        :param y_size_dir: an tuple of (output size, trim_direction), where
+        trim direction is either 1 or -1, which indicates to trim from
+        either the top or bottom respectively
+        :param x_size_dir: an tuple of (output size, trim_direction), where
+        trim direction is either 1 or -1, which indicates to trim from
+        either the left or right respectively
+        :param overwrite: whether or not the image should be overwritten
+        :return: None
+        """
+        LOGGER.debug(f"Trimming image {self.path}")
+
+        if x_size_dir:
+            if not isinstance(x_size_dir, tuple):
+                raise ValueError("please provide a tuple input for "
+                                 "x_size_dir")
+            elif len(x_size_dir) != 2:
+                raise ValueError("please provide exactly an output size and "
+                                 "trim direction")
+
+        if y_size_dir:
+            if not isinstance(y_size_dir, tuple):
+                raise ValueError("please provide a tuple input for "
+                                 "y_size_dir")
+            elif len(y_size_dir) != 2:
+                raise ValueError("please provide exactly an output size and "
+                                 "trim direction")
+
+        if x_size_dir:
+            self.image_array = utilities.trim_image_array(
+                self.image_array, x_size_dir[0], axis="x",
+                trim_dir=x_size_dir[1])
+
+        if y_size_dir:
+            self.image_array = utilities.trim_image_array(
+                self.image_array, y_size_dir[0], axis="y",
+                trim_dir=y_size_dir[1])
+
+        if overwrite:
+            cv2.imwrite(self.path, self.image_array)
 
     # *_________________________________ EDA _________________________________*
     @abstractmethod
