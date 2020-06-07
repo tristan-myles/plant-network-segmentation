@@ -1,4 +1,5 @@
 import argparse
+from ast import literal_eval
 import json
 import logging.config
 from os import path
@@ -92,6 +93,17 @@ def extract_tiles(seq_objects, length_x, stride_x, length_y,
             seq.tile_sequence(length_x=length_x, stride_x=stride_x,
                               length_y=length_y, stride_y=stride_y,
                               output_path=output_path)
+
+
+def trim_sequence_images(seq_objects, x_size_dir_list=None,
+                         y_size_dir_list=None, overwrite=False):
+    for seq, x_size_dir, y_size_dir in \
+            zip(seq_objects, x_size_dir_list, y_size_dir_list):
+        seq.load_image_array()
+
+        seq.trim_image_sequence(x_size_dir, y_size_dir, overwrite)
+
+        seq.unload_extracted_images()
 
 
 def plot_mseq_profiles(mseqs, show, output_path_list):
@@ -249,6 +261,28 @@ def parse_arguments() -> argparse.Namespace:
     parser_extract_tiles.add_argument("-ly", "--length_y", metavar="\b",
                                       type=int, help="tile y length")
 
+    parser_trim_sequence = subparsers.add_parser(
+        "trim_sequence", help="trims every image in an image sequence ")
+    parser_trim_sequence.set_defaults(which='trim_sequence')
+
+    parser_trim_sequence.add_argument(
+        "--mask", "-m", action="store_true", default=False,
+        help="whether the mask sequence should be trimmed, default is for "
+             "the leaf sequence to be trimmed")
+    parser_trim_sequence.add_argument(
+        "--y_size_dir",  "-ysd", metavar="\b",
+        help="y output size and direction to be passed in as a tuple, "
+             "where a 1 or -1 indicated to trim either top or bottom "
+             "respectively")
+    parser_trim_sequence.add_argument(
+        "--x_size_dir",  "-xsd", metavar="\b",
+        help="x output size and direction to be passed in as a tuple, "
+             "where a 1 or -1 indicated to trim either left or right "
+             "respectively")
+    parser_trim_sequence.add_argument(
+        "--overwrite",  "-o", action="store_true", default=False,
+        help="whether or not the image being trimmed should be overwritten")
+
     parser_extract_tiles.add_argument(
         "--leaf_output_path", "-lo", metavar="\b",
         help="output paths, if you want to use "
@@ -379,6 +413,41 @@ if __name__ == "__main__":
 
             extract_tiles(MSEQS, ARGS.length_x, ARGS.stride_x,
                           ARGS.length_y, ARGS.stride_y, MASK_OUTPUT_LIST)
+
+    if ARGS.which == "trim_sequence":
+        if ARGS.mask:
+            SEQS = MSEQS
+        else:
+            SEQS = LSEQS
+
+        if ARGS.x_size_dir == "same":
+            X_SIZE_DIR_LIST = INPUT_JSON_DICT["trim"]["x_size_dir"]
+            X_SIZE_DIR_LIST = [tuple(X_SIZE_DIR) if X_SIZE_DIR else None for
+                               X_SIZE_DIR in X_SIZE_DIR_LIST]
+        else:
+            X_SIZE_DIR_LIST = literal_eval(ARGS.x_size_dir)
+
+            # in the case of a single sequence with no x adjustment
+            if (not X_SIZE_DIR_LIST or
+                    isinstance(X_SIZE_DIR_LIST[0], int)):
+                X_SIZE_DIR_LIST = [X_SIZE_DIR_LIST]
+
+        if ARGS.y_size_dir == "same":
+            Y_SIZE_DIR_LIST = INPUT_JSON_DICT["trim"]["y_size_dir"]
+            Y_SIZE_DIR_LIST = [tuple(Y_SIZE_DIR) if Y_SIZE_DIR else None for
+                               Y_SIZE_DIR in Y_SIZE_DIR_LIST]
+        else:
+            Y_SIZE_DIR_LIST = literal_eval(ARGS.y_size_dir)
+
+            # in the case of a single sequence with no y adjustment
+            if (not Y_SIZE_DIR_LIST or
+                    isinstance(Y_SIZE_DIR_LIST[0], int)):
+                Y_SIZE_DIR_LIST = [Y_SIZE_DIR_LIST]
+
+        if ARGS.y_size_dir:
+            load_image_objects(SEQS)
+            trim_sequence_images(SEQS, X_SIZE_DIR_LIST, Y_SIZE_DIR_LIST,
+                                 overwrite=ARGS.overwrite)
 
     if ARGS.which == "plot_profile":
         if ARGS.output_path is not None:
