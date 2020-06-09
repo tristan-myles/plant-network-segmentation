@@ -251,18 +251,30 @@ def extract_tiles_databunch_df(lseqs, mseqs, output_path_list,
                                        csv_output_path)
 
 
-def train_fastai_unet(train_df_paths, val_df_paths, save_path, bs, epochs,
-                      lr):
+def train_fastai_unet(train_df_paths, save_path, bs,
+                      epochs, lr, val_df_paths=None, **kwargs):
     training_dfs = [pd.read_csv(path, index_col=0) for path in train_df_paths]
-    validation_dfs = [pd.read_csv(path, index_col=0) for path in val_df_paths]
 
-    combined_df = combine_and_add_valid(training_dfs, validation_dfs)
+    if val_df_paths:
+        validation_dfs = [pd.read_csv(path, index_col=0) for path in val_df_paths]
+        combined_df = combine_and_add_valid(training_dfs, validation_dfs)
+    else:
+        combined_df = pd.concat(training_dfs)
+
     combined_df, folder_name_path = format_databunch_df(
         combined_df, "folder_path", "leaf_name", create_copy=True)
 
     fai = FastaiUnetLearner()
-    fai.prep_fastai_data(combined_df, folder_name_path, bs, plot=False,
-                         mask_col_name="mask_path")
+    if val_df_paths:
+        fai.prep_fastai_data(combined_df, folder_name_path, bs, plot=False,
+                             mask_col_name="mask_path",
+                             **kwargs)
+    else:
+        fai.prep_fastai_data(combined_df, folder_name_path, bs, plot=False,
+                             mask_col_name="mask_path",
+                             split_func=ItemList.split_by_rand_pct,
+                             **kwargs)
+
     fai.create_learner()
 
     fai.train(epochs=epochs, save_path=save_path, lr=lr)
@@ -612,9 +624,16 @@ if __name__ == "__main__":
         TRAIN_CSV_INPUT_LIST = INPUT_JSON_DICT["fastai"]["train"]
         VAL_CSV_INPUT_LIST = INPUT_JSON_DICT["fastai"]["validation"]
 
-        train_fastai_unet(TRAIN_CSV_INPUT_LIST, VAL_CSV_INPUT_LIST,
-                          save_path=ARGS.save_path, bs=ARGS.batch_size,
-                          epochs=ARGS.epochs, lr=ARGS.learning_rate)
+        if VAL_CSV_INPUT_LIST:
+            train_fastai_unet(TRAIN_CSV_INPUT_LIST, save_path=ARGS.save_path,
+                              bs=ARGS.batch_size, epochs=ARGS.epochs,
+                              lr=ARGS.learning_rate,
+                              val_df_paths=VAL_CSV_INPUT_LIST)
+        else:
+            train_fastai_unet(TRAIN_CSV_INPUT_LIST,
+                              save_path=ARGS.save_path, bs=ARGS.batch_size,
+                              epochs=ARGS.epochs, lr=ARGS.learning_rate,
+                              seed=314)
 
     if ARGS.which == "predict_fastai":
         if ARGS.model_path == "same":

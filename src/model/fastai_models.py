@@ -39,11 +39,12 @@ class FastaiUnetLearner(Model):
                          split_func=ItemList.split_from_df,
                          plot: bool = False,
                          mask_col_name:str = "mask_path",
-                         codes: List[int] = [0, 1]):
+                         codes: List[int] = [0, 1],
+                         **kwargs):
 
         segmentation_image_list = (SegmentationItemList
                                    .from_df(paths_df, leaf_folder_path))
-        segmentation_image_list = split_func(segmentation_image_list)
+        segmentation_image_list = split_func(segmentation_image_list, **kwargs)
         segmentation_image_list = segmentation_image_list.label_from_df(
             mask_col_name, classes=codes)
 
