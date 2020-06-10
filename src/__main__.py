@@ -174,7 +174,8 @@ def extract_full_databunch_df(lseqs, mseqs, output_path_list,
 
 
 def extract_tiles_databunch_df(lseqs, mseqs, output_path_list,
-                               embolism_only=False):
+                               tile_embolism_only=False,
+                               leaf_embolism_only=False):
     for csv_output_path, lseq, mseq in zip(output_path_list, lseqs, mseqs):
         lseq.link_sequences(mseq)
 
@@ -183,7 +184,8 @@ def extract_tiles_databunch_df(lseqs, mseqs, output_path_list,
                     f"and {mseq.__class__.__name__} located at"
                     f" {mseq.folder_path}")
 
-        _ = lseq.get_tile_databunch_df(mseq, embolism_only,
+        _ = lseq.get_tile_databunch_df(mseq, tile_embolism_only,
+                                       leaf_embolism_only,
                                        csv_output_path)
 
 
@@ -322,8 +324,13 @@ def parse_arguments() -> argparse.Namespace:
                                 " json enter \"same\"")
 
     parser_databunch_df.add_argument("--tiles", "-t", action="store_true")
-    parser_databunch_df.add_argument("--embolism_only", "-eo",
-                                     action="store_true")
+    parser_databunch_df.add_argument("--tile_embolism_only", "-teo",
+                                     action="store_true",
+                                     help="should only tiles with embolisms "
+                                          "be used")
+    parser_databunch_df.add_argument(
+        "--leaf_embolism_only", "-leo", action="store_true",
+        help="should only full leafs with embolisms be used")
 
     parser_train_fastai = subparsers.add_parser(
         "train_fastai", help="train a fastai unet model")
@@ -488,10 +495,12 @@ if __name__ == "__main__":
 
         if ARGS.tiles:
             extract_tiles_databunch_df(
-                LSEQS, MSEQS, CSV_OUTPUT_LIST, ARGS.embolism_only)
+                LSEQS, MSEQS, CSV_OUTPUT_LIST,
+                tile_embolism_only=ARGS.tile_embolism_only,
+                leaf_embolism_only=ARGS.leaf_embolism_only)
         else:
             extract_full_databunch_df(
-                LSEQS, MSEQS, CSV_OUTPUT_LIST, ARGS.embolism_only)
+                LSEQS, MSEQS, CSV_OUTPUT_LIST, ARGS.leaf_embolism_only)
 
     if ARGS.which == "train_fastai":
         TRAIN_CSV_INPUT_LIST = INPUT_JSON_DICT["fastai"]["train"]
