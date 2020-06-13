@@ -110,6 +110,7 @@ class _ImageSequence(ABC):
                   disable=disable_pb) as pbar:
             for image in self.image_objects:
                 image.load_image()
+                pbar.update(1)
 
     def link_sequences(self, SequenceObject, sort_by_filename: bool = True):
         self.link = SequenceObject
