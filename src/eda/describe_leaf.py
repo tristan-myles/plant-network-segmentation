@@ -11,6 +11,7 @@ __status__ = "development"
 
 import logging
 import numpy as np
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 import PIL.Image
@@ -134,6 +135,66 @@ def plot_embolism_profile(embolism_percentages, intersections, leaf_name=None,
     axs[2].set_xlabel('Steps', fontsize=14)
     axs[2].set_ylabel('% Embolism', fontsize=14)
     axs[2].set_title('Unique Embolism % per Mask', fontsize=16)
+
+    if output_path:
+        fig.savefig(output_path)
+
+    if show:
+        plt.show()
+
+
+def plot_embolisms_per_leaf(summary_df=None, has_embolism_lol=None,
+                            leaf_names_list=None, output_path=None,
+                            show=True, percent=False, **kwargs):
+    leaf_names = []
+    has_embolism_list = []
+
+    if not summary_df and not has_embolism_lol:
+        raise ValueError("Please provide either a summary_df or list of "
+                         "has_embolism lists")
+
+    if not summary_df:
+        for i, h_e_list in enumerate(has_embolism_lol):
+            if leaf_names_list:
+                leaf_names = leaf_names + ([leaf_names_list[i]] *
+                                           len(h_e_list))
+            else:
+                leaf_names = leaf_names + ([f"leaf {i}"] * len(h_e_list))
+
+            has_embolism_list = has_embolism_list + h_e_list
+
+        summary_df = pd.DataFrame({"has_embolism": has_embolism_list,
+                                   "leaf": leaf_names})
+    else:
+        if len(summary_df.columns) != 2:
+            raise ValueError(
+                "A provided summary df should only have two columns, the "
+                "first should contain whether or not a leaf has an embolism "
+                "and the second should contain the leaf name")
+        summary_df.columns = ["has_embolism", "leaf"]
+
+    fig, ax = plt.subplots(**kwargs)
+
+    temp_df = pd.DataFrame(summary_df.groupby("leaf")['has_embolism'].
+                           value_counts(normalize=percent).round(2))
+
+    temp_df.unstack().plot(kind='bar', ax=ax, rot=0)
+
+    ax.legend(("False", "True"), title='Has Embolism', fontsize='large')
+    ax.set_xlabel('Leaf', fontsize=14)
+    ax.set_ylabel('Count', fontsize=14)
+    ax.set_title('Number of Images With Embolisms per Leaf', fontsize=16)
+
+    rects = [rect for rect in ax.get_children() if
+             isinstance(rect, mpl.patches.Rectangle)][:-1]
+
+    for rect in rects:
+        height = rect.get_height()
+        ax.annotate('{}'.format(height),
+                    xy=(rect.get_x() + rect.get_width() / 2, height),
+                    xytext=(0, 3),  # 3 points vertical offset
+                    textcoords="offset points",
+                    ha='center', va='bottom')
 
     if output_path:
         fig.savefig(output_path)
