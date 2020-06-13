@@ -149,9 +149,10 @@ class _ImageSequence(ABC):
 
     def trim_image_sequence(self, x_size_dir: Optional[Tuple[int, int]] = None,
                             y_size_dir: Optional[Tuple[int, int]] = None,
-                            overwrite: bool = True) -> None:
+                            overwrite: bool = True, disable_pb=False) -> None:
         """
         Note: parameters apply to all images in the image sequence
+        :param disable_pb: whether or not the progress bar should be disabled
         :param y_size_dir: an tuple of (output size, trim_direction), where
         trim direction is either 1 or -1, which indicates to trim from
         either the top or bottom respectively
@@ -162,18 +163,21 @@ class _ImageSequence(ABC):
         :return: None
         """
         # TODO: Implement option to use either x or y mode for output size
-        for image in self.image_objects:
-            if x_size_dir and y_size_dir:
-                if image.image_array.shape != (y_size_dir[0], x_size_dir[0]):
-                    image.trim_image(x_size_dir, y_size_dir, overwrite)
-            elif y_size_dir:
-                if image.image_array.shape[0] != y_size_dir[0]:
-                    image.trim_image(y_size_dir=y_size_dir,
-                                     overwrite=overwrite)
-            elif x_size_dir:
-                if image.image_array.shape[1] != x_size_dir[0]:
-                    image.trim_image(x_size_dir=x_size_dir,
-                                     overwrite=overwrite)
+        with tqdm(total=len(self.image_objects), file=sys.stdout,
+                  disable=disable_pb) as pbar:
+            for image in self.image_objects:
+                if x_size_dir and y_size_dir:
+                    if image.image_array.shape != (y_size_dir[0], x_size_dir[0]):
+                        image.trim_image(x_size_dir, y_size_dir, overwrite)
+                elif y_size_dir:
+                    if image.image_array.shape[0] != y_size_dir[0]:
+                        image.trim_image(y_size_dir=y_size_dir,
+                                         overwrite=overwrite)
+                elif x_size_dir:
+                    if image.image_array.shape[1] != x_size_dir[0]:
+                        image.trim_image(x_size_dir=x_size_dir,
+                                         overwrite=overwrite)
+                pbar.update(1)
 
     # *_________________________________ EDA _________________________________*
     def get_unique_sequence_range(self):
