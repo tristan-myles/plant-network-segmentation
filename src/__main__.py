@@ -461,6 +461,8 @@ if __name__ == "__main__":
                                  overwrite=ARGS.overwrite)
 
     if ARGS.which == "plot_profile":
+        utilities.update_plot_format()
+
         if ARGS.output_path is not None:
             if ARGS.output_path == "same":
                 PLOT_OUTPUT_LIST = INPUT_JSON_DICT["plots"]["output_paths"]
