@@ -98,9 +98,8 @@ def get_intersection(image: np.array, combined_image: np.array) -> \
     return intersection, combined_image
 
 
-def plot_embolism_profile(embolism_percentages, intersections,
-                          output_path=None, show=True,
-                          **kwargs):
+def plot_embolism_profile(embolism_percentages, intersections, leaf_name=None,
+                          output_path=None, show=True, **kwargs):
     """
     :param embolism_percentages:
     :param intersections:
@@ -110,9 +109,14 @@ def plot_embolism_profile(embolism_percentages, intersections,
     unique_embolism = np.array(embolism_percentages) - np.array(intersections)
     cum_embolism_percentages = np.cumsum(unique_embolism)
 
+    if leaf_name:
+        title = f"Embolism Profile of Leaf {leaf_name}"
+    else:
+        title = "Embolism Profile of Leaf"
+
     fig, axs = plt.subplots(3, **kwargs)
     fig.tight_layout(pad=8.0)
-    fig.suptitle('Embolism Profile of Leaf 1', fontsize=18, y=1)
+    fig.suptitle(title, fontsize=18, y=1)
 
     axs[0].plot(cum_embolism_percentages)
     axs[1].plot(unique_embolism, color="orange")
@@ -121,7 +125,7 @@ def plot_embolism_profile(embolism_percentages, intersections,
 
     axs[0].set_xlabel('Steps', fontsize=14)
     axs[0].set_ylabel('% Embolism', fontsize=14)
-    axs[0].set_title('Cummulative Embolism %', fontsize=16)
+    axs[0].set_title('Cumulative Embolism %', fontsize=16)
 
     axs[1].set_xlabel('Steps', fontsize=14)
     axs[1].set_ylabel('% Embolism', fontsize=14)
@@ -131,11 +135,12 @@ def plot_embolism_profile(embolism_percentages, intersections,
     axs[2].set_ylabel('% Embolism', fontsize=14)
     axs[2].set_title('Unique Embolism % per Mask', fontsize=16)
 
+    if output_path:
+        fig.savefig(output_path)
+
     if show:
         plt.show()
 
-    if output_path:
-        plt.savefig(output_path)
 
 
 if __name__ == "__main__":

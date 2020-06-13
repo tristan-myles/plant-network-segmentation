@@ -105,7 +105,7 @@ def trim_sequence_images(seq_objects, x_size_dir_list=None,
         seq.unload_extracted_images()
 
 
-def plot_mseq_profiles(mseqs, show, output_path_list):
+def plot_mseq_profiles(mseqs, show, output_path_list, leaf_name_list):
     for i, mseq in enumerate(mseqs):
         # less memory intensive for images to be loaded here
         LOGGER.info(f"Creating {mseq.num_files} image objects for "
@@ -119,9 +119,11 @@ def plot_mseq_profiles(mseqs, show, output_path_list):
         mseq.get_embolism_percent_list()
 
         if output_path_list is not None:
-            mseq.plot_profile(show, output_path_list[i])
+            mseq.plot_profile(show=show, output_path=output_path_list[i],
+                              leaf_name=leaf_name_list[i], figsize=(10, 15))
         else:
-            mseq.plot_profile(show)
+            mseq.plot_profile(show=show, leaf_name=leaf_name_list[i],
+                              figsize=(10, 15))
 
         mseq.unload_extracted_images()
 
@@ -305,6 +307,9 @@ def parse_arguments() -> argparse.Namespace:
     parser_plot_profile.add_argument(
         "--show", "-s", action="store_true", help="flag indicating if the "
                                                   "plot should be shown")
+    parser_plot_profile.add_argument(
+        "--leaf_names", "-ln",  type=str, metavar="\b",
+        help="leaf names to be used in plot title")
 
     parser_eda_df = subparsers.add_parser(
         "eda_df", help="extract an eda dataframe")
@@ -464,7 +469,14 @@ if __name__ == "__main__":
         else:
             PLOT_OUTPUT_LIST = None
 
-        plot_mseq_profiles(MSEQS, ARGS.show, PLOT_OUTPUT_LIST)
+        if ARGS.leaf_names == "same":
+            LEAF_NAMES_LIST = INPUT_JSON_DICT["plots"]["leaf_names"]
+        elif ARGS.leaf_names:
+            LEAF_NAMES_LIST = str.split(ARGS.leaf_names, " ")
+        else:
+            LEAF_NAMES_LIST = list(range(1, len(MSEQS)+1))
+
+        plot_mseq_profiles(MSEQS, ARGS.show, PLOT_OUTPUT_LIST, LEAF_NAMES_LIST)
 
     if ARGS.which == "eda_df":
         if ARGS.csv_output_path == "same":
