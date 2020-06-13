@@ -530,6 +530,8 @@ if __name__ == "__main__":
             X_SIZE_DIR_LIST = INPUT_JSON_DICT["trim"]["x_size_dir"]
             X_SIZE_DIR_LIST = [tuple(X_SIZE_DIR) if X_SIZE_DIR else None for
                                X_SIZE_DIR in X_SIZE_DIR_LIST]
+        elif not ARGS.x_size_dir:
+            X_SIZE_DIR_LIST = [None]
         else:
             X_SIZE_DIR_LIST = literal_eval(ARGS.x_size_dir)
 
@@ -542,6 +544,8 @@ if __name__ == "__main__":
             Y_SIZE_DIR_LIST = INPUT_JSON_DICT["trim"]["y_size_dir"]
             Y_SIZE_DIR_LIST = [tuple(Y_SIZE_DIR) if Y_SIZE_DIR else None for
                                Y_SIZE_DIR in Y_SIZE_DIR_LIST]
+        elif not ARGS.y_size_dir:
+            Y_SIZE_DIR_LIST = [None]
         else:
             Y_SIZE_DIR_LIST = literal_eval(ARGS.y_size_dir)
 
