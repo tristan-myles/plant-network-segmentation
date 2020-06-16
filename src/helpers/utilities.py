@@ -1,7 +1,12 @@
+import logging
 import os
 import pandas as pd
 from pathlib import Path
 from copy import deepcopy
+import matplotlib as mpl
+
+
+LOGGER = logging.getLogger(__name__)
 
 
 def create_file_name(output_folder_path, output_file_name, i,
@@ -94,3 +99,20 @@ def trim_image_array(image_array, output_size: int,
         image_array = image_array.transpose()
 
     return image_array
+
+
+def update_plot_format(default: bool = False):
+    if default:
+        mpl.rcParams.update(mpl.rcParamsDefault)
+    else:
+        # Project specific params
+        LOGGER.info(
+            "Note these changes will apply the entire session, please run  "
+            "this function with `default = True` to restore default "
+            "matplotlib settings")
+        mpl.rcParams['lines.linewidth'] = 3
+        mpl.rcParams['axes.spines.top'] = False
+        mpl.rcParams['axes.spines.right'] = False
+        mpl.rcParams['axes.linewidth'] = 1.5
+        mpl.rcParams['xtick.labelsize'] = 12
+        mpl.rcParams['ytick.labelsize'] = 12

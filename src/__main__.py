@@ -7,6 +7,7 @@ from fastai.vision import *
 
 from src.data.data_model import *
 from src.helpers.utilities import *
+from src.eda.describe_leaf import plot_embolisms_per_leaf
 from src.model.fastai_models import FastaiUnetLearner
 
 abs_path = path.dirname(path.abspath(__file__))
@@ -105,7 +106,7 @@ def trim_sequence_images(seq_objects, x_size_dir_list=None,
         seq.unload_extracted_images()
 
 
-def plot_mseq_profiles(mseqs, show, output_path_list):
+def plot_mseq_profiles(mseqs, show, output_path_list, leaf_name_list):
     for i, mseq in enumerate(mseqs):
         # less memory intensive for images to be loaded here
         LOGGER.info(f"Creating {mseq.num_files} image objects for "
@@ -119,9 +120,70 @@ def plot_mseq_profiles(mseqs, show, output_path_list):
         mseq.get_embolism_percent_list()
 
         if output_path_list is not None:
-            mseq.plot_profile(show, output_path_list[i])
+            mseq.plot_profile(show=show, output_path=output_path_list[i],
+                              leaf_name=leaf_name_list[i], figsize=(10, 15))
         else:
-            mseq.plot_profile(show)
+            mseq.plot_profile(show=show, leaf_name=leaf_name_list[i],
+                              figsize=(10, 15))
+
+        mseq.unload_extracted_images()
+
+
+def plot_mseq_embolism_counts(mseqs, show, output_path, tiles,
+                              leaf_name_list, leaf_embolism_only=False,
+                              percent=False):
+    has_embolism_lol = []
+
+    for i, mseq in enumerate(mseqs):
+        has_embolism_lol.append([])
+
+        # less memory intensive for images to be loaded here
+        LOGGER.info(f"Creating {mseq.num_files} image objects for "
+                    f"{mseq.__class__.__name__} located at {mseq.folder_path}")
+        mseq.load_extracted_images()
+
+        if not tiles or leaf_embolism_only:
+            mseq.load_image_array()
+
+            LOGGER.info("Extracting the embolism percent list")
+            mseq.get_embolism_percent_list()
+
+            LOGGER.info("Extracting the has_embolism list")
+            mseq.get_has_embolism_list()
+
+            mseq.unload_extracted_images()
+
+        if not tiles:
+            has_embolism_lol[i] = has_embolism_lol[i] + mseq.has_embolism_list
+
+        if tiles:
+            with tqdm(total=len(mseq.image_objects), file=sys.stdout) as pbar:
+                for mask_image in mseq.image_objects:
+                    if leaf_embolism_only:
+                        # Assumes linked sequences have been provided.
+                        if not mask_image.has_embolism:
+                            # Skip this image if the mask has no embolism
+                            continue
+
+                    mask_image.load_tile_paths()
+                    mask_image.load_extracted_images(load_image=True,
+                                                    disable_pb=True)
+                    mask_image.get_embolism_percent_list(disable_pb=True)
+                    mask_image.get_has_embolism_list(disable_pb=True)
+                    has_embolism_lol[i] = \
+                        has_embolism_lol[i] + mask_image.has_embolism_list
+                    mask_image.unload_extracted_images()
+                    pbar.update(1)
+
+    if output_path is not None:
+        plot_embolisms_per_leaf(has_embolism_lol=has_embolism_lol,
+                                show=show, output_path=output_path,
+                                leaf_names_list=leaf_name_list,
+                                percent=percent, figsize=(10, 15))
+    else:
+        plot_embolisms_per_leaf(has_embolism_lol=has_embolism_lol,
+                                show=show, leaf_names_list=leaf_name_list,
+                                percent=percent, figsize=(10, 15))
 
         mseq.unload_extracted_images()
 
@@ -305,6 +367,32 @@ def parse_arguments() -> argparse.Namespace:
     parser_plot_profile.add_argument(
         "--show", "-s", action="store_true", help="flag indicating if the "
                                                   "plot should be shown")
+    parser_plot_profile.add_argument(
+        "--leaf_names", "-ln",  type=str, metavar="\b",
+        help="leaf names to be used in plot title")
+
+    parser_plot_embolism_counts = subparsers.add_parser(
+        "plot_embolism_counts", help="plot the embolism count profile for a "
+                                     "dataset")
+    parser_plot_embolism_counts.set_defaults(which="plot_embolism_counts")
+    parser_plot_embolism_counts.add_argument(
+        "--output_path", "-o", type=str, metavar="\b", help="The plot output "
+                                                            "path")
+    parser_plot_embolism_counts.add_argument(
+        "--show", "-s", action="store_true", help="flag indicating if the "
+                                                  "plot should be shown")
+    parser_plot_embolism_counts.add_argument(
+        "--leaf_names", "-ln",  type=str, metavar="\b",
+        help="leaf names to be used in plot title")
+    parser_plot_embolism_counts.add_argument(
+        "--tile", "-t", action="store_true",
+        help="indicates if the plot should be created using tiles")
+    parser_plot_embolism_counts.add_argument(
+        "--leaf_embolism_only", "-leo", action="store_true",
+        help="should only full leafs with embolisms be used")
+    parser_plot_embolism_counts.add_argument(
+        "--percent", "-p", action="store_true",
+        help="should the plot y-axis be expressed as a percent")
 
     parser_eda_df = subparsers.add_parser(
         "eda_df", help="extract an eda dataframe")
@@ -455,16 +543,34 @@ if __name__ == "__main__":
             trim_sequence_images(SEQS, X_SIZE_DIR_LIST, Y_SIZE_DIR_LIST,
                                  overwrite=ARGS.overwrite)
 
-    if ARGS.which == "plot_profile":
+    if ARGS.which == "plot_profile" or ARGS.which == "plot_embolism_counts":
+        utilities.update_plot_format()
+
         if ARGS.output_path is not None:
             if ARGS.output_path == "same":
                 PLOT_OUTPUT_LIST = INPUT_JSON_DICT["plots"]["output_paths"]
             else:
-                PLOT_OUTPUT_LIST = str.split(ARGS.output_path, " ")
+                if ARGS.which == "plot_profile":
+                    PLOT_OUTPUT_LIST = str.split(ARGS.output_path, " ")
+                else:
+                    PLOT_OUTPUT_LIST = ARGS.output_path
         else:
             PLOT_OUTPUT_LIST = None
 
-        plot_mseq_profiles(MSEQS, ARGS.show, PLOT_OUTPUT_LIST)
+        if ARGS.leaf_names == "same":
+            LEAF_NAMES_LIST = INPUT_JSON_DICT["plots"]["leaf_names"]
+        elif ARGS.leaf_names:
+            LEAF_NAMES_LIST = str.split(ARGS.leaf_names, " ")
+        else:
+            LEAF_NAMES_LIST = list(range(1, len(MSEQS) + 1))
+
+        if ARGS.which == "plot_profile":
+            plot_mseq_profiles(MSEQS, ARGS.show, PLOT_OUTPUT_LIST,
+                               LEAF_NAMES_LIST)
+        else:
+            plot_mseq_embolism_counts(MSEQS, ARGS.show, PLOT_OUTPUT_LIST,
+                                      ARGS.tile, LEAF_NAMES_LIST,
+                                      ARGS.leaf_embolism_only, ARGS.percent)
 
     if ARGS.which == "eda_df":
         if ARGS.csv_output_path == "same":
