@@ -179,11 +179,11 @@ def plot_mseq_embolism_counts(mseqs, show, output_path, tiles,
         plot_embolisms_per_leaf(has_embolism_lol=has_embolism_lol,
                                 show=show, output_path=output_path,
                                 leaf_names_list=leaf_name_list,
-                                percent=percent, figsize=(10, 15))
+                                percent=percent, figsize=(15, 10))
     else:
         plot_embolisms_per_leaf(has_embolism_lol=has_embolism_lol,
                                 show=show, leaf_names_list=leaf_name_list,
-                                percent=percent, figsize=(10, 15))
+                                percent=percent, figsize=(15, 10))
 
         mseq.unload_extracted_images()
 
