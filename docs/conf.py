@@ -47,9 +47,9 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
-    'sphinx_autodoc_typehints'
+    'sphinx_autodoc_typehints',
+    'sphinx-prompt'
 ]
-
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
 
@@ -91,7 +91,7 @@ html_theme = 'sphinx_rtd_theme'
 #
 
 # .svg file doesn't diplay using logo only
-html_logo = "resources/logos/monstera_logo.svg"
+html_logo = "resources/images/monstera_logo.svg"
 # html_theme_options = {'logo_only':True}
 # html_show_sourcelink = True
 
