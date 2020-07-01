@@ -1007,6 +1007,7 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
 
         if memory_saving:
             self.image_array = None
+            self.prediction_array = None
 
     # *______________________________ utilities ______________________________*
     def get_databunch_dataframe(self, embolism_only: bool = False,
