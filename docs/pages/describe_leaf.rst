@@ -1,5 +1,5 @@
-Describe Leaf Module
-====================
+Describe Leaf
+=============
 
 .. automodule:: src.eda.describe_leaf
    :members:
