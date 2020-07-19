@@ -568,6 +568,9 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
                                     binarise: bool = False):
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
 
+        if binarise:
+            output_folder_path = output_folder_path + "-binary"
+
         Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 
         try:
@@ -826,9 +829,7 @@ class _FullImageMixin:
 
         if output_path is None:
             output_folder_path, output_file_name = self.path.rsplit("/", 1)
-            output_folder_path = os.path.join(
-                output_folder_path,
-                "../chips-" + str.lower(self.__class__.__name__))
+            output_folder_path = output_folder_path + "-chips"
         else:
             output_folder_path, output_file_name = output_path.rsplit("/",
                                                                       1)
@@ -862,12 +863,9 @@ class _FullImageMixin:
 
     def load_tile_paths(self, folder_path: str = None,
                         filename_pattern: str = None):
-
         if folder_path is None and filename_pattern is None:
             folder_path, filename_pattern = self.path.rsplit("/", 1)
-            folder_path = os.path.join(
-                folder_path,
-                "../chips-" + str.lower(self.__class__.__name__))
+            folder_path = folder_path + "-chips"
             filename_pattern = filename_pattern.rsplit(".")[0] + "*"
 
         self.file_list = sorted([
