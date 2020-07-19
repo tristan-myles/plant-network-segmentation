@@ -760,7 +760,7 @@ class _LeafImage(_Image):
         self.prediction_array = np.array([])
 
     # *___________________________ pre-processing ____________________________*
-    def binarise_self(self, prediction):
+    def binarise_self(self, prediction=None):
         if prediction:
             self.prediction_array = super().binarise_self(
                 self.prediction_array)
@@ -768,7 +768,8 @@ class _LeafImage(_Image):
             self.image_array = super().binarise_self(self.image_array)
 
     # *_________________________________ EDA _________________________________*
-    def extract_embolism_percent(self, prediction, embolism_px: int = 255):
+    def extract_embolism_percent(self, prediction=None,
+                                 embolism_px: int = 255):
         if prediction:
             return super().extract_embolism_percent(self.prediction_array,
                                                     embolism_px)
@@ -776,13 +777,13 @@ class _LeafImage(_Image):
             return super().extract_embolism_percent(self.image_array,
                                                     embolism_px)
 
-    def extract_unique_range(self, prediction):
+    def extract_unique_range(self, prediction=None):
         if prediction:
             return super().extract_unique_range(self.prediction_array)
         else:
             return super().extract_unique_range(self.image_array)
 
-    def extract_intersection(self, prediction, combined_image):
+    def extract_intersection(self, combined_image, prediction=None):
         if prediction:
             return super().extract_intersection(self.prediction_array,
                                                 combined_image)
