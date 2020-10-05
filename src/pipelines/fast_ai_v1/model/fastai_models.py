@@ -9,8 +9,10 @@ __email__ = "ndxtri015@myuct.ac.za"
 __status__ = "development"
 
 import logging
-from fastai.vision import *
+
 import matplotlib.pyplot as plt
+from fastai.vision import *
+
 from src.helpers.extract_dataset import chip_range
 from src.model.model import Model
 
@@ -41,7 +43,7 @@ class FastaiUnetLearner(Model):
                          batch_sizes: int,
                          split_func=ItemList.split_from_df,
                          plot: bool = False,
-                         mask_col_name:str = "mask_path",
+                         mask_col_name: str = "mask_path",
                          codes: List[int] = [0, 1],
                          **kwargs):
 
@@ -73,7 +75,7 @@ class FastaiUnetLearner(Model):
             [Precision(), Recall(), FBeta(beta=1), accuracy])
 
     def train(self, epochs: int, save_path: str = None, lr: float = None,
-              unfreeze_type = None):
+              unfreeze_type=None):
 
         if unfreeze_type == "all":
             self.learn.unfreeze()
@@ -122,7 +124,7 @@ class FastaiUnetLearner(Model):
             _, val_tfms = get_transforms()
             input_image = input_image.apply_tfms(
                 val_tfms.append(normalize_funcs(*imagenet_stats)),
-                input_image,size=new_tile.shape)
+                input_image, size=new_tile.shape)
         else:
             raise Exception("No input image :(")
 
@@ -144,8 +146,8 @@ class FastaiUnetLearner(Model):
 
                 if ((y_range[1] - y_range[0]) != y_tile_length or
                         (x_range[1] - x_range[0]) != x_tile_length):
-                    pred_tile = pred_tile[0:(y_range[1]-y_range[0]),
-                                0:(x_range[1]-x_range[0])]
+                    pred_tile = pred_tile[0:(y_range[1] - y_range[0]),
+                                0:(x_range[1] - x_range[0])]
 
                 prediction[y_range[0]:y_range[1], x_range[0]:x_range[1]] = \
                     pred_tile
@@ -219,7 +221,7 @@ class ConfusionMatrix(Callback):
 
         if self.cm is None:
             # make an empty confusion matrix
-           self.cm = torch.zeros((self.n_classes, self.n_classes),
+            self.cm = torch.zeros((self.n_classes, self.n_classes),
                                   device=torch.device('cpu'))
 
         cm_temp_numpy = self.cm.numpy()
@@ -239,7 +241,7 @@ class CMScores(ConfusionMatrix):
      and/or recall score."""
     average: Optional[str] = "binary"
     # `binary`, `micro`, `macro`, `weighted` or None
-    pos_label: int = 1                     # 0 or 1
+    pos_label: int = 1  # 0 or 1
     eps: float = 1e-9
 
     def _recall(self):
@@ -263,7 +265,7 @@ class CMScores(ConfusionMatrix):
             weights = self._weights(avg=self.average)
             return (prec * weights).sum()
 
-    def _weights(self, avg:str):
+    def _weights(self, avg: str):
         if self.n_classes != 2 and avg == "binary":
             avg = self.average = "macro"
             warn("average=`binary` was selected for a non binary case. "
@@ -273,9 +275,9 @@ class CMScores(ConfusionMatrix):
                 self.pos_label = 1
                 warn("Invalid value for pos_label. It has now been set to 1.")
             if self.pos_label == 1:
-                return Tensor([0,1])
+                return Tensor([0, 1])
             else:
-                return Tensor([1,0])
+                return Tensor([1, 0])
         elif avg == "micro":
             return self.cm.sum(dim=0) / self.cm.sum()
         elif avg == "macro":
@@ -286,12 +288,14 @@ class CMScores(ConfusionMatrix):
 
 class Recall(CMScores):
     """Computes the Recall."""
+
     def on_epoch_end(self, last_metrics, **kwargs):
         return add_metrics(last_metrics, self._recall())
 
 
 class Precision(CMScores):
     """Computes the Precision."""
+
     def on_epoch_end(self, last_metrics, **kwargs):
         return add_metrics(last_metrics, self._precision())
 

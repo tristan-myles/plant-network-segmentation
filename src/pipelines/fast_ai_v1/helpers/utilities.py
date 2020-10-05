@@ -1,58 +1,58 @@
 import argparse
-import logging.config
-from os import path
 
 from fastai.vision import *
 
 from src.data.data_model import *
-from src.pipelines.fast_ai_1.helpers.utilities import (combine_and_add_valid,
-                                                       format_databunch_df)
-from src.pipelines.fast_ai_1.model.fastai_models import FastaiUnetLearner
+from src.pipelines.fast_ai_v1.model.fastai_models import FastaiUnetLearner
 
-abs_path = path.dirname(path.abspath(__file__))
-
-logging.config.fileConfig(fname=abs_path + "/../../logging_configuration.ini",
-                          defaults={'logfilename': abs_path + "/main.log"},
-                          disable_existing_loggers=False)
 LOGGER = logging.getLogger(__name__)
 
-pil_logger = logging.getLogger('PIL')
-pil_logger.setLevel(logging.WARNING)
 
-mpl_logger = logging.getLogger('matplotlib')
-mpl_logger.setLevel(logging.WARNING)
+# *============================ DataBunch helpers ============================*
+def combine_and_add_valid(train_dfs, valid_dfs):
+    if not isinstance(train_dfs, list):
+        raise Exception("Please provide the training DataFrame(s) as a list")
+    elif not isinstance(valid_dfs, list):
+        raise Exception("Please provide the validation DataFrame(s) as a list")
 
+    train_df = pd.concat(train_dfs)
+    train_df["is_valid"] = False
 
-def create_sequence_objects(sequence_input):
-    lseqs = []
-    mseqs = []
+    valid_df = pd.concat(valid_dfs)
+    valid_df["is_valid"] = True
 
-    leaf_dict = sequence_input["leaves"]["input"]
-    if leaf_dict is not None:
-        leaf_keys = list(leaf_dict.keys())
-        for vals in zip(*list(leaf_dict.values())):
-            kwargs = {key: val for key, val in zip(leaf_keys, vals)}
-            lseqs.append(LeafSequence(**kwargs))
-
-    mask_dict = sequence_input["masks"]["input"]
-    if mask_dict is not None:
-        mask_keys = list(mask_dict.keys())
-        for vals in zip(*list(mask_dict.values())):
-            kwargs = {key: val for key, val in zip(mask_keys, vals)}
-            mseqs.append(MaskSequence(**kwargs))
-
-    return lseqs, mseqs
+    return pd.concat([train_df, valid_df])
 
 
-def load_image_objects(seq_objects, load_images=False):
-    LOGGER.info(f"Creating image objects for "
-                f"{seq_objects[0].__class__.__name__}")
+def format_databunch_df(df_to_update, folder_col_name,
+                        leaf_col_name, create_copy=False):
+    split_list = df_to_update[folder_col_name].str.split("/").to_list()
+    counts_df = pd.DataFrame(split_list).apply(
+        lambda x: len(x.unique()), axis=0)
 
-    for seq in seq_objects:
-        LOGGER.info(f"Creating {seq.num_files} objects")
-        seq.load_extracted_images(load_image=load_images)
+    for i, count in enumerate(counts_df):
+        if count > 1:
+            break
+
+    if create_copy:
+        updated_df = deepcopy(df_to_update)
+    else:
+        updated_df = df_to_update
+
+    updated_df[leaf_col_name] = updated_df.apply(
+        lambda x: os.path.join(*str.split(x[folder_col_name], "/")[i:],
+                               x[leaf_col_name]), axis=1)
+
+    common_folder_path = os.path.join("/", *str.split(
+        df_to_update[folder_col_name].to_list()[0], "/")[:i], "")
+
+    updated_df.drop(folder_col_name, axis=1, inplace=True)
+
+    return updated_df, common_folder_path
 
 
+# *================================== main ===================================*
+# *---------------------------------- train ----------------------------------*
 def train_fastai_unet(train_df_paths, save_path, bs, epochs, lr,
                       val_df_paths=None, unfreeze_type=None,
                       model_weights_path=None, **kwargs):
@@ -89,6 +89,7 @@ def train_fastai_unet(train_df_paths, save_path, bs, epochs, lr,
               unfreeze_type=unfreeze_type)
 
 
+# *--------------------------------- predict ---------------------------------*
 def predict_fastai_unet(lseqs, length_x, length_y, model_pkl_path):
     fai_unet_learner = FastaiUnetLearner(model_pkl_path=model_pkl_path)
 
@@ -96,6 +97,7 @@ def predict_fastai_unet(lseqs, length_x, length_y, model_pkl_path):
         lseq.predict_leaf_sequence(fai_unet_learner, length_x, length_y)
 
 
+# *-------------------------------- argparse ---------------------------------*
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser("Perform operations using the "
                                      "plant-image-segmentation code base")
@@ -146,52 +148,4 @@ def parse_arguments() -> argparse.Namespace:
 
     args = parser.parse_args()
     return args
-
-
-if __name__ == "__main__":
-    ARGS = parse_arguments()
-
-    LOGGER.debug(ARGS.which)
-    with open(ARGS.json_path, "r") as JSON_FILE:
-        INPUT_JSON_DICT = json.load(JSON_FILE)
-
-    if ARGS.which != "train_fastai":
-        LSEQS, MSEQS = create_sequence_objects(INPUT_JSON_DICT)
-
-    if ARGS.which == "train_fastai":
-        TRAIN_CSV_INPUT_LIST = INPUT_JSON_DICT["fastai"]["train"]
-        VAL_CSV_INPUT_LIST = INPUT_JSON_DICT["fastai"]["validation"]
-
-        if ARGS.unfreeze_type:
-            if ARGS.unfreeze_type != "all" and ARGS.unfreeze_type != "last":
-                UNFREEZE_TYPE = int(ARGS.unfreeze_type)
-            else:
-                UNFREEZE_TYPE = ARGS.unfreeze_type
-        else:
-            UNFREEZE_TYPE = None
-
-        if VAL_CSV_INPUT_LIST:
-            train_fastai_unet(TRAIN_CSV_INPUT_LIST, save_path=ARGS.save_path,
-                              bs=ARGS.batch_size, epochs=ARGS.epochs,
-                              lr=ARGS.learning_rate,
-                              val_df_paths=VAL_CSV_INPUT_LIST,
-                              unfreeze_type=UNFREEZE_TYPE,
-                              model_weights_path=ARGS.model_weights_path)
-        else:
-            train_fastai_unet(TRAIN_CSV_INPUT_LIST,
-                              save_path=ARGS.save_path, bs=ARGS.batch_size,
-                              epochs=ARGS.epochs, lr=ARGS.learning_rate,
-                              unfreeze_type=UNFREEZE_TYPE,
-                              model_weights_path=ARGS.model_weights_path,
-                              seed=314)
-
-    if ARGS.which == "predict_fastai":
-        if ARGS.model_path == "same":
-            MODEL_PATH = INPUT_JSON_DICT["fastai"]["model"]
-        else:
-            MODEL_PATH = ARGS.model_path
-
-        load_image_objects(LSEQS)
-
-        predict_fastai_unet(LSEQS, ARGS.length_x, ARGS.length_y,
-                            MODEL_PATH)
+# *===========================================================================*
