@@ -8,10 +8,13 @@ __version__ = "0.0.1"
 __email__ = "ndxtri015@myuct.ac.za"
 __status__ = "development"
 
+import logging
 from fastai.vision import *
 import matplotlib.pyplot as plt
 from src.helpers.extract_dataset import chip_range
 from src.model.model import Model
+
+LOGGER = logging.getLogger(__name__)
 
 
 class FastaiUnetLearner(Model):
@@ -69,25 +72,42 @@ class FastaiUnetLearner(Model):
             data_bunch, model, metrics=
             [Precision(), Recall(), FBeta(beta=1), accuracy])
 
-    def train(self, epochs: int, save_path: str = None,
-              lr: float = None):
+    def train(self, epochs: int, save_path: str = None, lr: float = None,
+              unfreeze_type = None):
+
+        if unfreeze_type == "all":
+            self.learn.unfreeze()
+        elif unfreeze_type == "last":
+            self.learn.freeze()
+        elif unfreeze_type:
+            if isinstance(unfreeze_type, int):
+                self.learn.freeze_to(unfreeze_type)
+            else:
+                raise ValueError("Please provide either all, last or the "
+                                 "layer to freeze up to as an int for the"
+                                 "unfreeze_type argument")
+
         if lr is None:
+            if not self.min_grad_lr:
+                LOGGER.info("Attempting to find a suggested LR")
+                self.find_lr()
+
             if self.min_grad_lr:
                 lr = self.min_grad_lr
             else:
-                raise ValueError("No lr provided and min_grad_lr "
-                                 "is also none")
+                raise ValueError("No lr provided and min_grad_lr is also none")
+
         self.learn.fit_one_cycle(epochs, lr)
 
         if save_path:
             self.learn.save(save_path, return_path=True)
             self.learn.export(f'{save_path}.pkl')
 
-    def find_lr(self, learn: vision.learner):
+    def find_lr(self):
         self.learn.lr_find()
         self.learn.recorder.plot(suggestion=True)
         # suggested LR is the point at which the gradient is the steepest
-        self.min_grad_lr = learn.recorder.min_grad_lr
+        self.min_grad_lr = self.learn.recorder.min_grad_lr
 
     def load_weights(self, path: str):
         self.learn.load(path)

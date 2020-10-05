@@ -251,8 +251,9 @@ def extract_tiles_databunch_df(lseqs, mseqs, output_path_list,
                                        csv_output_path)
 
 
-def train_fastai_unet(train_df_paths, save_path, bs,
-                      epochs, lr, val_df_paths=None, **kwargs):
+def train_fastai_unet(train_df_paths, save_path, bs, epochs, lr,
+                      val_df_paths=None, unfreeze_type=None,
+                      model_weights_path=None, **kwargs):
     training_dfs = [pd.read_csv(path, index_col=0) for path in train_df_paths]
 
     if val_df_paths:
@@ -265,6 +266,7 @@ def train_fastai_unet(train_df_paths, save_path, bs,
         combined_df, "folder_path", "leaf_name", create_copy=True)
 
     fai = FastaiUnetLearner()
+
     if val_df_paths:
         fai.prep_fastai_data(combined_df, folder_name_path, bs, plot=False,
                              mask_col_name="mask_path",
@@ -277,7 +279,11 @@ def train_fastai_unet(train_df_paths, save_path, bs,
 
     fai.create_learner()
 
-    fai.train(epochs=epochs, save_path=save_path, lr=lr)
+    if model_weights_path:
+        fai.load_weights(model_weights_path)
+
+    fai.train(epochs=epochs, save_path=save_path, lr=lr,
+              unfreeze_type=unfreeze_type)
 
 
 def predict_fastai_unet(lseqs, length_x, length_y, model_pkl_path):
@@ -445,6 +451,16 @@ def parse_arguments() -> argparse.Namespace:
                                      metavar="\b", help="number of epochs")
     parser_train_fastai.add_argument("--learning_rate", "-lr", type=float,
                                      metavar="\b", help="learning rate")
+    parser_train_fastai.add_argument(
+        "--unfreeze_type", "-ut", metavar="\b",
+        help="whether the model needs to be unfrozen before training, "
+             "the options that follow refer to the layer you want to "
+             "unfreeze: 'all', 'last', or the number you want to freeze up "
+             "to")
+    parser_train_fastai.add_argument(
+        "--model_weights_path", "-mwp",
+        help="path to fastai model weights (complete path excluding .pth) to "
+             "retrain, if the paths are in the input json enter \"same\"")
 
     parser_predict_fastai = subparsers.add_parser(
         "predict_fastai", help="train a fastai unet model")
@@ -628,16 +644,27 @@ if __name__ == "__main__":
         TRAIN_CSV_INPUT_LIST = INPUT_JSON_DICT["fastai"]["train"]
         VAL_CSV_INPUT_LIST = INPUT_JSON_DICT["fastai"]["validation"]
 
+        if ARGS.unfreeze_type:
+            if ARGS.unfreeze_type != "all" and ARGS.unfreeze_type != "last":
+                UNFREEZE_TYPE = int(ARGS.unfreeze_type)
+            else:
+                UNFREEZE_TYPE = ARGS.unfreeze_type
+        else:
+            UNFREEZE_TYPE = None
+
         if VAL_CSV_INPUT_LIST:
             train_fastai_unet(TRAIN_CSV_INPUT_LIST, save_path=ARGS.save_path,
                               bs=ARGS.batch_size, epochs=ARGS.epochs,
                               lr=ARGS.learning_rate,
-                              val_df_paths=VAL_CSV_INPUT_LIST)
+                              val_df_paths=VAL_CSV_INPUT_LIST,
+                              unfreeze_type=UNFREEZE_TYPE,
+                              model_weights_path=ARGS.model_weights_path)
         else:
             train_fastai_unet(TRAIN_CSV_INPUT_LIST,
                               save_path=ARGS.save_path, bs=ARGS.batch_size,
                               epochs=ARGS.epochs, lr=ARGS.learning_rate,
-                              seed=314)
+                              unfreeze_type=UNFREEZE_TYPE,
+                              model_weights_path=ARGS.model_weights_path, seed=314)
 
     if ARGS.which == "predict_fastai":
         if ARGS.model_path == "same":
