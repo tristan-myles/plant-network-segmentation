@@ -568,6 +568,9 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
                                     binarise: bool = False):
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
 
+        if binarise:
+            output_folder_path = output_folder_path + "-binary"
+
         Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 
         try:
@@ -757,7 +760,7 @@ class _LeafImage(_Image):
         self.prediction_array = np.array([])
 
     # *___________________________ pre-processing ____________________________*
-    def binarise_self(self, prediction):
+    def binarise_self(self, prediction=None):
         if prediction:
             self.prediction_array = super().binarise_self(
                 self.prediction_array)
@@ -765,7 +768,8 @@ class _LeafImage(_Image):
             self.image_array = super().binarise_self(self.image_array)
 
     # *_________________________________ EDA _________________________________*
-    def extract_embolism_percent(self, prediction, embolism_px: int = 255):
+    def extract_embolism_percent(self, prediction=None,
+                                 embolism_px: int = 255):
         if prediction:
             return super().extract_embolism_percent(self.prediction_array,
                                                     embolism_px)
@@ -773,13 +777,13 @@ class _LeafImage(_Image):
             return super().extract_embolism_percent(self.image_array,
                                                     embolism_px)
 
-    def extract_unique_range(self, prediction):
+    def extract_unique_range(self, prediction=None):
         if prediction:
             return super().extract_unique_range(self.prediction_array)
         else:
             return super().extract_unique_range(self.image_array)
 
-    def extract_intersection(self, prediction, combined_image):
+    def extract_intersection(self, combined_image, prediction=None):
         if prediction:
             return super().extract_intersection(self.prediction_array,
                                                 combined_image)
@@ -826,9 +830,7 @@ class _FullImageMixin:
 
         if output_path is None:
             output_folder_path, output_file_name = self.path.rsplit("/", 1)
-            output_folder_path = os.path.join(
-                output_folder_path,
-                "../chips-" + str.lower(self.__class__.__name__))
+            output_folder_path = output_folder_path + "-chips"
         else:
             output_folder_path, output_file_name = output_path.rsplit("/",
                                                                       1)
@@ -862,12 +864,9 @@ class _FullImageMixin:
 
     def load_tile_paths(self, folder_path: str = None,
                         filename_pattern: str = None):
-
         if folder_path is None and filename_pattern is None:
             folder_path, filename_pattern = self.path.rsplit("/", 1)
-            folder_path = os.path.join(
-                folder_path,
-                "../chips-" + str.lower(self.__class__.__name__))
+            folder_path = folder_path + "-chips"
             filename_pattern = filename_pattern.rsplit(".")[0] + "*"
 
         self.file_list = sorted([
