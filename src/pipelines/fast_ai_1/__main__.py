@@ -1,12 +1,13 @@
 import argparse
-import json
 import logging.config
 from os import path
 
+from fastai.vision import *
+
 from src.data.data_model import *
-from src.model.fastai_models import FastaiUnetLearner
 from src.pipelines.fast_ai_1.helpers.utilities import (combine_and_add_valid,
                                                        format_databunch_df)
+from src.pipelines.fast_ai_1.model.fastai_models import FastaiUnetLearner
 
 abs_path = path.dirname(path.abspath(__file__))
 
