@@ -5,8 +5,8 @@ from os import path
 
 from src.data.data_model import *
 from src.model.fastai_models import FastaiUnetLearner
-from src.pipelines.fast_ai.helpers.utilities import (combine_and_add_valid,
-                                                     format_databunch_df)
+from src.pipelines.fast_ai_1.helpers.utilities import (combine_and_add_valid,
+                                                       format_databunch_df)
 
 abs_path = path.dirname(path.abspath(__file__))
 
@@ -41,6 +41,7 @@ def create_sequence_objects(sequence_input):
             mseqs.append(MaskSequence(**kwargs))
 
     return lseqs, mseqs
+
 
 def load_image_objects(seq_objects, load_images=False):
     LOGGER.info(f"Creating image objects for "
@@ -106,23 +107,6 @@ def parse_arguments() -> argparse.Namespace:
     subparsers = parser.add_subparsers(title="actions",
                                        description='possible actions using '
                                                    'this module')
-
-    parser_databunch_df = subparsers.add_parser(
-        "databunch_df", help="extract an databunch dataframe")
-    parser_databunch_df.set_defaults(which="databunch_df")
-
-    parser_databunch_df.add_argument(
-        "csv_output_path", help="output paths, if the paths are in the input"
-                                " json enter \"same\"")
-
-    parser_databunch_df.add_argument("--tiles", "-t", action="store_true")
-    parser_databunch_df.add_argument("--tile_embolism_only", "-teo",
-                                     action="store_true",
-                                     help="should only tiles with embolisms "
-                                          "be used")
-    parser_databunch_df.add_argument(
-        "--leaf_embolism_only", "-leo", action="store_true",
-        help="should only full leafs with embolisms be used")
 
     parser_train_fastai = subparsers.add_parser(
         "train_fastai", help="train a fastai unet model")
