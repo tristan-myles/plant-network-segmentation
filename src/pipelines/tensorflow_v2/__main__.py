@@ -1,4 +1,5 @@
 import datetime
+import json
 import logging
 
 import numpy as np
@@ -7,7 +8,9 @@ from src.pipelines.tensorflow_v2.callbacks.lr_range_test import LRRangeTest
 from src.pipelines.tensorflow_v2.callbacks.one_cycle import OneCycleLR
 from src.pipelines.tensorflow_v2.helpers.train import get_tf_dataset, train
 from src.pipelines.tensorflow_v2.helpers.utilities import (parse_arguments,
-                                                           interactive_prompt)
+                                                           interactive_prompt,
+                                                           format_input,
+                                                           print_user_input)
 from src.pipelines.tensorflow_v2.losses.custom_losses import *
 from src.pipelines.tensorflow_v2.models.unet import Unet
 from src.pipelines.tensorflow_v2.models.unet_resnet import UnetResnet
@@ -28,6 +31,11 @@ def main():
 
     if ARGS.interactive:
         ANSWERS = interactive_prompt()
+    elif ARGS.json_path:
+        with open(ARGS.json_path, "r") as JSON_FILE:
+            ANSWERS = json.load(JSON_FILE)
+
+    ANSWERS = format_input(ANSWERS)
 
     # convert to np.array for multi-element indexing
     METRICS = np.array([

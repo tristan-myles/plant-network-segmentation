@@ -1,5 +1,6 @@
 import argparse
 from glob import glob
+import json
 
 import cv2
 import tensorflow as tf
@@ -97,116 +98,222 @@ def parse_arguments() -> argparse.Namespace:
 
 
 # *--------------------------- interactive prompt ----------------------------*
+def print_user_input(answers):
+    print(f"\nYogur chosen configuration is:\n"
+          f"1.  {'Training base directory':<40}: {answers['train_base_dir']}\n"
+          f"2.  {'Validation base directory':<40}: {answers['val_base_dir']}\n"
+          f"3.  {'Leaf, Mask extension':<40}: {answers['leaf_ext']},"
+          f" {answers['mask_ext']}\n"
+          f"4.  {'Include augmented images':<40}: {answers['incl_aug']}\n"
+          f"5.  {'Leaf shape':<40}: {answers['leaf_shape']}\n"
+          f"6.  {'Mask shape':<40}: {answers['mask_shape']}\n"
+          f"7.  {'Batch size':<40}: {answers['batch_size']}\n"
+          f"8.  {'Buffer size':<40}: {answers['buffer_size']}\n"
+          f"9.  {'Model choice':<40}: {answers['model_choice']}\n"
+          f"10. {'Loss function choice':<40}: {answers['loss_choice']}\n"
+          f"11. {'Optimiser choice':<40}: {answers['opt_choice']}\n"
+          f"12. {'Learning rate':<40}: {answers['lr']}\n"
+          f"13. {'Callback choices':<40}: {answers['callback_choices']}\n"
+          f"14. {'Metric choices':<40}: {answers['metric_choices']}\n")
+
+
 def interactive_prompt():
+    happy = False
+    # list options = 1 - 15
+
+    options_list = set(range(1, 16))
+
     print("Hello and welcome to plant-network-segmentation's training module"
           "\nA few inputs will be required from you to begin...")
-    train_base_dir = input("\nWhere is the base directory of your training "
-                           "images?\nNote, please include a / at the end of "
-                           "the directory: ")
-    val_base_dir = input("\nWhere is the base directory of your validation "
-                         "images?\nNote, please include a / at the end of "
-                         "the directory: ")
-    leaf_ext, mask_ext = input(
-        "\nWhat are the the leaf and mask extensions respectively?"
-        "\nPlease provide the leaf extension first and separate your answers "
-        "with a space\nNote, not . should be included in the ext name, "
-        "e.g. \"png\": ").split()
 
-    print("\nShould augmented images be included in the training set?\n"
-          "Options:\n"
-          "0: True\n"
-          "1: False")
-    incl_aug = input("Please choose a number: ")
-    incl_aug = int(incl_aug) == 0
+    while not happy:
+        if 1 in options_list:
+            train_base_dir = input("\n1. Where is the base directory of your"
+                                   " training images?\nNote, please include a"
+                                   " / at the end of the directory: ")
 
-    leaf_shape = tuple([int(size) for size in input(
-        "Please enter the leaf image shape, separating each number by a "
-        "space: ").split()])
+            options_list.remove(1)
 
-    mask_shape = tuple([int(size) for size in input(
-        "Please enter the mask image shape, separating each number by a "
-        "space: ").split()])
+        if 2 in options_list:
+            val_base_dir = input("\n2. Where is the base directory of your"
+                                 " validation images?\nNote, please include a"
+                                 " / at the end of the directory: ")
 
-    batch_size = int(input("\nPlease provide a batch size: "))
+            options_list.remove(2)
 
-    buffer_size = int(input(
-        "\nPlease provide a buffer size\nNote, this influences the extent to "
-        "which the data is shuffled: "))
+        if 3 in options_list:
+            leaf_ext, mask_ext = input(
+                "\n3. What are the the leaf and mask extensions respectively?"
+                "\nPlease provide the leaf extension first and separate your"
+                " answers with a space\nNote, not . should be included in the"
+                " ext name, e.g. \"png\": ").split()
 
-    print("\nPlease choose which model you would like to use\n"
-          "Options:\n"
-          "0: Vanilla U-Net\n"
-          "1: U-Net with ResNet backbone \n"
-          "2: W-Net\n")
-    model_choice = int(input("Please choose the relevant model number: "))
+            options_list.remove(3)
 
-    print("\nPlease choose which loss function you would like to use\n"
-          "Options:\n"
-          "0: Balance cross-entropy\n"
-          "1: Weighted cross-entropy \n"
-          "2: Focal loss\n"
-          "3: Soft dice loss\n")
-    loss_choice = int(input("\nPlease choose the relevant loss function "
-                            "number: "))
+        if 4 in options_list:
+            print("\n4. Should augmented images be included in the training "
+                  "set?\n"
+                  "Options:\n"
+                  "0: False\n"
+                  "1: True")
+            incl_aug = input("Please choose a number: ")
+            incl_aug = int(incl_aug) == 1
 
-    print("\nPlease choose which optimiser you would like to use\n"
-          "Options:\n"
-          "0: Adam\n"
-          "1: SGD with momentum \n")
-    opt_choice = int(input("Please choose the relevant optimiser number: "))
+            options_list.remove(4)
 
-    lr = float(input("\nPlease provide a learning rate: "))
+        if 5 in options_list:
+            leaf_shape = input("\n5. Please enter the leaf image shape, "
+                               "separating"
+                               " each number by a space: ")
 
-    print("\nPlease choose which callbacks you would like to use\n"
-          "Options:\n"
-          "0: Learning rate range test\n"
-          "1: 1cycle policy\n"
-          "2: Early stopping\n"
-          "3: CSV Logger\n"
-          "4: Model Checkpoint\n"
-          "5: Tensor Board\n"
-          "6: All\n")
-    callback_choices = [int(choice) for choice in input(
-        "Choose the relevant number(s) separated by a space: ").split()]
+            options_list.remove(5)
 
-    print("\nPlease choose which metrics you would like to report\n"
-          "Options:\n"
-          "0: True Positives\n"
-          "1: False Positives\n"
-          "2: True Negatives\n"
-          "3: False Negatives\n"
-          "4: Accuracy\n"
-          "5: Precision\n"
-          "6: Recall\n"
-          "7: AUC (ROC Curve) \n"
-          "8: All")
-    metric_choices = [int(choice) for choice in input(
-        "Choose the relevant number(s) separated by a space: ").split()]
+        if 6 in options_list:
+            mask_shape = input("\n6. Please enter the mask image shape, "
+                               "separating"
+                               " each number by a space: ")
 
-    print(f"\nYour chosen configuration is:\n"
-          f"{'Training base directory':<40}: {train_base_dir}\n"
-          f"{'Validation base directory':<40}: {val_base_dir}\n"
-          f"{'Leaf, Mask extension':<40}: {leaf_ext}, {mask_ext}\n"
-          f"{'Include augmented images':<40}: {incl_aug}\n"
-          f"{'Leaf shape':<40}: {leaf_shape}\n"
-          f"{'Mask shape':<40}: {mask_shape}\n"
-          f"{'Batch size':<40}: {batch_size}\n"
-          f"{'Buffer size':<40}: {buffer_size}\n"
-          f"{'Model choice':<40}: {model_choice}\n"
-          f"{'Loss function choice':<40}: {loss_choice}\n"
-          f"{'Optimiser choice':<40}: {opt_choice}\n"
-          f"{'Learning rate':<40}: {lr}\n"
-          f"{'Callback choices':<40}: {callback_choices}\n"
-          f"{'Metric choices':<40}: {metric_choices}\n")
+            options_list.remove(6)
 
-    answers = {"train_base_dir": train_base_dir, "val_base_dir": val_base_dir,
-               "leaf_ext": leaf_ext, "mask_ext": mask_ext,
-               "incl_aug": incl_aug, "mask_shape": mask_shape,
-               "leaf_shape": leaf_shape, "batch_size": batch_size,
-               "buffer_size": buffer_size, "model_choice": model_choice,
-               "loss_choice": loss_choice, "opt_choice": opt_choice,
-               "lr": lr, "callback_choices": callback_choices,
-               "metric_choices": metric_choices}
+        if 7 in options_list:
+            batch_size = int(input("\n7. Please provide a batch size: "))
+
+            options_list.remove(7)
+
+        if 8 in options_list:
+            buffer_size = int(input(
+                "\n8. Please provide a buffer size\nNote, this influences the"
+                " extent to which the data is shuffled: "))
+
+            options_list.remove(8)
+
+        if 9 in options_list:
+            print("\n9. Please choose which model you would like to use\n"
+                  "Options:\n"
+                  "0: Vanilla U-Net\n"
+                  "1: U-Net with ResNet backbone \n"
+                "2: W-Net\n")
+            model_choice = int(input("Please choose the relevant model"
+                                     " number: "))
+
+            options_list.remove(9)
+
+        if 10 in options_list:
+            print("\n10. Please choose which loss function you would like to "
+                  "use\n"
+                  "Options:\n"
+                  "0: Balance cross-entropy\n"
+                  "1: Weighted cross-entropy \n"
+                  "2: Focal loss\n"
+                  "3: Soft dice loss\n")
+            loss_choice = int(input("\nPlease choose the relevant loss"
+                                    " function number: "))
+
+            options_list.remove(10)
+
+        if 11 in options_list:
+            print("\n11. Please choose which optimiser you would like to use\n"
+                  "Options:\n"
+                  "0: Adam\n"
+                  "1: SGD with momentum \n")
+            opt_choice = int(input("Please choose the relevant optimiser"
+                                   " number: "))
+
+            options_list.remove(11)
+
+        if 12 in options_list:
+            lr = float(input("\n12. Please provide a learning rate: "))
+
+            options_list.remove(12)
+
+        if 13 in options_list:
+            print("\n13. Please choose which callbacks you would like to use\n"
+                  "Options:\n"
+                  "0: Learning rate range test\n"
+                  "1: 1cycle policy\n"
+                  "2: Early stopping\n"
+                  "3: CSV Logger\n"
+                  "4: Model Checkpoint\n"
+                  "5: Tensor Board\n"
+                  "6: All\n")
+            callback_choices = input("Choose the relevant number(s) separated"
+                                     " by a space: ")
+
+            options_list.remove(13)
+
+        if 14 in options_list:
+            print("\n14. Please choose which metrics you would like to "
+                  "report\n"
+                  "Options:\n"
+                  "0: True Positives\n"
+                  "1: False Positives\n"
+                  "2: True Negatives\n"
+                  "3: False Negatives\n"
+                  "4: Accuracy\n"
+                  "5: Precision\n"
+                  "6: Recall\n"
+                  "7: AUC (ROC Curve) \n"
+                  "8: All")
+
+            metric_choices = input("Choose the relevant number(s) separated by"
+                                   " a space: ")
+
+            options_list.remove(14)
+
+        answers = {"train_base_dir": train_base_dir, "val_base_dir": val_base_dir,
+                   "leaf_ext": leaf_ext, "mask_ext": mask_ext,
+                   "incl_aug": incl_aug, "mask_shape": mask_shape,
+                   "leaf_shape": leaf_shape, "batch_size": batch_size,
+                   "buffer_size": buffer_size, "model_choice": model_choice,
+                   "loss_choice": loss_choice, "opt_choice": opt_choice,
+                   "lr": lr, "callback_choices": callback_choices,
+                   "metric_choices": metric_choices}
+
+        print_user_input(answers)
+
+        options_list = input(
+            "\nIf you are satisfied with this configurations, please enter 0."
+            "\nIf not, please enter the number(s) of the options you would"
+            " like to change. Separate multiple options by a space: ")
+        options_list = set([int(choice) for choice in options_list.split()])
+
+        if len(options_list) == 1 and 0 in options_list:
+            happy = True
+        elif 0 in options_list:
+            print("\nYou entered options in addition to 0, so 0 will be "
+                  "removed")
+            options_list.remove(0)
+
+    save_path = input("\nIf you would like to save this configuration"
+                      " please enter the full json file name, including"
+                      " the file path: ")
+
+    if save_path:
+        with open(save_path, 'w') as file:
+            json.dump(answers, file)
 
     return answers
+
+
+def format_input(answers_dict):
+    to_tuple_keys = ["leaf_shape", "mask_shape"]
+
+    for key in to_tuple_keys:
+        answers_dict[key] = tuple(
+            [int(size) for size in answers_dict[key].split()])
+
+    to_list_keys = ["metric_choices", "callback_choices"]
+
+    for key in to_list_keys:
+        answers_dict[key] = [int(size) for size in answers_dict[key].split()]
+
+    to_int_keys = ["batch_size", "buffer_size", "model_choice",
+                   "loss_choice", "opt_choice"]
+
+    for key in to_int_keys:
+        answers_dict[key] = int(answers_dict[key])
+
+    answers_dict["lr"] = float(answers_dict["lr"])
+
+    return answers_dict
 # *===========================================================================*
