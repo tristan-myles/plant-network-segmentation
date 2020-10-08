@@ -65,14 +65,14 @@ def parse_image_fc(leaf_shape, mask_shape):
         # Masks
         mask = tf.io.read_file(mask_path)
         mask = tf.image.decode_png(mask, channels=1)
-        mask = tf.cast(mask, tf.float32) / 255
         mask = tf.reshape(mask, mask_shape)
         # mask = tf.image.resize(mask, [512, 512])
         mask = tfa.image.gaussian_filter2d(mask)
 
         # will return 255 where the condition is met else 0
         mask = tf.where(tf.greater(mask, 0), 255, 0)
-        # if mask is not binary then can use the code below to cast 255 to 1:
+        mask = tf.cast(mask, tf.float32) / 255
+
         return img, mask
     return parse_image
 
