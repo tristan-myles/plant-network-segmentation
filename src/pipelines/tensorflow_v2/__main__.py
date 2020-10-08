@@ -120,7 +120,8 @@ def main():
 
     # train model
     results = train(train_dataset, val_dataset, list(metrics),
-                    list(callbacks), model, ANSWERS["lr"], opt, loss)
+                    list(callbacks), model, ANSWERS["lr"], opt, loss,
+                    ANSWERS["epochs"])
 
 
 if __name__ == "__main__":

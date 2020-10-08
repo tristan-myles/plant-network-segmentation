@@ -66,12 +66,12 @@ def get_tf_dataset(train_base_dir, val_base_dir, leaf_ext, mask_ext,
 
 # *=============================== train model ===============================*
 def train(train_dataset, val_dataset, metrics, callbacks, model, lr, opt,
-          loss):
+          loss, epochs):
     model.compile(loss=loss,
                   optimizer=opt(lr=lr),
                   metrics=metrics)
 
-    model_history = model.fit(train_dataset, epochs=20,
+    model_history = model.fit(train_dataset, epochs=epochs,
                               validation_data=val_dataset,
                               callbacks=[callbacks])
 

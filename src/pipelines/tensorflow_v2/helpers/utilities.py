@@ -113,15 +113,16 @@ def print_user_input(answers):
           f"10. {'Loss function choice':<40}: {answers['loss_choice']}\n"
           f"11. {'Optimiser choice':<40}: {answers['opt_choice']}\n"
           f"12. {'Learning rate':<40}: {answers['lr']}\n"
-          f"13. {'Callback choices':<40}: {answers['callback_choices']}\n"
-          f"14. {'Metric choices':<40}: {answers['metric_choices']}\n"
-          f"15. {'Run name':<40}: {answers['run_name']}\n")
+          f"13. {'Epochs':<40}: {answers['epochs']}\n"
+          f"14. {'Callback choices':<40}: {answers['callback_choices']}\n"
+          f"15. {'Metric choices':<40}: {answers['metric_choices']}\n"
+          f"16. {'Run name':<40}: {answers['run_name']}\n")
 
 
 def interactive_prompt():
     happy = False
-    # list options = 1 - 15
-    options_list = set(range(1, 16))
+    # list options = 1 - 16
+    options_list = set(range(1, 17))
 
     print("Hello and welcome to plant-network-segmentation's training module"
           "\nA few inputs will be required from you to begin...")
@@ -192,7 +193,7 @@ def interactive_prompt():
                   "Options:\n"
                   "0: Vanilla U-Net\n"
                   "1: U-Net with ResNet backbone \n"
-                "2: W-Net\n")
+                  "2: W-Net\n")
             model_choice = int(input("Please choose the relevant model"
                                      " number: "))
 
@@ -227,6 +228,12 @@ def interactive_prompt():
             options_list.remove(12)
 
         if 13 in options_list:
+            epochs = float(input("\n13. Please provide the number of epochs"
+                                 " to run for: "))
+
+            options_list.remove(13)
+
+        if 14 in options_list:
             print("\n13. Please choose which callbacks you would like to use\n"
                   "Options:\n"
                   "0: Learning rate range test\n"
@@ -239,9 +246,9 @@ def interactive_prompt():
             callback_choices = input("Choose the relevant number(s) separated"
                                      " by a space: ")
 
-            options_list.remove(13)
+            options_list.remove(14)
 
-        if 14 in options_list:
+        if 15 in options_list:
             print("\n14. Please choose which metrics you would like to "
                   "report\n"
                   "Options:\n"
@@ -258,14 +265,14 @@ def interactive_prompt():
             metric_choices = input("Choose the relevant number(s) separated by"
                                    " a space: ")
 
-            options_list.remove(14)
+            options_list.remove(15)
 
-        if 15 in options_list:
+        if 16 in options_list:
             run_name = input("\n15. Please enter the run name, this will be"
                              " the name used to save your callback output"
                              " (if applicable): ")
 
-            options_list.remove(15)
+            options_list.remove(16)
 
         answers = {"train_base_dir": train_base_dir, "val_base_dir": val_base_dir,
                    "leaf_ext": leaf_ext, "mask_ext": mask_ext,
@@ -273,8 +280,9 @@ def interactive_prompt():
                    "leaf_shape": leaf_shape, "batch_size": batch_size,
                    "buffer_size": buffer_size, "model_choice": model_choice,
                    "loss_choice": loss_choice, "opt_choice": opt_choice,
-                   "lr": lr, "callback_choices": callback_choices,
-                   "metric_choices": metric_choices, "run_name": run_name}
+                   "lr": lr, "epochs": epochs, "run_name": run_name,
+                   "callback_choices": callback_choices,
+                   "metric_choices": metric_choices}
 
         print_user_input(answers)
 
@@ -315,7 +323,7 @@ def format_input(answers_dict):
         answers_dict[key] = [int(size) for size in answers_dict[key].split()]
 
     to_int_keys = ["batch_size", "buffer_size", "model_choice",
-                   "loss_choice", "opt_choice"]
+                   "loss_choice", "opt_choice", "epochs"]
 
     for key in to_int_keys:
         answers_dict[key] = int(answers_dict[key])
