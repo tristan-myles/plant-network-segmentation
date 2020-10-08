@@ -54,23 +54,29 @@ def main():
     else:
         metrics = METRICS[ANSWERS["metric_choices"]]
 
+    callback_base_dir = "data/run_data/"
+
     lr_range_test = LRRangeTest(init_lr=1e-8, max_lr=3, iterations=12197,
                                 verbose=1000)
+
     ocp = OneCycleLR(init_lr=1e-5, max_lr=1e-2, final_tail_lr=1e-9,
                      tail_length=0.2, iterations=243940)
+
     early_stopping = tf.keras.callbacks.EarlyStopping(monitor='precision',
                                                       patience=8,
                                                       min_delta=0.001)
     csv_logger = tf.keras.callbacks.CSVLogger(
-        "overfit_lr_decay_7.log", separator=',', append=False)
+        f"{callback_base_dir}csv_logs/{ANSWERS['run_name']}.log",
+        separator=',',  append=False)
 
     model_cpt = tf.keras.callbacks.ModelCheckpoint(
-        filepath="checking_overfit_7", save_weights_only=True,
-        monitor='val_recall', mode='max', save_best_only=True)
+        filepath=f"{callback_base_dir}saved_models/{ANSWERS['run_name']}",
+        save_weights_only=False, monitor='val_recall', mode='max',
+        save_best_only=True)
 
-    tb_log_dir = "tb_logs/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-    tb = tf.keras.callbacks.TensorBoard(log_dir=tb_log_dir, histogram_freq=1,
-                                        update_freq="epoch", profile_batch=0)
+    tb = tf.keras.callbacks.TensorBoard(
+        log_dir=f"{callback_base_dir}tb_logs/{ANSWERS['run_name']}",
+        histogram_freq=1, update_freq="epoch", profile_batch=0)
 
     CALLBACKS = np.array([
         lr_range_test, ocp, early_stopping, csv_logger, model_cpt, tb])

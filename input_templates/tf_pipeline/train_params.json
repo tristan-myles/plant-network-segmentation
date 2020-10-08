@@ -13,5 +13,6 @@
   "opt_choice": "0",
   "lr": "1",
   "callback_choices": "1 2 3",
-  "metric_choices": "1 2 3"
+  "metric_choices": "1 2 3",
+  "run_name": "name"
 }

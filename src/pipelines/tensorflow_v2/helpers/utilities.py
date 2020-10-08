@@ -114,13 +114,13 @@ def print_user_input(answers):
           f"11. {'Optimiser choice':<40}: {answers['opt_choice']}\n"
           f"12. {'Learning rate':<40}: {answers['lr']}\n"
           f"13. {'Callback choices':<40}: {answers['callback_choices']}\n"
-          f"14. {'Metric choices':<40}: {answers['metric_choices']}\n")
+          f"14. {'Metric choices':<40}: {answers['metric_choices']}\n"
+          f"15. {'Run name':<40}: {answers['run_name']}\n")
 
 
 def interactive_prompt():
     happy = False
     # list options = 1 - 15
-
     options_list = set(range(1, 16))
 
     print("Hello and welcome to plant-network-segmentation's training module"
@@ -260,6 +260,13 @@ def interactive_prompt():
 
             options_list.remove(14)
 
+        if 15 in options_list:
+            run_name = input("\n15. Please enter the run name, this will be"
+                             " the name used to save your callback output"
+                             " (if applicable): ")
+
+            options_list.remove(15)
+
         answers = {"train_base_dir": train_base_dir, "val_base_dir": val_base_dir,
                    "leaf_ext": leaf_ext, "mask_ext": mask_ext,
                    "incl_aug": incl_aug, "mask_shape": mask_shape,
@@ -267,7 +274,7 @@ def interactive_prompt():
                    "buffer_size": buffer_size, "model_choice": model_choice,
                    "loss_choice": loss_choice, "opt_choice": opt_choice,
                    "lr": lr, "callback_choices": callback_choices,
-                   "metric_choices": metric_choices}
+                   "metric_choices": metric_choices, "run_name": run_name}
 
         print_user_input(answers)
 
