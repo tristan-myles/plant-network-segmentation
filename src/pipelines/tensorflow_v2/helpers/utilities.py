@@ -99,7 +99,7 @@ def parse_arguments() -> argparse.Namespace:
 
 # *--------------------------- interactive prompt ----------------------------*
 def print_user_input(answers):
-    print(f"\nYogur chosen configuration is:\n"
+    print(f"\nYour chosen configuration is:\n"
           f"1.  {'Training base directory':<40}: {answers['train_base_dir']}\n"
           f"2.  {'Validation base directory':<40}: {answers['val_base_dir']}\n"
           f"3.  {'Leaf, Mask extension':<40}: {answers['leaf_ext']},"
