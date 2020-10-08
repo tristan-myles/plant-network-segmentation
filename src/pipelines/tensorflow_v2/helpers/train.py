@@ -75,5 +75,5 @@ def train(train_dataset, val_dataset, metrics, callbacks, model, lr, opt,
                               validation_data=val_dataset,
                               callbacks=[callbacks])
 
-    return model_history
+    return model_history, model
 # *===========================================================================*

@@ -69,8 +69,9 @@ def main():
         f"{callback_base_dir}csv_logs/{ANSWERS['run_name']}.log",
         separator=',',  append=False)
 
+    model_save_path = f"{callback_base_dir}saved_models/{ANSWERS['run_name']}"
     model_cpt = tf.keras.callbacks.ModelCheckpoint(
-        filepath=f"{callback_base_dir}saved_models/{ANSWERS['run_name']}",
+        filepath=model_save_path,
         save_weights_only=False, monitor='val_recall', mode='max',
         save_best_only=True)
 
@@ -119,9 +120,11 @@ def main():
         mask_shape=ANSWERS['mask_shape'])
 
     # train model
-    results = train(train_dataset, val_dataset, list(metrics),
+    _, model = train(train_dataset, val_dataset, list(metrics),
                     list(callbacks), model, ANSWERS["lr"], opt, loss,
                     ANSWERS["epochs"])
+
+    model.save(model_save_path, save_format="tf")
 
 
 if __name__ == "__main__":
