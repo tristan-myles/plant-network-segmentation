@@ -134,7 +134,7 @@ class WNet(tf.keras.Model):
 
         # Channels set for binary prediction
         self.unet1 = MiniUnet(1)
-        self.unet2 = MiniUnet(2)
+        self.unet2 = MiniUnet(1)
         self.concat = Concatenate()
 
     def call(self, input_tensor, training=True):
