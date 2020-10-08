@@ -35,6 +35,26 @@ class ResBlock(tf.keras.Model):
             self.conv3 = Conv2D(channels, 1, stride)
             self.bn3 = BatchNormalization()
 
+    def call(self, x):
+        x1 = self.conv1(x)
+        x1 = self.bn1(x1)
+        x1 = tf.nn.relu(x1)
+
+        x1 = self.conv2(x1)
+        x1 = self.bn2(x1)
+
+        # Matching dims (i.e. projection shortcut)
+        if self.flag or self.decode:
+            x = self.conv3(x)
+            x = self.bn3(x)
+
+        x1 += x
+
+        # Addition is before the activation...
+        x1 = tf.nn.relu(x1)
+
+        return x1
+
 
 # *============================== ResNet U-Net ===============================*
 class UnetResnet(tf.keras.Model):
@@ -182,7 +202,7 @@ class UnetResnet(tf.keras.Model):
 
     def model(self, shape=(288, 288, 1)):
         x = Input(shape=shape)
-        return Model(inputs=[x], outputs=self.call(x))
+        return tf.keras.Model(inputs=[x], outputs=self.call(x))
 
     def print_all_layers(self):
         model_layers = self.model().layers

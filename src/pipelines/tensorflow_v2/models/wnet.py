@@ -6,13 +6,12 @@
 import tensorflow as tf
 from tensorflow.keras.layers import (Conv2D, MaxPool2D, Conv2DTranspose,
                                      Input, BatchNormalization, Concatenate)
-from tensorflow.keras import Model
 
 from src.pipelines.tensorflow_v2.models.unet_resnet import ResBlock
 
 
 # *============================ Conv Bridge Block ============================*
-class ConvBridgeBlock(Model):
+class ConvBridgeBlock(tf.keras.Model):
     def __init__(self, channels):
         super().__init__()
 
@@ -32,7 +31,7 @@ class ConvBridgeBlock(Model):
 
 
 # *=============================== Mini U-Net ================================*
-class MiniUnet(Model):
+class MiniUnet(tf.keras.Model):
     # Olaf Ronneberger et al. U-Net
     def __init__(self, output_channels):
         super().__init__()
@@ -99,7 +98,7 @@ class MiniUnet(Model):
 
     def model(self, shape=(512, 512, 1)):
         x = Input(shape=shape)
-        return Model(inputs=[x], outputs=self.call(x))
+        return tf.keras.Model(inputs=[x], outputs=self.call(x))
 
     def print_all_layers(self):
         model_layers = self.model().layers
@@ -123,8 +122,9 @@ class MiniUnet(Model):
 
         return layers
 
+
 # *================================== W-Net ==================================*
-class WNet(Model):
+class WNet(tf.keras.Model):
     """
     Combines two Mini U-Nets where the prediction of the first Mini U-Net is
     concatenated to the first
@@ -149,5 +149,5 @@ class WNet(Model):
 
     def model(self, shape=(512, 512, 1)):
         x = Input(shape=shape)
-        return Model(inputs=[x], outputs=self.call(x))
+        return tf.keras.Model(inputs=[x], outputs=self.call(x))
 # *===========================================================================*

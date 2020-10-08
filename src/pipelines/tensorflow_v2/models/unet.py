@@ -1,5 +1,5 @@
 import tensorflow as tf
-from tensorflow.keras.layers import Conv2D, MaxPool2D, Conv2DTranspose
+from tensorflow.keras.layers import Input, Conv2D, MaxPool2D, Conv2DTranspose
 
 
 # *========================== U-Net Building Block ===========================*
@@ -106,8 +106,8 @@ class UnetBlock(tf.keras.Model):
 
         return x
 
-    def call(self, input_tensor: tf.tensor,
-             downblock_output: tf.tensor = None):
+    def call(self, input_tensor: tf.Tensor,
+             downblock_output: tf.Tensor = None):
         if self.decode:
             return self.downblock(input_tensor)
 
@@ -213,7 +213,7 @@ class Unet(tf.keras.Model):
 
     def model(self, shape=(512, 512, 1)):
         x = Input(shape=shape)
-        return Model(inputs=[x], outputs=self.call(x))
+        return tf.keras.Model(inputs=[x], outputs=self.call(x))
 
     def print_all_layers(self):
         model_layers = self.model().layers
