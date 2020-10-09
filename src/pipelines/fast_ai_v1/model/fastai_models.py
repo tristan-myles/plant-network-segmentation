@@ -129,6 +129,7 @@ class FastaiUnetLearner(Model):
             raise Exception("No input image :(")
 
         prediction = self.learn.predict(input_image)
+        prediction = (prediction[0].px.numpy() * 255)
 
         return prediction
 
