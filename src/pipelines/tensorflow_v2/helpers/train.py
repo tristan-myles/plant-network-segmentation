@@ -1,6 +1,7 @@
 import tensorflow as tf
 
 from src.data.data_model import *
+from src.model.model import Model
 from src.pipelines.tensorflow_v2.helpers.utilities import (
     get_sorted_list, configure_for_performance, parse_image_fc)
 
@@ -76,4 +77,9 @@ def train(train_dataset, val_dataset, metrics, callbacks, model, lr, opt,
                               callbacks=[callbacks])
 
     return model_history, model
+
+
+class _TFPredictionMixin(Model):
+    def predict_tile(self, new_tile):
+        pass
 # *===========================================================================*
