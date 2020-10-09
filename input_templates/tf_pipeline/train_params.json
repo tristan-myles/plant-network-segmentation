@@ -1,0 +1,19 @@
+{
+  "train_base_dir": "example/",
+  "val_base_dir": "example/",
+  "leaf_ext": "eg",
+  "mask_ext": "eg",
+  "incl_aug": true,
+  "mask_shape": "16 16 1",
+  "leaf_shape": "16 16 1",
+  "batch_size": "1",
+  "buffer_size": "1",
+  "model_choice": "0",
+  "loss_choice": "0",
+  "opt_choice": "0",
+  "lr": "0.1",
+  "epochs": "1",
+  "callback_choices": "1 2 3",
+  "metric_choices": "1 2 3",
+  "run_name": "name"
+}
