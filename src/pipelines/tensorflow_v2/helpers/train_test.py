@@ -79,6 +79,23 @@ class _TfPnsMixin(Model):
 
         return model_history
 
+    def load_workaround(self, mask_shape, leaf_shape, loss, opt, metrics,
+                        chkpt_path):
+        # Loading model weights, with the necessary workaround due to issues
+        # using model.save and model.load with subclassed models, specifically
+        # with custom objects
+        x_train_blank = np.zeros((1,) + leaf_shape)
+        y_train_blank = np.zeros((1,) + mask_shape)
+
+        self.compile(loss=loss, optimizer=opt, metrics=metrics)
+
+        # This initializes the variables used by the optimizers,
+        # as well as any stateful metric variables
+        self.train_on_batch(x_train_blank, y_train_blank)
+
+        # Load the state of the old model
+        self.load_weights(chkpt_path)
+
     def predict_tile(self, new_tile):
         pass
 # *===========================================================================*

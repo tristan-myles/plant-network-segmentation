@@ -8,10 +8,11 @@ import numpy as np
 from src.pipelines.tensorflow_v2.callbacks.lr_range_test import LRRangeTest
 from src.pipelines.tensorflow_v2.callbacks.one_cycle import OneCycleLR
 from src.pipelines.tensorflow_v2.helpers.train_test import get_tf_dataset
-from src.pipelines.tensorflow_v2.helpers.utilities import (parse_arguments,
-                                                           interactive_prompt,
-                                                           format_input,
-                                                           print_user_input)
+
+from src.pipelines.tensorflow_v2.helpers.utilities import (
+    parse_arguments, interactive_prompt, format_input, check_model_save,
+    get_model_pred_batch_loss)
+
 from src.pipelines.tensorflow_v2.losses.custom_losses import *
 from src.pipelines.tensorflow_v2.models.unet import Unet
 from src.pipelines.tensorflow_v2.models.unet_resnet import UnetResnet
@@ -51,9 +52,9 @@ def main():
     ])
 
     if ANSWERS["metric_choices"][0] == len(METRICS):
-        metrics = METRICS
+        metrics = list(METRICS)
     else:
-        metrics = METRICS[ANSWERS["metric_choices"]]
+        metrics = list(METRICS[ANSWERS["metric_choices"]])
 
     callback_base_dir = "data/run_data/"
 
@@ -76,7 +77,7 @@ def main():
 
     model_cpt = tf.keras.callbacks.ModelCheckpoint(
         filepath=model_save_path, save_weights_only=True, mode='max',
-        monitor='val_recall', save_best_only=True)
+        monitor='val_recall', save_best_only=True, save_format="tf")
 
     tb = tf.keras.callbacks.TensorBoard(
         log_dir=f"{callback_base_dir}tb_logs/{ANSWERS['run_name']}",
@@ -86,9 +87,9 @@ def main():
         lr_range_test, ocp, early_stopping, csv_logger, model_cpt, tb])
 
     if ANSWERS["callback_choices"][0] == len(CALLBACKS):
-        callbacks = CALLBACKS
+        callbacks = list(CALLBACKS)
     else:
-        callbacks = CALLBACKS[ANSWERS["callback_choices"]]
+        callbacks = list(CALLBACKS[ANSWERS["callback_choices"]])
 
     # Input validations is done when answers are provided, hence the final
     # else statement as opposed to an elif
@@ -123,11 +124,49 @@ def main():
         mask_shape=ANSWERS['mask_shape'])
 
     # train model
-    _ = model.train(train_dataset, val_dataset, list(metrics),
-                    list(callbacks), ANSWERS["lr"], opt, loss,
+    _ = model.train(train_dataset, val_dataset, metrics,
+                    callbacks, ANSWERS["lr"], opt, loss,
                     ANSWERS["epochs"])
 
-    model.save(model_save_path, save_format="tf")
+    # checking model save
+    # NB the condition below should relate to the model checkpoint option
+    if 4 in ANSWERS["callback_choices"]:
+        # code repeated so that memory is not wasted on the new model
+        if ANSWERS["model_choice"] == 0:
+            new_model = Unet(1)
+        elif ANSWERS["model_choice"] == 1:
+            new_model = UnetResnet(1)
+        else:
+            new_model = WNet()
+
+        if ANSWERS["opt_choice"] == 0:
+            new_opt = tf.keras.optimizers.Adam
+        else:
+            new_opt = tf.keras.optimizers.SGD
+
+        if ANSWERS["loss_choice"] == 0:
+            new_loss = tf.keras.losses.binary_crossentropy
+        elif ANSWERS["loss_choice"] == 1:
+            new_loss = weighted_CE(0.5)
+        elif ANSWERS["loss_choice"] == 2:
+            new_loss = focal_loss(0.5)
+        else:
+            new_loss = soft_dice_loss
+
+        old_pred, old_bloss = get_model_pred_batch_loss(
+            model, ANSWERS["leaf_shape"], ANSWERS["mask_shape"])
+
+        new_opt = new_opt(model.optimizer.lr.numpy())
+        print("warning deleting model")
+        del model
+
+        new_model.load_workaround(ANSWERS["leaf_shape"], ANSWERS["mask_shape"],
+                                  new_loss, new_opt, metrics, model_save_path)
+
+        new_pred, new_bloss = get_model_pred_batch_loss(
+            new_model, ANSWERS["leaf_shape"], ANSWERS["mask_shape"])
+
+        check_model_save(old_pred, new_pred, old_bloss, new_bloss)
 
 
 if __name__ == "__main__":

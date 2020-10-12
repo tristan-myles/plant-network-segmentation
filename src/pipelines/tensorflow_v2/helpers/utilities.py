@@ -3,6 +3,7 @@ from glob import glob
 import json
 
 import cv2
+import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
 
@@ -75,6 +76,32 @@ def parse_image_fc(leaf_shape, mask_shape):
 
         return img, mask
     return parse_image
+
+
+# *=============================== load model ================================*
+def check_model_save(old_pred, new_pred, old_bloss=None, new_bloss=None):
+    np.testing.assert_allclose(old_pred, new_pred, atol=1e-6,
+                               err_msg="Prediction from the saved model is"
+                                       " not the same as the original model")
+
+    if old_bloss:
+        assert old_bloss == new_bloss, "Optimiser state not preserved!"
+
+
+def get_model_pred_batch_loss(model, leaf_shape, mask_shape):
+    # Create a blank input image and mask
+    x_train_blank = np.zeros((1,) + leaf_shape)
+    y_train_blank = np.zeros((1,) + mask_shape)
+
+    # Check that the model state has been preserved
+    predictions = model.predict(x_train_blank)
+
+    # Checking that the optimizer state has been preserved
+    # Seems to work when these are repeated twice - not sure why?
+    batch_loss = model.train_on_batch(x_train_blank, y_train_blank)
+    batch_loss = model.train_on_batch(x_train_blank, y_train_blank)
+
+    return predictions, batch_loss
 
 
 # *=============================== tf __main__ ===============================*
