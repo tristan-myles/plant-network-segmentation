@@ -65,21 +65,20 @@ def get_tf_dataset(train_base_dir, val_base_dir, leaf_ext, mask_ext,
     return train_dataset, val_dataset
 
 
-# *=============================== train model ===============================*
-def train(train_dataset, val_dataset, metrics, callbacks, model, lr, opt,
-          loss, epochs):
-    model.compile(loss=loss,
-                  optimizer=opt(lr=lr),
-                  metrics=metrics)
+# *================================ TF Mixin =================================*
+class _TfPnsMixin(Model):
+    def train(self, train_dataset, val_dataset, metrics, callbacks, lr,
+              opt, loss, epochs):
+        self.compile(loss=loss,
+                     optimizer=opt(lr=lr),
+                     metrics=metrics)
 
-    model_history = model.fit(train_dataset, epochs=epochs,
-                              validation_data=val_dataset,
-                              callbacks=[callbacks])
+        model_history = self.fit(train_dataset, epochs=epochs,
+                                 validation_data=val_dataset,
+                                 callbacks=[callbacks])
 
-    return model_history, model
+        return model_history
 
-
-class _TFPredictionMixin(Model):
     def predict_tile(self, new_tile):
         pass
 # *===========================================================================*

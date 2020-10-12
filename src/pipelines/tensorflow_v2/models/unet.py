@@ -1,6 +1,8 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Input, Conv2D, MaxPool2D, Conv2DTranspose
 
+from src.pipelines.tensorflow_v2.helpers.train_test import _TfPnsMixin
+
 
 # *========================== U-Net Building Block ===========================*
 class UnetBlock(tf.keras.Model):
@@ -123,7 +125,7 @@ class UnetBlock(tf.keras.Model):
 
 
 # *================================== U-Net ==================================*
-class Unet(tf.keras.Model):
+class Unet(tf.keras.Model, _TfPnsMixin):
     # Olaf Ronneberger et al. U-Net
     def __init__(self, output_channels):
         super().__init__()

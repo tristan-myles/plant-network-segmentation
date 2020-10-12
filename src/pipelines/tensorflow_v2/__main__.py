@@ -6,7 +6,7 @@ import numpy as np
 
 from src.pipelines.tensorflow_v2.callbacks.lr_range_test import LRRangeTest
 from src.pipelines.tensorflow_v2.callbacks.one_cycle import OneCycleLR
-from src.pipelines.tensorflow_v2.helpers.train import get_tf_dataset, train
+from src.pipelines.tensorflow_v2.helpers.train_test import get_tf_dataset
 from src.pipelines.tensorflow_v2.helpers.utilities import (parse_arguments,
                                                            interactive_prompt,
                                                            format_input,
@@ -120,8 +120,8 @@ def main():
         mask_shape=ANSWERS['mask_shape'])
 
     # train model
-    _, model = train(train_dataset, val_dataset, list(metrics),
-                    list(callbacks), model, ANSWERS["lr"], opt, loss,
+    _ = model.train(train_dataset, val_dataset, list(metrics),
+                    list(callbacks), ANSWERS["lr"], opt, loss,
                     ANSWERS["epochs"])
 
     model.save(model_save_path, save_format="tf")
