@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+from pathlib import Path
 
 import numpy as np
 
@@ -69,11 +70,13 @@ def main():
         f"{callback_base_dir}csv_logs/{ANSWERS['run_name']}.log",
         separator=',',  append=False)
 
-    model_save_path = f"{callback_base_dir}saved_models/{ANSWERS['run_name']}"
+    model_save_path = (f"{callback_base_dir}saved_models/"
+                       f"{ANSWERS['run_name']}/{ANSWERS['run_name']}")
+    Path(model_save_path).mkdir(parents=True, exist_ok=True)
+
     model_cpt = tf.keras.callbacks.ModelCheckpoint(
-        filepath=model_save_path,
-        save_weights_only=False, monitor='val_recall', mode='max',
-        save_best_only=True)
+        filepath=model_save_path, save_weights_only=True, mode='max',
+        monitor='val_recall', save_best_only=True)
 
     tb = tf.keras.callbacks.TensorBoard(
         log_dir=f"{callback_base_dir}tb_logs/{ANSWERS['run_name']}",
