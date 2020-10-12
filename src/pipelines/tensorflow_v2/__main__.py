@@ -116,7 +116,7 @@ def main():
         val_base_dir=ANSWERS["val_base_dir"],
         leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
         incl_aug=ANSWERS['incl_aug'], batch_size=ANSWERS['batch_size'],
-        buffer_size=ANSWERS['buffer_size'], leaf_shape=ANSWERS['mask_shape'],
+        buffer_size=ANSWERS['buffer_size'], leaf_shape=ANSWERS['leaf_shape'],
         mask_shape=ANSWERS['mask_shape'])
 
     # train model
