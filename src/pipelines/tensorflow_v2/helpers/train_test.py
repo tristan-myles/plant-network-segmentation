@@ -37,32 +37,22 @@ def get_filepath_list(base_dir, leaf_ext, mask_ext, incl_aug=True):
     return list_x, list_y
 
 
-def get_tf_dataset(train_base_dir, val_base_dir, leaf_ext, mask_ext,
-                   incl_aug, cfp=True, batch_size=2, buffer_size=200,
+def get_tf_dataset(base_dir, leaf_ext, mask_ext,
+                   incl_aug=False, cfp=True, batch_size=2, buffer_size=200,
                    leaf_shape=(512, 512, 1), mask_shape=(512, 512, 1)):
-    train_x, train_y = get_filepath_list(train_base_dir, leaf_ext, mask_ext,
-                                         incl_aug)
 
-    val_x, val_y = get_filepath_list(val_base_dir, leaf_ext, mask_ext,
-                                     incl_aug=False)
+    data_x, data_y = get_filepath_list(base_dir, leaf_ext, mask_ext, incl_aug)
 
     parse_img_func = parse_image_fc(leaf_shape, mask_shape)
 
-    train_dataset = tf.data.Dataset.from_tensor_slices((train_x, train_y))
-    train_dataset = train_dataset.map(
-        parse_img_func, num_parallel_calls=tf.data.experimental.AUTOTUNE)
-
-    val_dataset = tf.data.Dataset.from_tensor_slices((val_x, val_y))
-    val_dataset = val_dataset.map(
+    dataset = tf.data.Dataset.from_tensor_slices((data_x, data_y))
+    dataset = dataset.map(
         parse_img_func, num_parallel_calls=tf.data.experimental.AUTOTUNE)
 
     if cfp:
-        train_dataset = configure_for_performance(train_dataset,
-                                                  batch_size, buffer_size)
-        val_dataset = configure_for_performance(val_dataset, batch_size,
-                                                buffer_size)
+        dataset = configure_for_performance(dataset, batch_size, buffer_size)
 
-    return train_dataset, val_dataset
+    return dataset
 
 
 # *================================ TF Mixin =================================*

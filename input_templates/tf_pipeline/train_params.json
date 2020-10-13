@@ -15,5 +15,6 @@
   "epochs": "1",
   "callback_choices": "1 2 3",
   "metric_choices": "1 2 3",
-  "run_name": "name"
+  "run_name": "name",
+  "test_dir": "example/"
 }

@@ -158,13 +158,14 @@ def print_user_input(answers):
           f"13. {'Epochs':<40}: {answers['epochs']}\n"
           f"14. {'Callback choices':<40}: {answers['callback_choices']}\n"
           f"15. {'Metric choices':<40}: {answers['metric_choices']}\n"
-          f"16. {'Run name':<40}: {answers['run_name']}\n")
+          f"16. {'Run name':<40}: {answers['run_name']}\n"
+          f"17. {'Test directory':<40}: {answers['test_dir']}\n")
 
 
 def interactive_prompt():
     happy = False
-    # list options = 1 - 16
-    options_list = set(range(1, 17))
+    # list options = 1 - 17
+    options_list = set(range(1, 18))
 
     print("Hello and welcome to plant-network-segmentation's training module"
           "\nA few inputs will be required from you to begin...")
@@ -316,6 +317,15 @@ def interactive_prompt():
 
             options_list.remove(16)
 
+        if 17 in options_list:
+            test_dir = input("\n16. If you would like to evaluate a test"
+                             " set please provide test directory. To"
+                             " skip this step leave this answer"
+                             " blank.\nNote, if providing a directory, "
+                             "please include a / at the end : ")
+
+            options_list.remove(17)
+
         answers = {"train_base_dir": train_base_dir,
                    "val_base_dir": val_base_dir,
                    "leaf_ext": leaf_ext, "mask_ext": mask_ext,
@@ -324,7 +334,7 @@ def interactive_prompt():
                    "buffer_size": buffer_size, "model_choice": model_choice,
                    "loss_choice": loss_choice, "opt_choice": opt_choice,
                    "lr": lr, "epochs": epochs, "run_name": run_name,
-                   "callback_choices": callback_choices,
+                   "callback_choices": callback_choices, "test_dir": test_dir,
                    "metric_choices": metric_choices}
 
         print_user_input(answers)

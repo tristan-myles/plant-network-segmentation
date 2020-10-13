@@ -115,18 +115,39 @@ def main():
         model = WNet()
 
     # get dataset
-    train_dataset, val_dataset = get_tf_dataset(
-        train_base_dir=ANSWERS["train_base_dir"],
-        val_base_dir=ANSWERS["val_base_dir"],
+    # train
+    train_dataset = get_tf_dataset(
+        base_dir=ANSWERS["train_base_dir"],
         leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
         incl_aug=ANSWERS['incl_aug'], batch_size=ANSWERS['batch_size'],
         buffer_size=ANSWERS['buffer_size'], leaf_shape=ANSWERS['leaf_shape'],
         mask_shape=ANSWERS['mask_shape'])
 
+    # val
+    val_dataset = get_tf_dataset(
+        base_dir=ANSWERS["val_base_dir"],
+        leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
+        batch_size=ANSWERS['batch_size'],
+        buffer_size=ANSWERS['buffer_size'],
+        leaf_shape=ANSWERS['leaf_shape'], mask_shape=ANSWERS['mask_shape'])
+
     # train model
     _ = model.train(train_dataset, val_dataset, metrics,
                     callbacks, ANSWERS["lr"], opt, loss,
                     ANSWERS["epochs"])
+
+    # check test_set
+    if ANSWERS["test_dir"]:
+        # val
+        test_dataset = get_tf_dataset(
+            base_dir=ANSWERS["val_base_dir"],
+            leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
+            batch_size=ANSWERS['batch_size'],
+            buffer_size=ANSWERS['buffer_size'],
+            leaf_shape=ANSWERS['leaf_shape'], mask_shape=ANSWERS['mask_shape'])
+
+        results = model.evaluate(test_dataset)
+        print(dict(zip(model.metrics_names, results)))
 
 
 if __name__ == "__main__":
