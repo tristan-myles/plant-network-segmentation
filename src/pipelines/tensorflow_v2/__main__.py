@@ -9,9 +9,9 @@ from src.pipelines.tensorflow_v2.callbacks.lr_range_test import LRRangeTest
 from src.pipelines.tensorflow_v2.callbacks.one_cycle import OneCycleLR
 from src.pipelines.tensorflow_v2.helpers.train_test import get_tf_dataset
 
-from src.pipelines.tensorflow_v2.helpers.utilities import (
-    parse_arguments, interactive_prompt, format_input, check_model_save,
-    get_model_pred_batch_loss)
+from src.pipelines.tensorflow_v2.helpers.utilities import (parse_arguments,
+                                                           interactive_prompt,
+                                                           format_input)
 
 from src.pipelines.tensorflow_v2.losses.custom_losses import *
 from src.pipelines.tensorflow_v2.models.unet import Unet
@@ -127,46 +127,6 @@ def main():
     _ = model.train(train_dataset, val_dataset, metrics,
                     callbacks, ANSWERS["lr"], opt, loss,
                     ANSWERS["epochs"])
-
-    # checking model save
-    # NB the condition below should relate to the model checkpoint option
-    if 4 in ANSWERS["callback_choices"]:
-        # code repeated so that memory is not wasted on the new model
-        if ANSWERS["model_choice"] == 0:
-            new_model = Unet(1)
-        elif ANSWERS["model_choice"] == 1:
-            new_model = UnetResnet(1)
-        else:
-            new_model = WNet()
-
-        if ANSWERS["opt_choice"] == 0:
-            new_opt = tf.keras.optimizers.Adam
-        else:
-            new_opt = tf.keras.optimizers.SGD
-
-        if ANSWERS["loss_choice"] == 0:
-            new_loss = tf.keras.losses.binary_crossentropy
-        elif ANSWERS["loss_choice"] == 1:
-            new_loss = weighted_CE(0.5)
-        elif ANSWERS["loss_choice"] == 2:
-            new_loss = focal_loss(0.5)
-        else:
-            new_loss = soft_dice_loss
-
-        old_pred, old_bloss = get_model_pred_batch_loss(
-            model, ANSWERS["leaf_shape"], ANSWERS["mask_shape"])
-
-        new_opt = new_opt(model.optimizer.lr.numpy())
-        print("warning deleting model")
-        del model
-
-        new_model.load_workaround(ANSWERS["leaf_shape"], ANSWERS["mask_shape"],
-                                  new_loss, new_opt, metrics, model_save_path)
-
-        new_pred, new_bloss = get_model_pred_batch_loss(
-            new_model, ANSWERS["leaf_shape"], ANSWERS["mask_shape"])
-
-        check_model_save(old_pred, new_pred, old_bloss, new_bloss)
 
 
 if __name__ == "__main__":

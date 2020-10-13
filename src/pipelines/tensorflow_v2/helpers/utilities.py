@@ -1,6 +1,6 @@
 import argparse
-from glob import glob
 import json
+from glob import glob
 
 import cv2
 import numpy as np
@@ -75,16 +75,31 @@ def parse_image_fc(leaf_shape, mask_shape):
         mask = tf.cast(mask, tf.float32) / 255
 
         return img, mask
+
     return parse_image
 
 
 # *=============================== load model ================================*
-def check_model_save(old_pred, new_pred, old_bloss=None, new_bloss=None):
+def check_model_save(model, new_model, new_loss, new_opt, answers, metrics,
+                     model_save_path, check_opt=False):
+    old_pred, old_bloss = get_model_pred_batch_loss(
+        model, answers["leaf_shape"], answers["mask_shape"])
+
+    new_opt = new_opt(model.optimizer.lr.numpy())
+    print("warning deleting model")
+    del model
+
+    new_model.load_workaround(answers["leaf_shape"], answers["mask_shape"],
+                              new_loss, new_opt, metrics, model_save_path)
+
+    new_pred, new_bloss = get_model_pred_batch_loss(
+        new_model, answers["leaf_shape"], answers["mask_shape"])
+
     np.testing.assert_allclose(old_pred, new_pred, atol=1e-6,
                                err_msg="Prediction from the saved model is"
                                        " not the same as the original model")
 
-    if old_bloss:
+    if check_opt:
         assert old_bloss == new_bloss, "Optimiser state not preserved!"
 
 
@@ -301,7 +316,8 @@ def interactive_prompt():
 
             options_list.remove(16)
 
-        answers = {"train_base_dir": train_base_dir, "val_base_dir": val_base_dir,
+        answers = {"train_base_dir": train_base_dir,
+                   "val_base_dir": val_base_dir,
                    "leaf_ext": leaf_ext, "mask_ext": mask_ext,
                    "incl_aug": incl_aug, "mask_shape": mask_shape,
                    "leaf_shape": leaf_shape, "batch_size": batch_size,
