@@ -4,7 +4,64 @@ import matplotlib as mpl
 
 from src.data.data_model import *
 
+from sklearn import metrics
+
 LOGGER = logging.getLogger(__name__)
+
+
+# *================================= metrics =================================*
+def get_iou_score(y_true, y_pred):
+    intersection = np.logical_and(y_true, y_pred)
+    union = np.logical_or(y_true, y_pred)
+    iou_score = np.sum(intersection) / np.sum(union)
+
+    return iou_score
+
+
+def classification_report(predictions, masks, save_path=None):
+    metric_df = pd.DataFrame({"IoU": [], "Precision": [], "Recall": [],
+                              "F1": [], "Accuracy": [], "AUC_PR": [],
+                              "FN": [], "FP": [], "TN": [], "TP": []})
+
+    for pred, mask in zip(predictions, masks):
+        # grab the original image and reconstructed image
+        y_true = mask.round().flatten()
+        y_pred = pred.flatten()
+
+        avg_pr = metrics.average_precision_score(y_true, y_pred)
+
+        y_pred = y_pred.round()
+
+        tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_pred).ravel()
+        iou = get_iou_score(y_true, y_pred)
+
+        # set values to 0 if there are no true positives
+        if tp > 0:
+            precision = tp / (tp + fp)
+            recall = tp / (tp + fn)
+            f1 = tp / (tp + 0.5 * (fn + fp))
+        else:
+            precision = 0
+            recall = 0
+            f1 = 0
+
+        d = {"IoU": iou,
+             "AUC_PR": avg_pr,
+             "Precision": precision,
+             "Recall": recall,
+             "F1": f1,
+             "Accuracy": (tp + tn) / (tp + fn + tn + fp),
+             "FN": fn,
+             "FP": fp,
+             "TN": tn,
+             "TP": tp}
+
+        metric_df = metric_df.append(d, ignore_index=True)
+
+        if save_path:
+            metric_df.to_csv(save_path)
+
+    return metric_df
 
 
 # *=============================== data model ================================*

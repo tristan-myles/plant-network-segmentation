@@ -18,7 +18,8 @@ def configure_for_performance(ds, batch_size=2, buffer_size=100):
     # ds = ds.cache()
     # Number of batches to use when shuffling (calls x examples sequentially
     # => bigger buffer = better shuffle)
-    ds = ds.shuffle(buffer_size=buffer_size)
+    if buffer_size:
+        ds = ds.shuffle(buffer_size=buffer_size)
     ds = ds.batch(batch_size)
 
     # number of batches to prefetch
@@ -77,6 +78,8 @@ def parse_image_fc(leaf_shape, mask_shape):
         return img, mask
 
     return parse_image
+
+# *----------------------------- post-processing -----------------------------*
 
 
 # *=============================== load model ================================*
