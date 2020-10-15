@@ -1,8 +1,9 @@
 import argparse
-from glob import glob
 import json
+from glob import glob
 
 import cv2
+import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
 
@@ -17,7 +18,8 @@ def configure_for_performance(ds, batch_size=2, buffer_size=100):
     # ds = ds.cache()
     # Number of batches to use when shuffling (calls x examples sequentially
     # => bigger buffer = better shuffle)
-    ds = ds.shuffle(buffer_size=buffer_size)
+    if buffer_size:
+        ds = ds.shuffle(buffer_size=buffer_size)
     ds = ds.batch(batch_size)
 
     # number of batches to prefetch
@@ -74,7 +76,50 @@ def parse_image_fc(leaf_shape, mask_shape):
         mask = tf.cast(mask, tf.float32) / 255
 
         return img, mask
+
     return parse_image
+
+# *----------------------------- post-processing -----------------------------*
+
+
+# *=============================== load model ================================*
+def check_model_save(model, new_model, new_loss, new_opt, answers, metrics,
+                     model_save_path, check_opt=False):
+    old_pred, old_bloss = get_model_pred_batch_loss(
+        model, answers["leaf_shape"], answers["mask_shape"])
+
+    new_opt = new_opt(model.optimizer.lr.numpy())
+    print("warning deleting model")
+    del model
+
+    new_model.load_workaround(answers["leaf_shape"], answers["mask_shape"],
+                              new_loss, new_opt, metrics, model_save_path)
+
+    new_pred, new_bloss = get_model_pred_batch_loss(
+        new_model, answers["leaf_shape"], answers["mask_shape"])
+
+    np.testing.assert_allclose(old_pred, new_pred, atol=1e-6,
+                               err_msg="Prediction from the saved model is"
+                                       " not the same as the original model")
+
+    if check_opt:
+        assert old_bloss == new_bloss, "Optimiser state not preserved!"
+
+
+def get_model_pred_batch_loss(model, leaf_shape, mask_shape):
+    # Create a blank input image and mask
+    x_train_blank = np.zeros((1,) + leaf_shape)
+    y_train_blank = np.zeros((1,) + mask_shape)
+
+    # Check that the model state has been preserved
+    predictions = model.predict(x_train_blank)
+
+    # Checking that the optimizer state has been preserved
+    # Seems to work when these are repeated twice - not sure why?
+    batch_loss = model.train_on_batch(x_train_blank, y_train_blank)
+    batch_loss = model.train_on_batch(x_train_blank, y_train_blank)
+
+    return predictions, batch_loss
 
 
 # *=============================== tf __main__ ===============================*
@@ -116,13 +161,14 @@ def print_user_input(answers):
           f"13. {'Epochs':<40}: {answers['epochs']}\n"
           f"14. {'Callback choices':<40}: {answers['callback_choices']}\n"
           f"15. {'Metric choices':<40}: {answers['metric_choices']}\n"
-          f"16. {'Run name':<40}: {answers['run_name']}\n")
+          f"16. {'Run name':<40}: {answers['run_name']}\n"
+          f"17. {'Test directory':<40}: {answers['test_dir']}\n")
 
 
 def interactive_prompt():
     happy = False
-    # list options = 1 - 16
-    options_list = set(range(1, 17))
+    # list options = 1 - 17
+    options_list = set(range(1, 18))
 
     print("Hello and welcome to plant-network-segmentation's training module"
           "\nA few inputs will be required from you to begin...")
@@ -274,14 +320,24 @@ def interactive_prompt():
 
             options_list.remove(16)
 
-        answers = {"train_base_dir": train_base_dir, "val_base_dir": val_base_dir,
+        if 17 in options_list:
+            test_dir = input("\n16. If you would like to evaluate a test"
+                             " set please provide test directory. To"
+                             " skip this step leave this answer"
+                             " blank.\nNote, if providing a directory, "
+                             "please include a / at the end : ")
+
+            options_list.remove(17)
+
+        answers = {"train_base_dir": train_base_dir,
+                   "val_base_dir": val_base_dir,
                    "leaf_ext": leaf_ext, "mask_ext": mask_ext,
                    "incl_aug": incl_aug, "mask_shape": mask_shape,
                    "leaf_shape": leaf_shape, "batch_size": batch_size,
                    "buffer_size": buffer_size, "model_choice": model_choice,
                    "loss_choice": loss_choice, "opt_choice": opt_choice,
                    "lr": lr, "epochs": epochs, "run_name": run_name,
-                   "callback_choices": callback_choices,
+                   "callback_choices": callback_choices, "test_dir": test_dir,
                    "metric_choices": metric_choices}
 
         print_user_input(answers)

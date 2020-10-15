@@ -1,16 +1,17 @@
-import datetime
 import json
 import logging
+from pathlib import Path
+from pprint import pprint
 
 import numpy as np
 
+from src.helpers.utilities import classification_report
 from src.pipelines.tensorflow_v2.callbacks.lr_range_test import LRRangeTest
 from src.pipelines.tensorflow_v2.callbacks.one_cycle import OneCycleLR
-from src.pipelines.tensorflow_v2.helpers.train import get_tf_dataset, train
+from src.pipelines.tensorflow_v2.helpers.train_test import get_tf_dataset
 from src.pipelines.tensorflow_v2.helpers.utilities import (parse_arguments,
                                                            interactive_prompt,
-                                                           format_input,
-                                                           print_user_input)
+                                                           format_input)
 from src.pipelines.tensorflow_v2.losses.custom_losses import *
 from src.pipelines.tensorflow_v2.models.unet import Unet
 from src.pipelines.tensorflow_v2.models.unet_resnet import UnetResnet
@@ -50,9 +51,9 @@ def main():
     ])
 
     if ANSWERS["metric_choices"][0] == len(METRICS):
-        metrics = METRICS
+        metrics = list(METRICS)
     else:
-        metrics = METRICS[ANSWERS["metric_choices"]]
+        metrics = list(METRICS[ANSWERS["metric_choices"]])
 
     callback_base_dir = "data/run_data/"
 
@@ -67,13 +68,15 @@ def main():
                                                       min_delta=0.001)
     csv_logger = tf.keras.callbacks.CSVLogger(
         f"{callback_base_dir}csv_logs/{ANSWERS['run_name']}.log",
-        separator=',',  append=False)
+        separator=',', append=False)
 
-    model_save_path = f"{callback_base_dir}saved_models/{ANSWERS['run_name']}"
+    model_save_path = (f"{callback_base_dir}saved_models/"
+                       f"{ANSWERS['run_name']}/{ANSWERS['run_name']}")
+    Path(model_save_path).mkdir(parents=True, exist_ok=True)
+
     model_cpt = tf.keras.callbacks.ModelCheckpoint(
-        filepath=model_save_path,
-        save_weights_only=False, monitor='val_recall', mode='max',
-        save_best_only=True)
+        filepath=model_save_path, save_weights_only=True, mode='max',
+        monitor='val_recall', save_best_only=True, save_format="tf")
 
     tb = tf.keras.callbacks.TensorBoard(
         log_dir=f"{callback_base_dir}tb_logs/{ANSWERS['run_name']}",
@@ -83,9 +86,9 @@ def main():
         lr_range_test, ocp, early_stopping, csv_logger, model_cpt, tb])
 
     if ANSWERS["callback_choices"][0] == len(CALLBACKS):
-        callbacks = CALLBACKS
+        callbacks = list(CALLBACKS)
     else:
-        callbacks = CALLBACKS[ANSWERS["callback_choices"]]
+        callbacks = list(CALLBACKS[ANSWERS["callback_choices"]])
 
     # Input validations is done when answers are provided, hence the final
     # else statement as opposed to an elif
@@ -111,20 +114,50 @@ def main():
         model = WNet()
 
     # get dataset
-    train_dataset, val_dataset = get_tf_dataset(
-        train_base_dir=ANSWERS["train_base_dir"],
-        val_base_dir=ANSWERS["val_base_dir"],
+    # train
+    train_dataset = get_tf_dataset(
+        base_dir=ANSWERS["train_base_dir"],
         leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
         incl_aug=ANSWERS['incl_aug'], batch_size=ANSWERS['batch_size'],
-        buffer_size=ANSWERS['buffer_size'], leaf_shape=ANSWERS['mask_shape'],
+        buffer_size=ANSWERS['buffer_size'], leaf_shape=ANSWERS['leaf_shape'],
         mask_shape=ANSWERS['mask_shape'])
 
+    # val
+    val_dataset = get_tf_dataset(
+        base_dir=ANSWERS["val_base_dir"],
+        leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
+        batch_size=ANSWERS['batch_size'],
+        buffer_size=None,
+        leaf_shape=ANSWERS['leaf_shape'], mask_shape=ANSWERS['mask_shape'])
+
     # train model
-    _, model = train(train_dataset, val_dataset, list(metrics),
-                    list(callbacks), model, ANSWERS["lr"], opt, loss,
+    _ = model.train(train_dataset, val_dataset, metrics,
+                    callbacks, ANSWERS["lr"], opt, loss,
                     ANSWERS["epochs"])
 
-    model.save(model_save_path, save_format="tf")
+    # check test_set
+    if ANSWERS["test_dir"]:
+        # val
+        test_dataset = get_tf_dataset(
+            base_dir=ANSWERS["val_base_dir"],
+            leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
+            batch_size=1,
+            buffer_size=None,
+            leaf_shape=ANSWERS['leaf_shape'], mask_shape=ANSWERS['mask_shape'])
+
+        results = model.evaluate(test_dataset)
+        pprint(dict(zip(model.metrics_names, results)))
+
+        # Could have a memory issue by keeping all the predictions and all
+        # the masks in memory at the same time, possibly better to use a
+        # generator in the classification report...
+        predictions = model.predict(test_dataset)
+        masks = [imageset[1] for imageset in test_dataset.as_numpy_iterator()]
+
+        csv_save_path = (f"{callback_base_dir}classification_reports/"
+                         f"{ANSWERS['run_name']}.csv")
+
+        _ = classification_report(predictions, masks, save_path=csv_save_path)
 
 
 if __name__ == "__main__":

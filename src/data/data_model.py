@@ -968,7 +968,6 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
                 pred_tile = temp_tile.predict_tile(model,
                                                    **kwargs)
 
-                pred_tile = (pred_tile[0].px.numpy() * 255)
                 pred_tile = pred_tile.reshape(y_tile_length, x_tile_length)
 
                 if ((y_range[1] - old_upper_y) != y_tile_length or

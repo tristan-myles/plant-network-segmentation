@@ -6,6 +6,8 @@ from tensorflow.keras.layers import (Conv2D, MaxPool2D, Concatenate,
                                      Conv2DTranspose, BatchNormalization,
                                      Input)
 
+from src.pipelines.tensorflow_v2.helpers.train_test import _TfPnsMixin
+
 
 # *============================= Residual Block ==============================*
 class ResBlock(tf.keras.Model):
@@ -57,7 +59,7 @@ class ResBlock(tf.keras.Model):
 
 
 # *============================== ResNet U-Net ===============================*
-class UnetResnet(tf.keras.Model):
+class UnetResnet(tf.keras.Model, _TfPnsMixin):
     def __init__(self, output_channels):
         super().__init__()
         he_initializer = tf.keras.initializers.he_normal(seed=3141)

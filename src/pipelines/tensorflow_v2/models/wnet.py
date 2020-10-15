@@ -8,6 +8,7 @@ from tensorflow.keras.layers import (Conv2D, MaxPool2D, Conv2DTranspose,
                                      Input, BatchNormalization, Concatenate)
 
 from src.pipelines.tensorflow_v2.models.unet_resnet import ResBlock
+from src.pipelines.tensorflow_v2.helpers.train_test import _TfPnsMixin
 
 
 # *============================ Conv Bridge Block ============================*
@@ -124,7 +125,7 @@ class MiniUnet(tf.keras.Model):
 
 
 # *================================== W-Net ==================================*
-class WNet(tf.keras.Model):
+class WNet(tf.keras.Model, _TfPnsMixin):
     """
     Combines two Mini U-Nets where the prediction of the first Mini U-Net is
     concatenated to the first
