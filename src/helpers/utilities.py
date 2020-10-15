@@ -325,4 +325,272 @@ def parse_arguments() -> argparse.Namespace:
 
     args = parser.parse_args()
     return args
+
+
+# *--------------------------- interactive prompt ----------------------------*
+def interactive_prompt():
+    happy = False
+    options_list = set((-1,))
+
+    while not happy:
+        if -1 in options_list:
+            print("* What action would you like to take?\n"
+                  "------------ Extraction ------------\n"
+                  "1. Extract images\n"
+                  "2. Extract tiles\n"
+                  "------------- Plotting -------------\n"
+                  "3. Plot embolism profile\n"
+                  "4. Plot embolism count barplot\n"
+                  "--------------- EDA ----------------\n"
+                  "5. EDA DataFrame\n"
+                  "6. DataBunch DataFrame\n"
+                  "------------- General --------------\n"
+                  "7. Trim sequence")
+
+            operation = int(input("Please select your option: "))
+
+            # Include the max of all options: 1 - 10
+            options_list.update(range(1, 10))
+
+            print(options_list)
+
+            options_list.remove(-1)
+        print("Please separate multiple answers by a space")
+
+        if 1 in options_list:
+            leaf_input_dir = input(
+                "\n1. Where are the leaf images that you would like to"
+                " difference? (Leave this blank to skip)\nAnswer: ")
+
+            options_list.remove(1)
+
+        if 2 in options_list:
+            mask_input_dir = input(
+                "\n2. Where are the mask images that you would like to"
+                " difference? (Leave this blank to skip)\nAnswer: ")
+
+            options_list.remove(2)
+
+        if operation == 1 or operation == 2:
+            if 3 in options_list:
+                if leaf_input_dir:
+                    leaf_output_dir = input(
+                        "\n3. Where do you want to save the extracted leaves."
+                        "\n   Please also include the file name."
+                        "\nAnswer: ")
+                else:
+                    print("\nYou did not enter a leaf directory, so question 3"
+                          " will be skipped.")
+                    leaf_output_dir = None
+
+                options_list.remove(3)
+
+            if 4 in options_list:
+                if mask_input_dir:
+                    mask_output_dir = input(
+                        "\n4. Where do you want to save the extracted masks."
+                        "\n   Please also include the file name."
+                        "\nAnswer: ")
+                else:
+                    print("\nYou did not enter a mask directory, so question 4"
+                          " will be skipped.")
+                    mask_output_dir = None
+
+                options_list.remove(4)
+
+        if operation == 1 or operation == 2:
+            if 5 in options_list:
+                print("\n5. Would you like to overwrite any existing "
+                      "extracted images?\n"
+                      "   Options:\n"
+                      "   0: False\n"
+                      "   1: True")
+                overwrite = input("Please choose a number: ")
+                overwrite = int(overwrite) == 1
+
+                options_list.remove(5)
+
+        if operation == 1:
+            if 6 in options_list:
+                print("\n6. Would you like to save binarised masks - i.e."
+                      " pixel values as 0, 1?\n"
+                      "   Options:\n"
+                      "   0: False\n"
+                      "   1: True")
+                binarise = input("Please choose a number: ")
+                binarise = int(binarise) == 1
+
+                options_list.remove(6)
+
+        if operation == 2:
+            if 6 in options_list:
+                sx = input("\n6. Please enter the size of the x stride: ")
+
+                options_list.remove(6)
+
+            if 7 in options_list:
+                sy = input("\n7. Please enter the size of the y stride: ")
+
+                options_list.remove(7)
+
+            if 8 in options_list:
+                lx = input("\n8. Please enter the width of the tile"
+                           " (x length): ")
+
+                options_list.remove(8)
+
+            if 9 in options_list:
+                ly = input("\n9. Please enter the length of the tile"
+                           " (y length)")
+                options_list.remove(9)
+
+        if operation == 3 or operation == 4:
+            if 3 in options_list:
+                if leaf_input_dir:
+                    leaf_output_dir = input(
+                        "\n3. Please enter the image output paths, enter a"
+                        " path, including the filename, for each image."
+                        "\nAnswer: ")
+
+                options_list.remove(3)
+
+            if 4 in options_list:
+                if mask_input_dir:
+                    mask_output_dir = input(
+                        "\n4. What leaf names should be used in the plot "
+                        "title?\nPlease enter a name per leaf: ")
+
+                options_list.remove(4)
+
+            if 5 in options_list:
+                print("\n5. Would you like to display the plot before exiting"
+                      " the script?\n"
+                      "   Options:\n"
+                      "   0: No\n"
+                      "   1: Yes")
+                show = input("Please choose a number: ")
+                show = int(show) == 1
+
+                options_list.remove(5)
+
+        if operation == 4 or operation == 6:
+            if 6 in options_list:
+                print("\n6. Should only leaves with embolisms be used?\n"
+                      "   Options:\n"
+                      "   0: No\n"
+                      "   1: Yes")
+                leo = input("Please choose a number: ")
+                leo = int(leo) == 1
+
+                options_list.remove(6)
+
+        if operation == 4:
+            if 7 in options_list:
+                print("\n7. Would you like to create the plot using image "
+                      "tiles\n"
+                      "   Options:\n"
+                      "   0: No\n"
+                      "   1: Yes")
+                use_tiles = input("Please choose a number: ")
+                use_tiles = int(use_tiles) == 1
+
+                options_list.remove(7)
+
+            if 8 in options_list:
+                print("\n8. Should the y-axis scale use percentages?\n"
+                      "   Options:\n"
+                      "   0: No\n"
+                      "   1: Yes")
+                perc_scale = input("Please choose a number: ")
+                perc_scale = int(perc_scale) == 1
+
+                options_list.remove(8)
+
+        if operation == 5 or operation == 6:
+            if 3 in options_list:
+                mask_output_dir = input(
+                    "\n3. Where do you want to save the csv output?."
+                    "\n   Please also include the file name."
+                    "\nAnswer: ")
+
+                options_list.remove(3)
+
+            if 4 in options_list:
+                print("\n4. Would you like to create the data frame using"
+                      " only tiles\n"
+                      "   Options:\n"
+                      "   0: No\n"
+                      "   1: Yes")
+                use_tiles = input("Please choose a number: ")
+                use_tiles = int(use_tiles) == 1
+
+                options_list.remove(4)
+
+        if operation == 6:
+            if 5 in options_list:
+                print("\n5. Should only tiles with embolisms be used?\n"
+                      "   Options:\n"
+                      "   0: No\n"
+                      "   1: Yes")
+                teo = input("Please choose a number: ")
+                teo = int(teo) == 1
+
+        if operation == 7:
+            if 3 in options_list:
+                ysd = input(
+                    "\n3. What is the y output size and directions?\n   Note,"
+                    " for direction, a 1 or -1 indicates to trim either the"
+                    " top or bottom respectively."
+                    "\n Reminder, separate your answers by a space."
+                    "\nAnswer: ")
+
+                options_list.remove(3)
+
+            if 4 in options_list:
+                xsd = input(
+                    "\n4. What is the x output size and directions?\n   Note,"
+                    " for direction, a 1 or -1 indicates to trim either the"
+                    " left or right respectively."
+                    "\n Reminder, separate your answers by a space."
+                    "\nAnswer: ")
+
+                options_list.remove(4)
+
+            if 5 in options_list:
+                print("\n5. Would you like to overwrite any existing "
+                      "extracted images?\n"
+                      "   Options:\n"
+                      "   0: False\n"
+                      "   1: True")
+                overwrite = input("Please choose a number: ")
+                overwrite = int(overwrite) == 1
+
+                options_list.remove(5)
+
+            if 6 in options_list:
+                print("\n6. Would you also like to trim mask images?\n"
+                      "   Options:\n"
+                      "   0: No\n"
+                      "   1: Yes")
+                trim_masks = input("Please choose a number: ")
+                trim_masks = int(trim_masks) == 1
+
+                options_list.remove(6)
+
+        if operation not in list(range(1,8)):
+            raise ValueError("Please choose an option from the input list")
+
+        options_list = input(
+            "\nIf you are satisfied with this configurations, please enter 0."
+            "\nIf not, please enter the number(s) of the options you would"
+            " like to change.\nTo restart please enter -1."
+            "\n Separate multiple options by a space: ")
+        options_list = set([int(choice) for choice in options_list.split()])
+
+        if len(options_list) == 1 and 0 in options_list:
+            happy = True
+        elif 0 in options_list:
+            print("\nYou entered options in addition to 0, so 0 will be "
+                  "removed")
+            options_list.remove(0)
 # *===========================================================================*
