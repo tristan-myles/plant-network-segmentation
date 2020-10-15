@@ -176,6 +176,7 @@ def trim_sequence_images(seq_objects, x_size_dir_list=None,
 
         seq.unload_extracted_images()
 
+
 # *-------------------------------- argparse ---------------------------------*
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser("Perform operations using the "
@@ -226,6 +227,18 @@ def parse_arguments() -> argparse.Namespace:
     parser_extract_tiles.add_argument("-ly", "--length_y", metavar="\b",
                                       type=int, help="tile y length")
 
+    parser_extract_tiles.add_argument(
+        "--leaf_output_path", "-lo", metavar="\b",
+        help="output paths, if you want to use "
+             "the default path enter  \"default\", if the paths are in "
+             "the input json enter  \"same\"")
+
+    parser_extract_tiles.add_argument(
+        "--mask_output_path", "-mo", metavar="\b",
+        help="output paths, if you want to use "
+             "the default path enter  \"default\", if the paths are in "
+             "the input json enter  \"same\"")
+
     parser_trim_sequence = subparsers.add_parser(
         "trim_sequence", help="trims every image in an image sequence ")
     parser_trim_sequence.set_defaults(which='trim_sequence')
@@ -247,18 +260,6 @@ def parse_arguments() -> argparse.Namespace:
     parser_trim_sequence.add_argument(
         "--overwrite", "-o", action="store_true", default=False,
         help="whether or not the image being trimmed should be overwritten")
-
-    parser_extract_tiles.add_argument(
-        "--leaf_output_path", "-lo", metavar="\b",
-        help="output paths, if you want to use "
-             "the default path enter  \"default\", if the paths are in "
-             "the input json enter  \"same\"")
-
-    parser_extract_tiles.add_argument(
-        "--mask_output_path", "-mo", metavar="\b",
-        help="output paths, if you want to use "
-             "the default path enter  \"default\", if the paths are in "
-             "the input json enter  \"same\"")
 
     parser_plot_profile = subparsers.add_parser(
         "plot_profile", help="plot an embolism profile")
@@ -291,7 +292,7 @@ def parse_arguments() -> argparse.Namespace:
         help="indicates if the plot should be created using tiles")
     parser_plot_embolism_counts.add_argument(
         "--leaf_embolism_only", "-leo", action="store_true",
-        help="should only full leafs with embolisms be used")
+        help="should only full leaves with embolisms be used")
     parser_plot_embolism_counts.add_argument(
         "--percent", "-p", action="store_true",
         help="should the plot y-axis be expressed as a percent")
