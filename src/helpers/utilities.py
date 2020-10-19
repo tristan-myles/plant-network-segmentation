@@ -1,10 +1,10 @@
 import argparse
+import json
 
 import matplotlib as mpl
+from sklearn import metrics
 
 from src.data.data_model import *
-
-from sklearn import metrics
 
 LOGGER = logging.getLogger(__name__)
 
@@ -182,14 +182,20 @@ def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser("Perform operations using the "
                                      "plant-image-segmentation code base")
 
-    parser.add_argument("json_path", type=str,
+    parser.add_argument(
+        "-i", "--interactive", action="store_true", default=False,
+        help="flag to run the script in interactive mode")
+
+    parser.add_argument("-j", "--json_path", metavar="\b", type=str,
+                        help="path to input parameters for an action")
+
+    subparsers = parser.add_subparsers(
+        title="actions", description='possible actions using this module')
+
+    parser.add_argument("-fj", "--filepath_json", metavar="\b", type=str,
                         help="path to a JSON file with the required "
                              "parameters to create LeafSequence and "
                              "MaskSequence objects")
-
-    subparsers = parser.add_subparsers(title="actions",
-                                       description='possible actions using '
-                                                   'this module')
 
     parser_extract_images = subparsers.add_parser("extract_images",
                                                   help="extraction help")
@@ -331,9 +337,14 @@ def parse_arguments() -> argparse.Namespace:
 def interactive_prompt():
     happy = False
     options_list = set((-1,))
+    operation_names = ["extract_images", "extract_tiles", "plot_profile",
+                       "plot_embolism_counts", "eda_df", "databunch_df",
+                       "trim_sequence"]
 
     while not happy:
         if -1 in options_list:
+            output_dict = {}
+
             print("* What action would you like to take?\n"
                   "------------ Extraction ------------\n"
                   "1. Extract images\n"
@@ -348,57 +359,86 @@ def interactive_prompt():
                   "7. Trim sequence")
 
             operation = int(input("Please select your option: "))
+            output_dict["which"] = operation_names[operation-1]
 
             # Include the max of all options: 1 - 10
             options_list.update(range(1, 10))
-
-            print(options_list)
 
             options_list.remove(-1)
         print("Please separate multiple answers by a space")
 
         if 1 in options_list:
-            leaf_input_dir = input(
+            leaf_input_path = input(
                 "\n1. Where are the leaf images that you would like to"
-                " difference? (Leave this blank to skip)\nAnswer: ")
+                " use?\nPlease include the filename pattern if"
+                " necessary\n(Leave this blank to skip)\nAnswer: ")
+
+            output_dict["leaves"] = {
+                "input": {"folder_path": [], "filename_pattern": []}}
+
+            for path in leaf_input_path.split():
+                folder_path, filename = path.rsplit("/", 1)
+                output_dict["leaves"]["input"]["folder_path"].append(
+                    folder_path + "/")
+                output_dict["leaves"]["input"]["filename_pattern"].append(
+                    filename)
 
             options_list.remove(1)
 
         if 2 in options_list:
-            mask_input_dir = input(
+            mask_input_path = input(
                 "\n2. Where are the mask images that you would like to"
-                " difference? (Leave this blank to skip)\nAnswer: ")
+                " use include the filename pattern if"
+                " necessary\n(Leave this blank to skip)\nAnswer: ")
 
-            options_list.remove(2)
+            if operation == 1:
+                output_dict["masks"] = {
+                    "input": {"mpf_path": mask_input_path.split()}}
+            else:
+                output_dict["masks"] = {
+                    "input": {"folder_path": [], "filename_pattern": []}}
+
+                for path in mask_input_path.split():
+                    folder_path, filename = path.rsplit("/", 1)
+                    output_dict["masks"]["input"]["folder_path"].append(
+                        folder_path+"/")
+                    output_dict["masks"]["input"]["filename_pattern"].append(
+                        filename)
+
+                options_list.remove(2)
 
         if operation == 1 or operation == 2:
             if 3 in options_list:
-                if leaf_input_dir:
-                    leaf_output_dir = input(
+                if leaf_input_path:
+                    leaf_output_path = input(
                         "\n3. Where do you want to save the extracted leaves."
                         "\n   Please also include the file name."
                         "\nAnswer: ")
+
+                    output_dict["leaf_output_path"] = leaf_output_path
                 else:
                     print("\nYou did not enter a leaf directory, so question 3"
                           " will be skipped.")
-                    leaf_output_dir = None
+                    output_dict["leaf_output_path"] = None
 
                 options_list.remove(3)
 
             if 4 in options_list:
-                if mask_input_dir:
-                    mask_output_dir = input(
+                if mask_input_path:
+                    mask_output_path = input(
                         "\n4. Where do you want to save the extracted masks."
                         "\n   Please also include the file name."
                         "\nAnswer: ")
+
+                    output_dict["mask_output_path"] = mask_output_path
                 else:
                     print("\nYou did not enter a mask directory, so question 4"
                           " will be skipped.")
-                    mask_output_dir = None
+
+                    output_dict["mask_output_path"] = None
 
                 options_list.remove(4)
 
-        if operation == 1 or operation == 2:
             if 5 in options_list:
                 print("\n5. Would you like to overwrite any existing "
                       "extracted images?\n"
@@ -407,6 +447,8 @@ def interactive_prompt():
                       "   1: True")
                 overwrite = input("Please choose a number: ")
                 overwrite = int(overwrite) == 1
+
+                output_dict["overwrite"] = overwrite
 
                 options_list.remove(5)
 
@@ -420,16 +462,22 @@ def interactive_prompt():
                 binarise = input("Please choose a number: ")
                 binarise = int(binarise) == 1
 
+                output_dict["binarise"] = binarise
+
                 options_list.remove(6)
 
         if operation == 2:
             if 6 in options_list:
                 sx = input("\n6. Please enter the size of the x stride: ")
 
+                output_dict["stride_x"] = int(sx)
+
                 options_list.remove(6)
 
             if 7 in options_list:
                 sy = input("\n7. Please enter the size of the y stride: ")
+
+                output_dict["stride_y"] = int(sy)
 
                 options_list.remove(7)
 
@@ -437,28 +485,35 @@ def interactive_prompt():
                 lx = input("\n8. Please enter the width of the tile"
                            " (x length): ")
 
+                output_dict["length_x"] = int(lx)
+
                 options_list.remove(8)
 
             if 9 in options_list:
                 ly = input("\n9. Please enter the length of the tile"
-                           " (y length)")
+                           " (y length): ")
+
+                output_dict["length_y"] = int(ly)
+
                 options_list.remove(9)
 
         if operation == 3 or operation == 4:
             if 3 in options_list:
-                if leaf_input_dir:
-                    leaf_output_dir = input(
-                        "\n3. Please enter the image output paths, enter a"
-                        " path, including the filename, for each image."
-                        "\nAnswer: ")
+                output_path = input(
+                    "\n3. Please enter the image output paths, enter a"
+                    " path, including the filename, for each image."
+                    "\nAnswer: ")
+
+                output_dict["output_path"] = output_path
 
                 options_list.remove(3)
 
             if 4 in options_list:
-                if mask_input_dir:
-                    mask_output_dir = input(
-                        "\n4. What leaf names should be used in the plot "
-                        "title?\nPlease enter a name per leaf: ")
+                leaf_names = input(
+                    "\n4. What leaf names should be used in the plot "
+                    "title?\nPlease enter a name per leaf: ")
+
+                output_dict["leaf_names"] = leaf_names
 
                 options_list.remove(4)
 
@@ -471,6 +526,8 @@ def interactive_prompt():
                 show = input("Please choose a number: ")
                 show = int(show) == 1
 
+                output_dict["show"] = show
+
                 options_list.remove(5)
 
         if operation == 4 or operation == 6:
@@ -482,6 +539,8 @@ def interactive_prompt():
                 leo = input("Please choose a number: ")
                 leo = int(leo) == 1
 
+                output_dict["leaf_embolism_only"] = leo
+
                 options_list.remove(6)
 
         if operation == 4:
@@ -491,8 +550,10 @@ def interactive_prompt():
                       "   Options:\n"
                       "   0: No\n"
                       "   1: Yes")
-                use_tiles = input("Please choose a number: ")
-                use_tiles = int(use_tiles) == 1
+                tile = input("Please choose a number: ")
+                tile = int(tile) == 1
+
+                output_dict["tile"] = tile
 
                 options_list.remove(7)
 
@@ -501,30 +562,63 @@ def interactive_prompt():
                       "   Options:\n"
                       "   0: No\n"
                       "   1: Yes")
-                perc_scale = input("Please choose a number: ")
-                perc_scale = int(perc_scale) == 1
+                percent = input("Please choose a number: ")
+                percent = int(percent) == 1
+
+                output_dict["percent"] = percent
 
                 options_list.remove(8)
 
         if operation == 5 or operation == 6:
             if 3 in options_list:
-                mask_output_dir = input(
+                csv_output_path = input(
                     "\n3. Where do you want to save the csv output?."
                     "\n   Please also include the file name."
                     "\nAnswer: ")
+
+                output_dict["csv_output_path"] = csv_output_path
 
                 options_list.remove(3)
 
             if 4 in options_list:
                 print("\n4. Would you like to create the data frame using"
-                      " only tiles\n"
+                      " tiles only\n"
                       "   Options:\n"
                       "   0: No\n"
                       "   1: Yes")
-                use_tiles = input("Please choose a number: ")
-                use_tiles = int(use_tiles) == 1
+                tiles = input("Please choose a number: ")
+                tiles = int(tiles) == 1
+
+                output_dict["tiles"] = tiles
 
                 options_list.remove(4)
+
+            if 5 in options_list and operation == 5:
+                print("\n5. Please choose which fields you would like included"
+                      " in the EDA DataFrame\n"
+                      "Options:\n"
+                      "0: Linked filename\n"
+                      "1: Unique range\n"
+                      "2: Embolism percent\n"
+                      "3: Intersection\n"
+                      "4: Has embolism\n")
+
+                eda_options = input("Choose the relevant number(s) separated"
+                                    " by a space: ").split()
+
+                output_dict["eda_df_options"] = {"linked_filename": False,
+                                                 "unique_range": False,
+                                                 "embolism_percent": False,
+                                                 "intersection": False,
+                                                 "has_embolism": False}
+
+                eda_df_options = list(output_dict["eda_df_options"])
+
+                for option in eda_options:
+                    output_dict["eda_df_options"][eda_df_options[int(option)]] = \
+                        True
+
+            options_list.remove(5)
 
         if operation == 6:
             if 5 in options_list:
@@ -535,6 +629,8 @@ def interactive_prompt():
                 teo = input("Please choose a number: ")
                 teo = int(teo) == 1
 
+                output_dict["tile_embolism_only"] = teo
+
         if operation == 7:
             if 3 in options_list:
                 ysd = input(
@@ -543,6 +639,8 @@ def interactive_prompt():
                     " top or bottom respectively."
                     "\n Reminder, separate your answers by a space."
                     "\nAnswer: ")
+
+                output_dict["y_size_dir"] = ysd
 
                 options_list.remove(3)
 
@@ -553,6 +651,8 @@ def interactive_prompt():
                     " left or right respectively."
                     "\n Reminder, separate your answers by a space."
                     "\nAnswer: ")
+
+                output_dict["x_size_dir"] = xsd
 
                 options_list.remove(4)
 
@@ -565,26 +665,31 @@ def interactive_prompt():
                 overwrite = input("Please choose a number: ")
                 overwrite = int(overwrite) == 1
 
+                output_dict["overwrite"] = overwrite
+
                 options_list.remove(5)
 
             if 6 in options_list:
-                print("\n6. Would you also like to trim mask images?\n"
+                print("\n6. Would you like to trim mask images (instead of "
+                      "leaf images)?\n"
                       "   Options:\n"
                       "   0: No\n"
                       "   1: Yes")
                 trim_masks = input("Please choose a number: ")
                 trim_masks = int(trim_masks) == 1
 
+                output_dict["mask"] = trim_masks
+
                 options_list.remove(6)
 
-        if operation not in list(range(1,8)):
+        if operation not in list(range(1, 8)):
             raise ValueError("Please choose an option from the input list")
 
         options_list = input(
             "\nIf you are satisfied with this configurations, please enter 0."
             "\nIf not, please enter the number(s) of the options you would"
             " like to change.\nTo restart please enter -1."
-            "\n Separate multiple options by a space: ")
+            "\nSeparate multiple options by a space: ")
         options_list = set([int(choice) for choice in options_list.split()])
 
         if len(options_list) == 1 and 0 in options_list:
@@ -593,4 +698,14 @@ def interactive_prompt():
             print("\nYou entered options in addition to 0, so 0 will be "
                   "removed")
             options_list.remove(0)
+
+    save_path = input("\nIf you would like to save this configuration"
+                      " please enter the full json file name, including"
+                      " the file path: ")
+
+    if save_path:
+        with open(save_path, 'w') as file:
+            json.dump(output_dict, file)
+
+    return output_dict
 # *===========================================================================*
