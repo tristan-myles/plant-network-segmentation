@@ -1,5 +1,6 @@
 import argparse
 import json
+import pprint
 
 import matplotlib as mpl
 from sklearn import metrics
@@ -334,6 +335,22 @@ def parse_arguments() -> argparse.Namespace:
 
 
 # *--------------------------- interactive prompt ----------------------------*
+def print_options_dict(output_dict):
+    print(f"\nYour chosen configuration is:\n")
+    for i, (key, val) in enumerate(output_dict.items()):
+        if i == 0:
+            num = "  "
+        else:
+            num = str(i) + "."
+        if isinstance(val, dict):
+            print_str = "\n" + pprint.pformat(val) + "\n"
+        else:
+            print_str = val
+
+        print(f"{num} {(' '.join(key.split('_'))).capitalize() :<20}:"
+              f" {print_str}")
+
+
 def interactive_prompt():
     happy = False
     options_list = set((-1,))
@@ -684,6 +701,8 @@ def interactive_prompt():
 
         if operation not in list(range(1, 8)):
             raise ValueError("Please choose an option from the input list")
+
+        print_options_dict(output_dict)
 
         options_list = input(
             "\nIf you are satisfied with this configurations, please enter 0."
