@@ -45,7 +45,8 @@ def main():
                 LEAF_OUTPUT_LIST = \
                     INPUT_JSON_DICT["leaves"]["output"]["output_path"]
             else:
-                LEAF_OUTPUT_LIST = str.split(ARGS_DICT["leaf_output_path"], " ")
+                LEAF_OUTPUT_LIST = str.split(ARGS_DICT["leaf_output_path"],
+                                             ";")
 
             extract_leaf_images(LSEQS, LEAF_OUTPUT_LIST, ARGS_DICT["overwrite"])
 
@@ -54,7 +55,8 @@ def main():
                 MASK_OUTPUT_LIST = \
                     INPUT_JSON_DICT["masks"]["output"]["output_path"]
             else:
-                MASK_OUTPUT_LIST = str.split(ARGS_DICT["mask_output_path"], " ")
+                MASK_OUTPUT_LIST = str.split(ARGS_DICT["mask_output_path"],
+                                             ";")
 
             extract_multipage_mask_images(MSEQS, MASK_OUTPUT_LIST,
                                           ARGS_DICT["overwrite"],
@@ -70,10 +72,12 @@ def main():
                 LEAF_OUTPUT_LIST = \
                     INPUT_JSON_DICT["leaves"]["output"]["output_path"]
             else:
-                LEAF_OUTPUT_LIST = str.split(ARGS_DICT["leaf_output_path"], " ")
+                LEAF_OUTPUT_LIST = str.split(ARGS_DICT["leaf_output_path"],
+                                             " ")
 
             extract_tiles(LSEQS, ARGS_DICT["length_x"], ARGS_DICT["stride_x"],
-                          ARGS_DICT["length_y"], ARGS_DICT["stride_y"], LEAF_OUTPUT_LIST)
+                          ARGS_DICT["length_y"], ARGS_DICT["stride_y"],
+                          LEAF_OUTPUT_LIST)
 
         if ARGS_DICT["mask_output_path"] is not None:
             load_image_objects(MSEQS)
@@ -84,7 +88,8 @@ def main():
                 MASK_OUTPUT_LIST = \
                     INPUT_JSON_DICT["masks"]["output"]["output_path"]
             else:
-                MASK_OUTPUT_LIST = str.split(ARGS_DICT["mask_output_path"], " ")
+                MASK_OUTPUT_LIST = str.split(ARGS_DICT["mask_output_path"],
+                                             ";")
 
             extract_tiles(MSEQS, ARGS_DICT["length_x"], ARGS_DICT["stride_x"],
                           ARGS_DICT["length_y"], ARGS_DICT["stride_y"], MASK_OUTPUT_LIST)
@@ -128,7 +133,8 @@ def main():
             trim_sequence_images(SEQS, X_SIZE_DIR_LIST, Y_SIZE_DIR_LIST,
                                  overwrite=ARGS_DICT["overwrite"])
 
-    if ARGS_DICT["which"] == "plot_profile" or ARGS_DICT["which"] == "plot_embolism_counts":
+    if (ARGS_DICT["which"] == "plot_profile" or
+            ARGS_DICT["which"] == "plot_embolism_counts"):
         utilities.update_plot_format()
 
         if ARGS_DICT["output_path"] is not None:
@@ -136,7 +142,7 @@ def main():
                 PLOT_OUTPUT_LIST = INPUT_JSON_DICT["plots"]["output_paths"]
             else:
                 if ARGS_DICT["which"] == "plot_profile":
-                    PLOT_OUTPUT_LIST = str.split(ARGS_DICT["output_path"], " ")
+                    PLOT_OUTPUT_LIST = str.split(ARGS_DICT["output_path"], ";")
                 else:
                     PLOT_OUTPUT_LIST = ARGS_DICT["output_path"]
         else:
@@ -145,7 +151,7 @@ def main():
         if ARGS_DICT["leaf_names"] == "same":
             LEAF_NAMES_LIST = INPUT_JSON_DICT["plots"]["leaf_names"]
         elif ARGS_DICT["leaf_names"]:
-            LEAF_NAMES_LIST = str.split(ARGS_DICT["leaf_names"], " ")
+            LEAF_NAMES_LIST = str.split(ARGS_DICT["leaf_names"], ";")
         else:
             LEAF_NAMES_LIST = list(range(1, len(MSEQS) + 1))
 
@@ -153,7 +159,8 @@ def main():
             plot_mseq_profiles(MSEQS, ARGS_DICT["show"], PLOT_OUTPUT_LIST,
                                LEAF_NAMES_LIST)
         else:
-            plot_mseq_embolism_counts(MSEQS, ARGS_DICT["show"], PLOT_OUTPUT_LIST,
+            plot_mseq_embolism_counts(MSEQS, ARGS_DICT["show"],
+                                      PLOT_OUTPUT_LIST,
                                       ARGS_DICT["tile"], LEAF_NAMES_LIST,
                                       ARGS_DICT["leaf_embolism_only"],
                                       ARGS_DICT["percent"])
@@ -164,7 +171,7 @@ def main():
         if ARGS_DICT["csv_output_path"] == "same":
             CSV_OUTPUT_LIST = INPUT_JSON_DICT["eda_df"]["output_path"]
         else:
-            CSV_OUTPUT_LIST = str.split(ARGS_DICT["csv_output_path"], " ")
+            CSV_OUTPUT_LIST = str.split(ARGS_DICT["csv_output_path"], ";")
 
         if ARGS_DICT["eda_df_options"]["linked_filename"]:
             load_image_objects(LSEQS)
@@ -185,7 +192,7 @@ def main():
         if ARGS_DICT["csv_output_path"] == "same":
             CSV_OUTPUT_LIST = INPUT_JSON_DICT["databunch_df"]["output_path"]
         else:
-            CSV_OUTPUT_LIST = str.split(ARGS_DICT["csv_output_path"], " ")
+            CSV_OUTPUT_LIST = str.split(ARGS_DICT["csv_output_path"], ";")
 
         if ARGS_DICT["tiles"]:
             extract_tiles_databunch_df(

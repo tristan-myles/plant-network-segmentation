@@ -328,7 +328,7 @@ def parse_arguments() -> argparse.Namespace:
                                           "be used")
     parser_databunch_df.add_argument(
         "--leaf_embolism_only", "-leo", action="store_true",
-        help="should only full leafs with embolisms be used")
+        help="should only full leaves with embolisms be used")
 
     args = parser.parse_args()
     return args
@@ -382,7 +382,8 @@ def interactive_prompt():
             options_list.update(range(1, 10))
 
             options_list.remove(-1)
-        print("Please separate multiple answers by a space")
+        print("Please separate multiple answers by a ';'. NOTE: the individual"
+              "file paths cannot contain semi-colons")
 
         if 1 in options_list:
             leaf_input_path = input(
@@ -393,7 +394,7 @@ def interactive_prompt():
             output_dict["leaves"] = {
                 "input": {"folder_path": [], "filename_pattern": []}}
 
-            for path in leaf_input_path.split():
+            for path in leaf_input_path.split(";"):
                 folder_path, filename = path.rsplit("/", 1)
                 output_dict["leaves"]["input"]["folder_path"].append(
                     folder_path + "/")
@@ -410,12 +411,12 @@ def interactive_prompt():
 
             if operation == 1:
                 output_dict["masks"] = {
-                    "input": {"mpf_path": mask_input_path.split()}}
+                    "input": {"mpf_path": mask_input_path.split(";")}}
             else:
                 output_dict["masks"] = {
                     "input": {"folder_path": [], "filename_pattern": []}}
 
-                for path in mask_input_path.split():
+                for path in mask_input_path.split(";"):
                     folder_path, filename = path.rsplit("/", 1)
                     output_dict["masks"]["input"]["folder_path"].append(
                         folder_path+"/")
@@ -621,7 +622,7 @@ def interactive_prompt():
                       "4: Has embolism\n")
 
                 eda_options = input("Choose the relevant number(s) separated"
-                                    " by a space: ").split()
+                                    " by a ';' : ").split(";")
 
                 output_dict["eda_df_options"] = {"linked_filename": False,
                                                  "unique_range": False,
@@ -654,7 +655,7 @@ def interactive_prompt():
                     "\n3. What is the y output size and directions?\n   Note,"
                     " for direction, a 1 or -1 indicates to trim either the"
                     " top or bottom respectively."
-                    "\n Reminder, separate your answers by a space."
+                    "\n Reminder, separate your answers by a ';' ."
                     "\nAnswer: ")
 
                 output_dict["y_size_dir"] = ysd
@@ -666,7 +667,7 @@ def interactive_prompt():
                     "\n4. What is the x output size and directions?\n   Note,"
                     " for direction, a 1 or -1 indicates to trim either the"
                     " left or right respectively."
-                    "\n Reminder, separate your answers by a space."
+                    "\n Reminder, separate your answers by a ';'."
                     "\nAnswer: ")
 
                 output_dict["x_size_dir"] = xsd
@@ -708,8 +709,8 @@ def interactive_prompt():
             "\nIf you are satisfied with this configurations, please enter 0."
             "\nIf not, please enter the number(s) of the options you would"
             " like to change.\nTo restart please enter -1."
-            "\nSeparate multiple options by a space: ")
-        options_list = set([int(choice) for choice in options_list.split()])
+            "\nSeparate multiple options by a ';' : ")
+        options_list = set([int(choice) for choice in options_list.split(";")])
 
         if len(options_list) == 1 and 0 in options_list:
             happy = True
