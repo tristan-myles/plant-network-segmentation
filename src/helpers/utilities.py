@@ -634,8 +634,8 @@ def interactive_prompt():
                 eda_df_options = list(output_dict["eda_df_options"])
 
                 for option in eda_options:
-                    output_dict["eda_df_options"][eda_df_options[int(option)]] = \
-                        True
+                    output_dict["eda_df_options"][
+                        eda_df_options[int(option)]] = True
 
                 options_list.remove(5)
 
@@ -670,11 +670,12 @@ def interactive_prompt():
         if operation == 7:
             if 3 in options_list:
                 ysd = input(
-                    "\n3. What is the y output size and directions?\n   Note,"
-                    " for direction, a 1 or -1 indicates to trim either the"
-                    " top or bottom respectively."
-                    "\n Reminder, separate your answers by a ';' ."
-                    "\nAnswer: ")
+                    "\n3. What is the y output size and directions?"
+                    "\n   Note, for direction, a 1 or -1 indicates to trim"
+                    " either the left or right respectively."
+                    "\nPlease provide your answer as a tuple, and please"
+                    " separate these answers by a ';' (if no trimming is "
+                    "required answer 'None'): ")
 
                 output_dict["y_size_dir"] = ysd
 
@@ -682,11 +683,12 @@ def interactive_prompt():
 
             if 4 in options_list:
                 xsd = input(
-                    "\n4. What is the x output size and directions?\n   Note,"
-                    " for direction, a 1 or -1 indicates to trim either the"
-                    " left or right respectively."
-                    "\n Reminder, separate your answers by a ';'."
-                    "\nAnswer: ")
+                    "\n4. What is the x output size and directions?"
+                    "\n   Note, for direction, a 1 or -1 indicates to trim"
+                    " either the left or right respectively."
+                    "\nPlease provide your answer as a tuple, and please"
+                    " separate these answers by a ';' (if no trimming is "
+                    "required answer 'None'): ")
 
                 output_dict["x_size_dir"] = xsd
 

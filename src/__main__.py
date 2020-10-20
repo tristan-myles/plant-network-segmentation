@@ -107,7 +107,8 @@ def main():
         elif not ARGS_DICT["x_size_dir"]:
             X_SIZE_DIR_LIST = [None]
         else:
-            X_SIZE_DIR_LIST = literal_eval(ARGS_DICT["x_size_dir"])
+            X_SIZE_DIR_LIST = [literal_eval(x_size_dir) for x_size_dir in
+                               ARGS_DICT["x_size_dir"].split(";")]
 
             # in the case of a single sequence with no x adjustment
             if (not X_SIZE_DIR_LIST or
@@ -121,7 +122,8 @@ def main():
         elif not ARGS_DICT["y_size_dir"]:
             Y_SIZE_DIR_LIST = [None]
         else:
-            Y_SIZE_DIR_LIST = literal_eval(ARGS_DICT["y_size_dir"])
+            Y_SIZE_DIR_LIST = [literal_eval(y_size_dir) for y_size_dir in
+                               ARGS_DICT["y_size_dir"].split(";")]
 
             # in the case of a single sequence with no y adjustment
             if (not Y_SIZE_DIR_LIST or
