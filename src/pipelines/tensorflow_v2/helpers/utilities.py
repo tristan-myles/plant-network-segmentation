@@ -51,7 +51,7 @@ def read_file(img_path):
     return img
 
 
-def parse_image_fc(leaf_shape, mask_shape):
+def parse_image_fc(leaf_shape, mask_shape, train=False):
     def parse_image(img_path: str, mask_path: str):
         # load the raw data from the file as a string
         img = tf.numpy_function(read_file, [img_path], tf.float32)
@@ -61,25 +61,35 @@ def parse_image_fc(leaf_shape, mask_shape):
 
         # Applying median filter
         # img = tfa.image.median_filter2d(img)
-        img = tf.cast(img, tf.float32) / 255.0
         # img = global_contrast_normalization(img)
 
         # Masks
         mask = tf.io.read_file(mask_path)
         mask = tf.image.decode_png(mask, channels=1)
         mask = tf.reshape(mask, mask_shape)
-        # mask = tf.image.resize(mask, [512, 512])
-        mask = tfa.image.gaussian_filter2d(mask)
 
-        # will return 255 where the condition is met else 0
-        mask = tf.where(tf.greater(mask, 0), 255, 0)
-        mask = tf.cast(mask, tf.float32) / 255
+        if train:
+            # mask = tf.image.resize(mask, [512, 512])
+            mask = tfa.image.gaussian_filter2d(mask)
+            # will return 255 where the condition is met else 0
+            mask = tf.where(tf.greater(mask, 0), 255, 0)
+            img = tf.where((tf.equal(mask, 255) & tf.greater_equal(img, 0)),
+                           -1e-9, img)
+
+        mask = tf.cast(mask, tf.float32) / 255.0
+        img = tf.cast(img, tf.float32) / 255.0
 
         return img, mask
 
     return parse_image
 
+
 # *----------------------------- post-processing -----------------------------*
+def im2_lt_im1(pred, input_image):
+    # reducing false positives, i.e trying to improve precision
+    pred[(input_image >= 0)] = 0
+
+    return pred
 
 
 # *=============================== load model ================================*

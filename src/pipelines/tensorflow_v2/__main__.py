@@ -11,7 +11,8 @@ from src.pipelines.tensorflow_v2.callbacks.one_cycle import OneCycleLR
 from src.pipelines.tensorflow_v2.helpers.train_test import get_tf_dataset
 from src.pipelines.tensorflow_v2.helpers.utilities import (parse_arguments,
                                                            interactive_prompt,
-                                                           format_input)
+                                                           format_input,
+                                                           im2_lt_im1)
 from src.pipelines.tensorflow_v2.losses.custom_losses import *
 from src.pipelines.tensorflow_v2.models.unet import Unet
 from src.pipelines.tensorflow_v2.models.unet_resnet import UnetResnet
@@ -119,8 +120,9 @@ def main():
         base_dir=ANSWERS["train_base_dir"],
         leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
         incl_aug=ANSWERS['incl_aug'], batch_size=ANSWERS['batch_size'],
-        buffer_size=ANSWERS['buffer_size'], leaf_shape=ANSWERS['leaf_shape'],
-        mask_shape=ANSWERS['mask_shape'])
+        buffer_size=ANSWERS['buffer_size'],
+        leaf_shape=ANSWERS['leaf_shape'],
+        mask_shape=ANSWERS['mask_shape'], train=True)
 
     # val
     val_dataset = get_tf_dataset(
@@ -143,7 +145,8 @@ def main():
             leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
             batch_size=1,
             buffer_size=None,
-            leaf_shape=ANSWERS['leaf_shape'], mask_shape=ANSWERS['mask_shape'])
+            leaf_shape=ANSWERS['leaf_shape'],
+            mask_shape=ANSWERS['mask_shape'])
 
         results = model.evaluate(test_dataset)
         pprint(dict(zip(model.metrics_names, results)))
@@ -152,11 +155,25 @@ def main():
         # the masks in memory at the same time, possibly better to use a
         # generator in the classification report...
         predictions = model.predict(test_dataset)
+
+        masks = []
+        leaves = []
+        for imageset in test_dataset.as_numpy_iterator():
+            masks.append(imageset[1][0])
+            leaves.append(imageset[0][0])
+
         masks = [imageset[1] for imageset in test_dataset.as_numpy_iterator()]
 
         csv_save_path = (f"{callback_base_dir}classification_reports/"
                          f"{ANSWERS['run_name']}.csv")
 
+        _ = classification_report(predictions, masks, save_path=csv_save_path)
+
+        predictions = [im2_lt_im1(pred, leaf) for pred, leaf
+                       in zip(predictions, leaves)]
+
+        csv_save_path = (csv_save_path.rsplit(".", 1)[0] +
+                         "_post_processed.csv")
         _ = classification_report(predictions, masks, save_path=csv_save_path)
 
 
