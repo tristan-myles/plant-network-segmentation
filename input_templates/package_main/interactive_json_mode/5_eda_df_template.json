@@ -1,0 +1,36 @@
+{
+  "which": "eda_df",
+  "leaves": {
+    "input": {
+      "folder_path": [
+        "test1/test2/extracted/leaves/",
+        "test3/leaves/extracted/"
+      ],
+      "filename_pattern": [
+        "*.png",
+        "*.png"
+      ]
+    }
+  },
+  "masks": {
+    "input": {
+      "folder_path": [
+        "test1/test2/extracted/masks/",
+        "test3/extracted/masks/"
+      ],
+      "filename_pattern": [
+        "*.png",
+        "*.png"
+      ]
+    }
+  },
+  "csv_output_path": "test2.csv;test3_eda.csv",
+  "tiles": false,
+  "eda_df_options": {
+    "linked_filename": false,
+    "unique_range": true,
+    "embolism_percent": true,
+    "intersection": true,
+    "has_embolism": false
+  }
+}

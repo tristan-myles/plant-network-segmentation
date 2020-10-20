@@ -1,0 +1,30 @@
+{
+  "which": "plot_profile",
+  "leaves": {
+    "input": {
+      "folder_path": [
+        "test1/test2/extracted/leaves/",
+        "test3/leaves/extracted/"
+      ],
+      "filename_pattern": [
+        "*.png",
+        "*.png"
+      ]
+    }
+  },
+  "masks": {
+    "input": {
+      "folder_path": [
+        "test1/test2/extracted/masks/",
+        "test3/extracted/masks/"
+      ],
+      "filename_pattern": [
+        "*.png",
+        "*.png"
+      ]
+    }
+  },
+  "output_path": "test2.svg;test3.svg",
+  "leaf_names": "Leaf 1;Leaf 2",
+  "show": false
+}

@@ -1,0 +1,34 @@
+{
+  "leaves": {
+    "input": {
+      "folder_path": [
+        "/test1/test2/test3/",
+        "/test4/test5/"
+      ],
+      "filename_pattern": [
+        "*",
+        "*"
+      ]
+    },
+    "output": {
+      "output_path": [
+        "/test1/test2/test3/extracted_images/leaves/test3_leaf.png",
+        "/test4/test5/extracted_images/leaves/test4_leaf.png"
+      ]
+    }
+  },
+  "masks": {
+    "input": {
+      "mpf_path": [
+        "/test1/test2/test3/multipage_file1.tif",
+        "/test4/test5/multipage_file2.tif"
+      ]
+    },
+    "output": {
+      "output_path": [
+        "/test1/test2/test3/extracted_images/masks/test3_mask.png",
+        "/test4/test5/extracted_images/masks/test4_mask.png"
+      ]
+    }
+  }
+}

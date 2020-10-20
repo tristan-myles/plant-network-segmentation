@@ -1,0 +1,27 @@
+{
+  "which": "extract_images",
+  "leaves": {
+    "input": {
+      "folder_path": [
+        "test1/test2/",
+        "test3/"
+      ],
+      "filename_pattern": [
+        "*.png",
+        "*.tif"
+      ]
+    }
+  },
+  "masks": {
+    "input": {
+      "mpf_path": [
+        "test1/test2/multipage1.tif",
+        "test3/multipage2.tif"
+      ]
+    }
+  },
+  "leaf_output_path": "test1/test2/extracted/leaves/test2_leaf.png;test3/extracted/leaves/test3_leaf.png",
+  "mask_output_path": "test1/test2/extracted/masks/test2_mask.png;test3/extracted/masks/test3_mask.png",
+  "overwrite": true,
+  "binarise": false
+}

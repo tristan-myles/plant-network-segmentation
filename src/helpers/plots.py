@@ -1,4 +1,6 @@
 import logging
+import tqdm
+import sys
 
 from src.eda.describe_leaf import plot_embolisms_per_leaf
 
