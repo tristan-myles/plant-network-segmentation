@@ -394,12 +394,13 @@ def interactive_prompt():
             output_dict["leaves"] = {
                 "input": {"folder_path": [], "filename_pattern": []}}
 
-            for path in leaf_input_path.split(";"):
-                folder_path, filename = path.rsplit("/", 1)
-                output_dict["leaves"]["input"]["folder_path"].append(
-                    folder_path + "/")
-                output_dict["leaves"]["input"]["filename_pattern"].append(
-                    filename)
+            if leaf_input_path:
+                for path in leaf_input_path.split(";"):
+                    folder_path, filename = path.rsplit("/", 1)
+                    output_dict["leaves"]["input"]["folder_path"].append(
+                        folder_path + "/")
+                    output_dict["leaves"]["input"]["filename_pattern"].append(
+                        filename)
 
             options_list.remove(1)
 
@@ -416,12 +417,13 @@ def interactive_prompt():
                 output_dict["masks"] = {
                     "input": {"folder_path": [], "filename_pattern": []}}
 
-                for path in mask_input_path.split(";"):
-                    folder_path, filename = path.rsplit("/", 1)
-                    output_dict["masks"]["input"]["folder_path"].append(
-                        folder_path+"/")
-                    output_dict["masks"]["input"]["filename_pattern"].append(
-                        filename)
+                if mask_input_path:
+                    for path in mask_input_path.split(";"):
+                        folder_path, filename = path.rsplit("/", 1)
+                        output_dict["masks"]["input"]["folder_path"].append(
+                            folder_path+"/")
+                        output_dict["masks"]["input"][
+                            "filename_pattern"].append(filename)
 
                 options_list.remove(2)
 
@@ -548,7 +550,7 @@ def interactive_prompt():
 
                 options_list.remove(5)
 
-        if operation == 4 or operation == 6:
+        if operation == 4:
             if 6 in options_list:
                 print("\n6. Should only leaves with embolisms be used?\n"
                       "   Options:\n"
@@ -561,7 +563,6 @@ def interactive_prompt():
 
                 options_list.remove(6)
 
-        if operation == 4:
             if 7 in options_list:
                 print("\n7. Would you like to create the plot using image "
                       "tiles\n"
@@ -600,7 +601,7 @@ def interactive_prompt():
 
             if 4 in options_list:
                 print("\n4. Would you like to create the data frame using"
-                      " tiles only\n"
+                      " tiles\n"
                       "   Options:\n"
                       "   0: No\n"
                       "   1: Yes")
@@ -636,18 +637,35 @@ def interactive_prompt():
                     output_dict["eda_df_options"][eda_df_options[int(option)]] = \
                         True
 
-            options_list.remove(5)
+                options_list.remove(5)
 
         if operation == 6:
             if 5 in options_list:
-                print("\n5. Should only tiles with embolisms be used?\n"
+                print("\n5. Should only leaves with embolisms be used?\n"
                       "   Options:\n"
                       "   0: No\n"
                       "   1: Yes")
-                teo = input("Please choose a number: ")
-                teo = int(teo) == 1
+                leo = input("Please choose a number: ")
+                leo = int(leo) == 1
+
+                output_dict["leaf_embolism_only"] = leo
+
+                options_list.remove(5)
+
+            if 6 in options_list:
+                if tiles:
+                    print("\n6. Should only tiles with embolisms be used?\n"
+                          "   Options:\n"
+                          "   0: No\n"
+                          "   1: Yes")
+                    teo = input("Please choose a number: ")
+                    teo = int(teo) == 1
+                else:
+                    teo=False
 
                 output_dict["tile_embolism_only"] = teo
+
+                options_list.remove(6)
 
         if operation == 7:
             if 3 in options_list:
