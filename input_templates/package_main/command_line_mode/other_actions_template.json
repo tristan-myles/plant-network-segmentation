@@ -1,0 +1,86 @@
+{
+  "leaves": {
+    "input": {
+      "folder_path": [
+        "/test1/test2/test3/extracted_images/leaves/",
+        "/test4/test5/extracted_images/leaves/"
+      ],
+      "filename_pattern": [
+        "*.png",
+        "*.png"
+      ]
+    },
+    "output": {
+      "output_path": [
+        "/test1/test2/test3/extracted_images/leaf_tiles/test3_leaf_tile.png",
+        "/test4/test5/extracted_images/leaf_tiles/test5_leaf_tile.png"
+      ]
+    }
+  },
+  "masks": {
+    "input": {
+      "folder_path": [
+        "/test1/test2/test3/extracted_images/masks/",
+        "/test4/test5/extracted_images/masks/"
+      ],
+      "filename_pattern": [
+        "*.png",
+        "*.png"
+      ]
+    },
+    "output": {
+      "output_path": [
+        "/test1/test2/test3/extracted_images/mask_tiles/test3_mask_tile.png",
+        "/test4/test5/extracted_images/mask_tiles/test5_mask_tile.png"
+      ]
+    }
+  },
+  "plots": {
+    "output_paths": [
+      "test3.svg",
+      "test2.svg"
+    ],
+    "leaf_names": [
+      "Leaf 1",
+      "Leaf 2"
+    ]
+  },
+  "trim": {
+    "x_size_dir": [
+      [
+        1000,
+        -1
+      ],
+      [
+        1440,
+        1
+      ]
+    ],
+    "y_size_dir": [
+      [
+        1000,
+        1
+      ],
+      null
+    ]
+  },
+  "eda_df": {
+    "options": {
+      "linked_filename": true,
+      "unique_range": true,
+      "embolism_percent": true,
+      "intersection": true,
+      "has_embolism": true
+    },
+    "output_path": [
+      "test3_eda.csv",
+      "test5_eda.csv"
+    ]
+  },
+  "databunch_df": {
+    "output_path": [
+      "test3_databunch.csv",
+      "test5_databunch.csv"
+    ]
+  }
+}

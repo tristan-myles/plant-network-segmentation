@@ -1,0 +1,34 @@
+{
+  "which": "extract_tiles",
+  "leaves": {
+    "input": {
+      "folder_path": [
+        "test1/test2/extracted/leaves/",
+        "test3/leaves/extracted/"
+      ],
+      "filename_pattern": [
+        "*.png",
+        "*.png"
+      ]
+    }
+  },
+  "masks": {
+    "input": {
+      "folder_path": [
+        "test1/test2/extracted/masks/",
+        "test3/extracted/masks/"
+      ],
+      "filename_pattern": [
+        "*.png",
+        "*.png"
+      ]
+    }
+  },
+  "leaf_output_path": "test1/test2/extracted/leaf-chips/*.png;test3/extracted/leaf-chips/*.png",
+  "mask_output_path": "test1/test2/extracted/leaf-chips/*.png;test3/extracted/leaf-chips/*.png",
+  "overwrite": true,
+  "stride_x": 256,
+  "stride_y": 256,
+  "length_x": 256,
+  "length_y": 256
+}
