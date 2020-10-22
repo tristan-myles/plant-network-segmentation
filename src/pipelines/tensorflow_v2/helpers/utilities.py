@@ -51,6 +51,16 @@ def read_file(img_path):
     return img
 
 
+def parse_numpy_image(img, batch_shape):
+    img = tf.convert_to_tensor(img)
+    img = tf.where(tf.greater_equal(img, tf.cast(0, "float32")),
+                   tf.cast(0, "float32"), img)
+    img = tf.cast(img, tf.float32) / 255.0
+    img = tf.reshape(img, batch_shape)
+
+    return img
+
+
 def parse_image_fc(leaf_shape, mask_shape, train=False):
     def parse_image(img_path: str, mask_path: str):
         # load the raw data from the file as a string

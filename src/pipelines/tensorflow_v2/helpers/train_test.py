@@ -3,7 +3,8 @@ import tensorflow as tf
 from src.data.data_model import *
 from src.model.model import Model
 from src.pipelines.tensorflow_v2.helpers.utilities import (
-    get_sorted_list, configure_for_performance, parse_image_fc)
+    get_sorted_list, configure_for_performance, parse_image_fc,
+    parse_numpy_image)
 
 LOGGER = logging.getLogger(__name__)
 
@@ -87,6 +88,15 @@ class _TfPnsMixin(Model):
         # Load the state of the old model
         self.load_weights(chkpt_path)
 
-    def predict_tile(self, new_tile):
-        pass
+    def predict_tile(self, new_tile, leaf_shape):
+        batch_shape = (1,) + leaf_shape
+        img = parse_numpy_image(new_tile, batch_shape)
+        prediction = self.predict(img)
+        prediction = np.reshape(prediction, leaf_shape)
+
+        # temp post-process:
+        prediction[new_tile >= 0] = 0
+        prediction = prediction * 255
+
+        return prediction
 # *===========================================================================*
