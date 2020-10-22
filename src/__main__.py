@@ -205,6 +205,18 @@ def main():
             extract_full_databunch_df(
                 LSEQS, MSEQS, CSV_OUTPUT_LIST, ARGS_DICT["leaf_embolism_only"])
 
+    if ARGS_DICT["which"] == "predict":
+        load_image_objects(LSEQS)
+
+        if ARGS_DICT["csv_path"]:
+            load_image_objects(LSEQS)
+
+        leaf_shape = tuple(ARGS_DICT["leaf_shape"].split(";"))
+        predict_tensorflow(LSEQS, model_path=ARGS_DICT["model_path"],
+                           leaf_shape=leaf_shape,
+                           cr_csv_list=ARGS_DICT["csv_path"],
+                           mseqs=MSEQS)
+
 
 if __name__ == "__main__":
     main()

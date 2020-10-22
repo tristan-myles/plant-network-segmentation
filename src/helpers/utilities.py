@@ -5,10 +5,44 @@ import pprint
 import matplotlib as mpl
 from sklearn import metrics
 
+from tensorflow import keras
+
 from src.data.data_model import *
 
 LOGGER = logging.getLogger(__name__)
 
+
+# *=============================== prediction ================================*
+def predict_tensorflow(lseqs, model_path, leaf_shape, cr_csv_list=None,
+                       mseqs=None):
+    model = keras.load_model(model_path, compile=False)
+    memory_saving = True
+
+    if cr_csv_list:
+        memory_saving = False
+
+    for i, lseq in enumerate(lseqs):
+        lseq.predict_leaf_sequence(model, leaf_shape[0],
+                                   leaf_shape[1],
+                                   memory_saving=memory_saving,
+                                   leaf_shape=leaf_shape)
+
+        if cr_csv_list:
+            mseqs[i].load_extracted_images(load_image=True)
+
+            temp_pred_list = []
+            temp_mask_list = []
+
+            for leaf, mask in zip(lseq.image_objects. mseqs.image_objects):
+                temp_pred_list.append(leaf.prediction_array)
+                temp_mask_list.append(mask.image_array)
+
+                # save memory
+                del leaf.image_array
+                del mask.image_array
+
+                _ = classification_report(temp_pred_list, temp_mask_list,
+                                          save_path=cr_csv_list[i])
 
 # *================================= metrics =================================*
 def get_iou_score(y_true, y_pred):
@@ -337,12 +371,12 @@ def parse_arguments() -> argparse.Namespace:
         "--model_path", "-mp", type=str, metavar="\b",
         help="the path to the saved model to restore")
     parser_prediction.add_argument(
-        "--classification_report_csv", "-cr", type=str, metavar="\b",
-        help="csv paths of where the classification report should be saved; "
+        "--csv_path", "-cp", type=str, metavar="\b",
+        help="csv path of where the classification report should be saved; "
              "this flag determines if a classification report is generated")
     parser_prediction.add_argument(
         "--leaf_shape", "-ls", type=str, metavar="\b",
-        help="leaf shape, please seperate each number by a ';'")
+        help="leaf shape, please separate each number by a ';'")
     args = parser.parse_args()
     return args
 
@@ -698,12 +732,12 @@ def interactive_prompt():
                 options_list.remove(4)
 
             if 5 in options_list:
-                class_report_path = input(
+                csv_path = input(
                     "\n5. Please provide a .csv save path if you would "
                     "like to generate a classification report."
                     "\n(Leave this blank to skip)\nAnswer: ")
 
-                output_dict["class_report_paths"] = class_report_path
+                output_dict["csv_path"] = csv_path
 
                 options_list.remove(5)
 
