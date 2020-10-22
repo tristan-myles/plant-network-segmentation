@@ -39,24 +39,36 @@ def main():
 
     ANSWERS = format_input(ANSWERS)
 
-    # convert to np.array for multi-element indexing
-    METRICS = np.array([
-        tf.keras.metrics.TruePositives(name='tp'),
-        tf.keras.metrics.FalsePositives(name='fp'),
-        tf.keras.metrics.TrueNegatives(name='tn'),
-        tf.keras.metrics.FalseNegatives(name='fn'),
-        tf.keras.metrics.BinaryAccuracy(name='accuracy'),
-        tf.keras.metrics.Precision(name='precision'),
-        tf.keras.metrics.Recall(name='recall'),
-        tf.keras.metrics.AUC(name='auc'),
-    ])
-
-    if ANSWERS["metric_choices"][0] == len(METRICS):
-        metrics = list(METRICS)
+    if ANSWERS["model_choice"] == 0:
+        model = Unet(1)
+    elif ANSWERS["model_choice"] == 1:
+        model = UnetResnet(1)
     else:
-        metrics = list(METRICS[ANSWERS["metric_choices"]])
+        model = WNet()
 
     callback_base_dir = "data/run_data/"
+
+    model_save_path = (f"{callback_base_dir}saved_models/"
+                       f"{ANSWERS['run_name']}")
+    model_save_path = model_save_path
+
+    # Input validations is done when answers are provided, hence the final
+    # else statement as opposed to an elif
+    if ANSWERS["loss_choice"] == 0:
+        loss = tf.keras.losses.binary_crossentropy
+    elif ANSWERS["loss_choice"] == 1:
+        loss = weighted_CE(0.5)
+    elif ANSWERS["loss_choice"] == 2:
+        loss = focal_loss(0.5)
+        model_save_path = model_save_path + "-focal_loss"
+    else:
+        loss = soft_dice_loss
+        model_save_path = model_save_path + "-dice_loss"
+
+    if ANSWERS["opt_choice"] == 0:
+        opt = tf.keras.optimizers.Adam
+    else:
+        opt = tf.keras.optimizers.SGD
 
     lr_range_test = LRRangeTest(init_lr=1e-8, max_lr=3, iterations=12197,
                                 verbose=1000)
@@ -71,8 +83,7 @@ def main():
         f"{callback_base_dir}csv_logs/{ANSWERS['run_name']}.log",
         separator=',', append=False)
 
-    model_save_path = (f"{callback_base_dir}saved_models/"
-                       f"{ANSWERS['run_name']}/{ANSWERS['run_name']}")
+    model_save_path = model_save_path + "/"
     Path(model_save_path).mkdir(parents=True, exist_ok=True)
 
     model_cpt = tf.keras.callbacks.ModelCheckpoint(
@@ -91,28 +102,22 @@ def main():
     else:
         callbacks = list(CALLBACKS[ANSWERS["callback_choices"]])
 
-    # Input validations is done when answers are provided, hence the final
-    # else statement as opposed to an elif
-    if ANSWERS["loss_choice"] == 0:
-        loss = tf.keras.losses.binary_crossentropy
-    elif ANSWERS["loss_choice"] == 1:
-        loss = weighted_CE(0.5)
-    elif ANSWERS["loss_choice"] == 2:
-        loss = focal_loss(0.5)
-    else:
-        loss = soft_dice_loss
+    # convert to np.array for multi-element indexing
+    METRICS = np.array([
+        tf.keras.metrics.TruePositives(name='tp'),
+        tf.keras.metrics.FalsePositives(name='fp'),
+        tf.keras.metrics.TrueNegatives(name='tn'),
+        tf.keras.metrics.FalseNegatives(name='fn'),
+        tf.keras.metrics.BinaryAccuracy(name='accuracy'),
+        tf.keras.metrics.Precision(name='precision'),
+        tf.keras.metrics.Recall(name='recall'),
+        tf.keras.metrics.AUC(name='auc'),
+    ])
 
-    if ANSWERS["opt_choice"] == 0:
-        opt = tf.keras.optimizers.Adam
+    if ANSWERS["metric_choices"][0] == len(METRICS):
+        metrics = list(METRICS)
     else:
-        opt = tf.keras.optimizers.SGD
-
-    if ANSWERS["model_choice"] == 0:
-        model = Unet(1)
-    elif ANSWERS["model_choice"] == 1:
-        model = UnetResnet(1)
-    else:
-        model = WNet()
+        metrics = list(METRICS[ANSWERS["metric_choices"]])
 
     # get dataset
     # train
@@ -137,9 +142,29 @@ def main():
                     callbacks, ANSWERS["lr"], opt, loss,
                     ANSWERS["epochs"])
 
+    # load the best model and check that it has the same validation recall
+    # as the best val recall achieved during training
+    del model
+    if ANSWERS["model_choice"] == 0:
+        model = Unet(1)
+    elif ANSWERS["model_choice"] == 1:
+        model = UnetResnet(1)
+    else:
+        model = WNet()
+
+    # load model with best val recall
+    model.load_workaround(ANSWERS["mask_shape"], ANSWERS['leaf_shape'],
+                          loss, opt(1e-3), metrics, model_save_path)
+
+    # check that recall is the same as the best val recall during training
+    model.evaluate(val_dataset)
+
+    # workaround since ModelCheckpoint workaround is not working
+    model.save(model_save_path)
+
     # check test_set
     if ANSWERS["test_dir"]:
-        # val
+        # test
         test_dataset = get_tf_dataset(
             base_dir=ANSWERS["val_base_dir"],
             leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
@@ -148,8 +173,7 @@ def main():
             leaf_shape=ANSWERS['leaf_shape'],
             mask_shape=ANSWERS['mask_shape'])
 
-        results = model.evaluate(test_dataset)
-        pprint(dict(zip(model.metrics_names, results)))
+        model.evaluate(test_dataset)
 
         # Could have a memory issue by keeping all the predictions and all
         # the masks in memory at the same time, possibly better to use a
@@ -175,6 +199,8 @@ def main():
         csv_save_path = (csv_save_path.rsplit(".", 1)[0] +
                          "_post_processed.csv")
         _ = classification_report(predictions, masks, save_path=csv_save_path)
+
+        model.save(model_save_path)
 
 
 if __name__ == "__main__":
