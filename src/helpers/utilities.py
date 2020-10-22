@@ -340,7 +340,9 @@ def parse_arguments() -> argparse.Namespace:
         "--classification_report_csv", "-cr", type=str, metavar="\b",
         help="csv paths of where the classification report should be saved; "
              "this flag determines if a classification report is generated")
-
+    parser_prediction.add_argument(
+        "--leaf_shape", "-ls", type=str, metavar="\b",
+        help="leaf shape, please seperate each number by a ';'")
     args = parser.parse_args()
     return args
 
@@ -389,7 +391,7 @@ def interactive_prompt():
                   "8. Trim sequence")
 
             operation = int(input("Please select your option: "))
-            output_dict["which"] = operation_names[operation-1]
+            output_dict["which"] = operation_names[operation - 1]
 
             # Include the max of all options: 1 - 10
             options_list.update(range(1, 10))
@@ -434,7 +436,7 @@ def interactive_prompt():
                     for path in mask_input_path.split(";"):
                         folder_path, filename = path.rsplit("/", 1)
                         output_dict["masks"]["input"]["folder_path"].append(
-                            folder_path+"/")
+                            folder_path + "/")
                         output_dict["masks"]["input"][
                             "filename_pattern"].append(filename)
 
@@ -674,7 +676,7 @@ def interactive_prompt():
                     teo = input("Please choose a number: ")
                     teo = int(teo) == 1
                 else:
-                    teo=False
+                    teo = False
 
                 output_dict["tile_embolism_only"] = teo
 
@@ -689,13 +691,21 @@ def interactive_prompt():
                 options_list.remove(3)
 
             if 4 in options_list:
+                leaf_shape = input("\n4. Please enter the leaf image shape: ")
+
+                output_dict["leaf_shape"] = leaf_shape
+
+                options_list.remove(4)
+
+            if 5 in options_list:
                 class_report_path = input(
-                    "\n4. Please provide a .csv save path if you would "
-                    "like to generate a classification report: ")
+                    "\n5. Please provide a .csv save path if you would "
+                    "like to generate a classification report."
+                    "\n(Leave this blank to skip)\nAnswer: ")
 
                 output_dict["class_report_paths"] = class_report_path
 
-                options_list.remove(4)
+                options_list.remove(5)
 
         if operation == 8:
             if 3 in options_list:
