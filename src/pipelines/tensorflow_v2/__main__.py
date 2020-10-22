@@ -166,7 +166,7 @@ def main():
     if ANSWERS["test_dir"]:
         # test
         test_dataset = get_tf_dataset(
-            base_dir=ANSWERS["val_base_dir"],
+            base_dir=ANSWERS["test_dir"],
             leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
             batch_size=1,
             buffer_size=None,
