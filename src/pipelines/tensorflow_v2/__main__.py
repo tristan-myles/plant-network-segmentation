@@ -200,8 +200,6 @@ def main():
                          "_post_processed.csv")
         _ = classification_report(predictions, masks, save_path=csv_save_path)
 
-        model.save(model_save_path)
-
 
 if __name__ == "__main__":
     main()
