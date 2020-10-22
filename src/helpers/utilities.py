@@ -330,6 +330,17 @@ def parse_arguments() -> argparse.Namespace:
         "--leaf_embolism_only", "-leo", action="store_true",
         help="should only full leaves with embolisms be used")
 
+    parser_prediction = subparsers.add_parser(
+        "predict", help="generate predictions using a saved model")
+    parser_prediction.set_defaults(which="predict")
+    parser_prediction.add_argument(
+        "--model_path", "-mp", type=str, metavar="\b",
+        help="the path to the saved model to restore")
+    parser_prediction.add_argument(
+        "--classification_report_csv", "-cr", type=str, metavar="\b",
+        help="csv paths of where the classification report should be saved; "
+             "this flag determines if a classification report is generated")
+
     args = parser.parse_args()
     return args
 
@@ -356,7 +367,7 @@ def interactive_prompt():
     options_list = set((-1,))
     operation_names = ["extract_images", "extract_tiles", "plot_profile",
                        "plot_embolism_counts", "eda_df", "databunch_df",
-                       "trim_sequence"]
+                       "predict", "trim_sequence"]
 
     while not happy:
         if -1 in options_list:
@@ -372,8 +383,10 @@ def interactive_prompt():
                   "--------------- EDA ----------------\n"
                   "5. EDA DataFrame\n"
                   "6. DataBunch DataFrame\n"
+                  "------------ Prediction ------------\n"
+                  "7. Tensorflow Model\n"
                   "------------- General --------------\n"
-                  "7. Trim sequence")
+                  "8. Trim sequence")
 
             operation = int(input("Please select your option: "))
             output_dict["which"] = operation_names[operation-1]
@@ -668,6 +681,23 @@ def interactive_prompt():
                 options_list.remove(6)
 
         if operation == 7:
+            if 3 in options_list:
+                model_path = input("\n3. Please provide the model path: ")
+
+                output_dict["model_path"] = model_path
+
+                options_list.remove(3)
+
+            if 4 in options_list:
+                class_report_path = input(
+                    "\n4. Please provide a .csv save path if you would "
+                    "like to generate a classification report: ")
+
+                output_dict["class_report_paths"] = class_report_path
+
+                options_list.remove(4)
+
+        if operation == 8:
             if 3 in options_list:
                 ysd = input(
                     "\n3. What is the y output size and directions?"
