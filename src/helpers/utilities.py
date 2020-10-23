@@ -4,18 +4,68 @@ import pprint
 
 import matplotlib as mpl
 from sklearn import metrics
-
 from tensorflow import keras
 
 from src.data.data_model import *
+from src.pipelines.tensorflow_v2.losses.custom_losses import *
+from src.pipelines.tensorflow_v2.models.unet import Unet
+from src.pipelines.tensorflow_v2.models.unet_resnet import UnetResnet
+from src.pipelines.tensorflow_v2.models.wnet import WNet
 
 LOGGER = logging.getLogger(__name__)
 
 
+# *================================ get model ================================*
+def get_workaround_details(compilation_dict):
+    # model:
+    if compilation_dict["model"] == "unet":
+        model = Unet(1)
+    elif compilation_dict["model"] == "unet_resnet":
+        model = UnetResnet(1)
+    elif compilation_dict["model"] == "wnet":
+        model = WNet()
+    else:
+        raise ValueError("Please provide a valid answer for model choice, "
+                         "options are unet, unet_resnet, or wnet")
+
+    if compilation_dict["loss"] == "bce":
+        loss = keras.losses.binary_crossentropy
+    elif compilation_dict["loss"] == "wce":
+        loss = weighted_CE(0.5)
+    elif compilation_dict["loss"] == "focal":
+        loss = focal_loss(0.5)
+    elif compilation_dict["loss"] == "dice":
+        loss = soft_dice_loss
+    else:
+        raise ValueError("Please provide a valid answer for loss choice, "
+                         "options are bce, wce, focal, or dice")
+
+    if compilation_dict["opt"] == "adam":
+        opt = keras.optimizers.Adam
+    elif compilation_dict["opt"] == "sgd":
+        opt = keras.optimizers.SGD
+    else:
+        raise ValueError("Please provide a valid answer for optimiser choice, "
+                         "options are adam or sgd")
+
+    metrics = [ keras.metrics.BinaryAccuracy(name='accuracy'),
+                keras.metrics.Precision(name='precision'),
+                keras.metrics.Recall(name='recall')]
+
+    return model, loss, opt, metrics
+
+
 # *=============================== prediction ================================*
-def predict_tensorflow(lseqs, model_path, leaf_shape, cr_csv_list=None,
+def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list=None,
                        mseqs=None):
-    model = keras.load_model(model_path, compile=False)
+    with open(model_weight_path + "compilation.json", "r") as json_file:
+        compilation_dict = json.load(json_file)
+
+    model, loss, opt, metrics = get_workaround_details(compilation_dict)
+    model.load_workaround(leaf_shape, leaf_shape, loss,
+                          opt(float(compilation_dict["lr"])), metrics,
+                          model_weight_path)
+
     memory_saving = True
 
     if cr_csv_list:
@@ -369,7 +419,7 @@ def parse_arguments() -> argparse.Namespace:
     parser_prediction.set_defaults(which="predict")
     parser_prediction.add_argument(
         "--model_path", "-mp", type=str, metavar="\b",
-        help="the path to the saved model to restore")
+        help="the path to the saved model weights to restore")
     parser_prediction.add_argument(
         "--csv_path", "-cp", type=str, metavar="\b",
         help="csv path of where the classification report should be saved; "
@@ -718,7 +768,8 @@ def interactive_prompt():
 
         if operation == 7:
             if 3 in options_list:
-                model_path = input("\n3. Please provide the model path: ")
+                model_path = input("\n3. Please provide the model weights "
+                                   "path: ")
 
                 output_dict["model_path"] = model_path
 

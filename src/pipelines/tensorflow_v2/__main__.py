@@ -1,7 +1,6 @@
 import json
 import logging
 from pathlib import Path
-from pprint import pprint
 
 import numpy as np
 
@@ -12,7 +11,8 @@ from src.pipelines.tensorflow_v2.helpers.train_test import get_tf_dataset
 from src.pipelines.tensorflow_v2.helpers.utilities import (parse_arguments,
                                                            interactive_prompt,
                                                            format_input,
-                                                           im2_lt_im1)
+                                                           im2_lt_im1,
+                                                           save_compilation_dict)
 from src.pipelines.tensorflow_v2.losses.custom_losses import *
 from src.pipelines.tensorflow_v2.models.unet import Unet
 from src.pipelines.tensorflow_v2.models.unet_resnet import UnetResnet
@@ -60,10 +60,10 @@ def main():
         loss = weighted_CE(0.5)
     elif ANSWERS["loss_choice"] == 2:
         loss = focal_loss(0.5)
-        model_save_path = model_save_path + "-focal_loss"
+        model_save_path = model_save_path
     else:
         loss = soft_dice_loss
-        model_save_path = model_save_path + "-dice_loss"
+        model_save_path = model_save_path
 
     if ANSWERS["opt_choice"] == 0:
         opt = tf.keras.optimizers.Adam
@@ -142,6 +142,10 @@ def main():
                     callbacks, ANSWERS["lr"], opt, loss,
                     ANSWERS["epochs"])
 
+    # save the compilation dict once training is complete
+    lr = model.optimizer.lr.numpy()
+    save_compilation_dict(ANSWERS, lr, model_save_path)
+
     # load the best model and check that it has the same validation recall
     # as the best val recall achieved during training
     del model
@@ -154,13 +158,10 @@ def main():
 
     # load model with best val recall
     model.load_workaround(ANSWERS["mask_shape"], ANSWERS['leaf_shape'],
-                          loss, opt(1e-3), metrics, model_save_path)
+                          loss, opt(lr), metrics, model_save_path)
 
     # check that recall is the same as the best val recall during training
     model.evaluate(val_dataset)
-
-    # workaround since ModelCheckpoint workaround is not working
-    model.save(model_save_path)
 
     # check test_set
     if ANSWERS["test_dir"]:

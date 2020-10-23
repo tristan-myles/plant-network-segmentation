@@ -211,8 +211,9 @@ def main():
         if ARGS_DICT["csv_path"]:
             load_image_objects(LSEQS)
 
-        leaf_shape = tuple(ARGS_DICT["leaf_shape"].split(";"))
-        predict_tensorflow(LSEQS, model_path=ARGS_DICT["model_path"],
+        leaf_shape = tuple([int(dim) for dim in
+                            ARGS_DICT["leaf_shape"].split(";")])
+        predict_tensorflow(LSEQS, model_weight_path=ARGS_DICT["model_path"],
                            leaf_shape=leaf_shape,
                            cr_csv_list=ARGS_DICT["csv_path"],
                            mseqs=MSEQS)
