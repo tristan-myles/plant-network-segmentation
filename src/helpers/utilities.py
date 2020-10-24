@@ -67,6 +67,7 @@ def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list=None,
                           model_weight_path)
 
     memory_saving = True
+    cr_csv_list = cr_csv_list.split(";")
 
     if cr_csv_list:
         memory_saving = False
@@ -84,15 +85,15 @@ def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list=None,
             temp_mask_list = []
 
             for leaf, mask in zip(lseq.image_objects. mseqs.image_objects):
-                temp_pred_list.append(leaf.prediction_array)
-                temp_mask_list.append(mask.image_array)
+                temp_pred_list.append(leaf.prediction_array/255.0)
+                temp_mask_list.append(mask.image_array/255.0)
 
                 # save memory
                 del leaf.image_array
                 del mask.image_array
 
-                _ = classification_report(temp_pred_list, temp_mask_list,
-                                          save_path=cr_csv_list[i])
+            _ = classification_report(temp_pred_list, temp_mask_list,
+                                      save_path=cr_csv_list[i])
 
 # *================================= metrics =================================*
 def get_iou_score(y_true, y_pred):
