@@ -1,5 +1,5 @@
-How to Use
-==========
+Package in Command Line Mode
+============================
 
 Extraction
 ----------

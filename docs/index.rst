@@ -17,17 +17,19 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 .. toctree::
    :maxdepth: 2
    :caption: Model Modules
-  
+
    pages/data_model
-   pages/fastai_models
    pages/model
-  
+
 
 .. toctree::
    :maxdepth: 2
    :caption: How to Use
 
-   pages/how_to_use
+   pages/how_to_use_overview
+   pages/how_to_use_tf2
+   pages/how_to_use_main_interactive
+   pages/how_to_use_main_cl
    pages/data_model_xml
 
 Indices and tables
