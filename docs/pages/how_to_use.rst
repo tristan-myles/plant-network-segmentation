@@ -9,7 +9,7 @@ Python Command
 
 .. prompt:: bash $
    
-   python -m src.__main__ <input.json> extract_images
+   python -m src.__main__ -fj <input.json> extract_images
 
 usage: 
        Perform operations using the plant-image-segmentation code base json_path extract_images
@@ -54,6 +54,57 @@ Input Json Template
 
 Tiling
 ------
+
+Python Command
+^^^^^^^^^^^^^^
+
+.. prompt:: bash $
+
+   python -m src.__main__ -fj <input.json> extract_tiles
+   
+usage: Perform operations using the plant-image-segmentation code base json_path extract_tiles
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -sx, --stride_x   x stride size
+  -sy, --stride_y   y stride size
+  -lx, --length_x   tile x length
+  -ly, --length_y   tile y length
+  --leaf_output_path, -lo 
+                        output paths, if you want to use the default path
+                        enter "default", if the paths are in the input json
+                        enter "same"
+  --mask_output_path, -mo 
+                        output paths, if you want to use the default path
+                        enter "default", if the paths are in the input json
+                        enter "same"
+
+Input Json Template
+^^^^^^^^^^^^^^^^^^^
+
+.. code-block:: json
+
+   {
+    "leaves": {
+        "input": {
+        "folder_path": [],
+        "filename_pattern": []
+        },
+        "output": {
+        "output_path": []
+        }
+    },
+    "masks": {
+        "input": {
+        "folder_path": [],
+        "filename_pattern": []
+       },
+        "output": {
+        "output_path": []
+        }
+    }
+   }
+  
 
 Plotting
 --------
