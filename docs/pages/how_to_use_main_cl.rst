@@ -1,3 +1,5 @@
+.. _how_to_cl:
+
 Package in Command Line Mode
 ============================
 
