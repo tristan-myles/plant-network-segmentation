@@ -86,6 +86,19 @@ JSON template
 
 Tiles
 ^^^^^
+If the default name should be used to save the image tiles, please enter
+"default" when prompted. Using the default name will create a folder called
+"<image>-chips" - where <images> will either be leaves or masks - in the
+parent folder of where your images are located. The image tiles will have
+the same name as their parent image with it's number added at the end. For
+example if a parent image is called leaf_1, and there are 10 tiles per
+image, the tiles will be named as image_1_<i>.png, where i will indicate the
+tile number; this will be repeated for each tile.
+
+.. warning::
+    Using custom file names to save the tile is not currently working.
+    Rather use "default"
+
 JSON template
 """""""""""""
 .. code-block:: json
