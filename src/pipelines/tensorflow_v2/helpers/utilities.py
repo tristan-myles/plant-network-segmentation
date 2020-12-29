@@ -9,6 +9,21 @@ import tensorflow_addons as tfa
 
 
 # *================================= general =================================*
+def save_compilation_dict(answers, lr, save_path):
+    model_choices = ["unet", "unet_resnet", "wnet"]
+    loss_choices = ["bce", "wce", "focal", "dice"]
+    opt_choices = ["adam", "sgd"]
+
+    compilation_dict = {"model": model_choices[answers["model_choice"]],
+                        "loss": loss_choices[answers["loss_choice"]],
+                        "opt": opt_choices[answers["opt_choice"]],
+                        "lr": str(lr)}
+
+    save_path = save_path + "compilation.json"
+    with open(save_path, 'w') as file:
+        json.dump(compilation_dict, file)
+
+
 def get_sorted_list(search_string):
     return sorted([str(f) for f in glob(search_string, recursive=True)])
 
@@ -47,6 +62,16 @@ def read_file(img_path):
     img = tf.convert_to_tensor(
         cv2.imread(img_path.decode("utf-8"), cv2.IMREAD_UNCHANGED),
         dtype=tf.float32)
+
+    return img
+
+
+def parse_numpy_image(img, batch_shape):
+    img = tf.convert_to_tensor(img)
+    img = tf.where(tf.greater_equal(img, tf.cast(0, "float32")),
+                   tf.cast(0, "float32"), img)
+    img = tf.cast(img, tf.float32) / 255.0
+    img = tf.reshape(img, batch_shape)
 
     return img
 

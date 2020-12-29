@@ -4,11 +4,97 @@ import pprint
 
 import matplotlib as mpl
 from sklearn import metrics
+from tensorflow import keras
+from tqdm import tqdm
 
 from src.data.data_model import *
+from src.pipelines.tensorflow_v2.losses.custom_losses import *
+from src.pipelines.tensorflow_v2.models.unet import Unet
+from src.pipelines.tensorflow_v2.models.unet_resnet import UnetResnet
+from src.pipelines.tensorflow_v2.models.wnet import WNet
 
 LOGGER = logging.getLogger(__name__)
 
+
+# *================================ get model ================================*
+def get_workaround_details(compilation_dict):
+    # model:
+    if compilation_dict["model"] == "unet":
+        model = Unet(1)
+    elif compilation_dict["model"] == "unet_resnet":
+        model = UnetResnet(1)
+    elif compilation_dict["model"] == "wnet":
+        model = WNet()
+    else:
+        raise ValueError("Please provide a valid answer for model choice, "
+                         "options are unet, unet_resnet, or wnet")
+
+    if compilation_dict["loss"] == "bce":
+        loss = keras.losses.binary_crossentropy
+    elif compilation_dict["loss"] == "wce":
+        loss = weighted_CE(0.5)
+    elif compilation_dict["loss"] == "focal":
+        loss = focal_loss(0.5)
+    elif compilation_dict["loss"] == "dice":
+        loss = soft_dice_loss
+    else:
+        raise ValueError("Please provide a valid answer for loss choice, "
+                         "options are bce, wce, focal, or dice")
+
+    if compilation_dict["opt"] == "adam":
+        opt = keras.optimizers.Adam
+    elif compilation_dict["opt"] == "sgd":
+        opt = keras.optimizers.SGD
+    else:
+        raise ValueError("Please provide a valid answer for optimiser choice, "
+                         "options are adam or sgd")
+
+    metrics = [ keras.metrics.BinaryAccuracy(name='accuracy'),
+                keras.metrics.Precision(name='precision'),
+                keras.metrics.Recall(name='recall')]
+
+    return model, loss, opt, metrics
+
+
+# *=============================== prediction ================================*
+def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list=None,
+                       mseqs=None):
+    with open(model_weight_path + "compilation.json", "r") as json_file:
+        compilation_dict = json.load(json_file)
+
+    model, loss, opt, metrics = get_workaround_details(compilation_dict)
+    model.load_workaround(leaf_shape, leaf_shape, loss,
+                          opt(float(compilation_dict["lr"])), metrics,
+                          model_weight_path)
+
+    memory_saving = True
+    cr_csv_list = cr_csv_list.split(";")
+
+    if cr_csv_list:
+        memory_saving = False
+
+    for i, lseq in enumerate(lseqs):
+        lseq.predict_leaf_sequence(model, leaf_shape[0],
+                                   leaf_shape[1],
+                                   memory_saving=memory_saving,
+                                   leaf_shape=leaf_shape)
+
+        if cr_csv_list:
+            mseqs[i].load_extracted_images(load_image=True)
+
+            temp_pred_list = []
+            temp_mask_list = []
+
+            for leaf, mask in zip(lseq.image_objects. mseqs.image_objects):
+                temp_pred_list.append(leaf.prediction_array/255.0)
+                temp_mask_list.append(mask.image_array/255.0)
+
+                # save memory
+                del leaf.image_array
+                del mask.image_array
+
+            _ = classification_report(temp_pred_list, temp_mask_list,
+                                      save_path=cr_csv_list[i])
 
 # *================================= metrics =================================*
 def get_iou_score(y_true, y_pred):
@@ -24,40 +110,43 @@ def classification_report(predictions, masks, save_path=None):
                               "F1": [], "Accuracy": [], "AUC_PR": [],
                               "FN": [], "FP": [], "TN": [], "TP": []})
 
-    for pred, mask in zip(predictions, masks):
-        # grab the original image and reconstructed image
-        y_true = mask.round().flatten()
-        y_pred = pred.flatten()
+    with tqdm(total=len(predictions), file=sys.stdout) as pbar:
+        for pred, mask in zip(predictions, masks):
+            # grab the original image and reconstructed image
+            y_true = mask.round().flatten()
+            y_pred = pred.flatten()
 
-        avg_pr = metrics.average_precision_score(y_true, y_pred)
+            avg_pr = metrics.average_precision_score(y_true, y_pred)
 
-        y_pred = y_pred.round()
+            y_pred = y_pred.round()
 
-        tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_pred).ravel()
-        iou = get_iou_score(y_true, y_pred)
+            tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_pred).ravel()
+            iou = get_iou_score(y_true, y_pred)
 
-        # set values to 0 if there are no true positives
-        if tp > 0:
-            precision = tp / (tp + fp)
-            recall = tp / (tp + fn)
-            f1 = tp / (tp + 0.5 * (fn + fp))
-        else:
-            precision = 0
-            recall = 0
-            f1 = 0
+            # set values to 0 if there are no true positives
+            if tp > 0:
+                precision = tp / (tp + fp)
+                recall = tp / (tp + fn)
+                f1 = tp / (tp + 0.5 * (fn + fp))
+            else:
+                precision = 0
+                recall = 0
+                f1 = 0
 
-        d = {"IoU": iou,
-             "AUC_PR": avg_pr,
-             "Precision": precision,
-             "Recall": recall,
-             "F1": f1,
-             "Accuracy": (tp + tn) / (tp + fn + tn + fp),
-             "FN": fn,
-             "FP": fp,
-             "TN": tn,
-             "TP": tp}
+            d = {"IoU": iou,
+                 "AUC_PR": avg_pr,
+                 "Precision": precision,
+                 "Recall": recall,
+                 "F1": f1,
+                 "Accuracy": (tp + tn) / (tp + fn + tn + fp),
+                 "FN": fn,
+                 "FP": fp,
+                 "TN": tn,
+                 "TP": tp}
 
-        metric_df = metric_df.append(d, ignore_index=True)
+            metric_df = metric_df.append(d, ignore_index=True)
+
+            pbar.update(1)
 
         if save_path:
             metric_df.to_csv(save_path)
@@ -330,6 +419,19 @@ def parse_arguments() -> argparse.Namespace:
         "--leaf_embolism_only", "-leo", action="store_true",
         help="should only full leaves with embolisms be used")
 
+    parser_prediction = subparsers.add_parser(
+        "predict", help="generate predictions using a saved model")
+    parser_prediction.set_defaults(which="predict")
+    parser_prediction.add_argument(
+        "--model_path", "-mp", type=str, metavar="\b",
+        help="the path to the saved model weights to restore")
+    parser_prediction.add_argument(
+        "--csv_path", "-cp", type=str, metavar="\b",
+        help="csv path of where the classification report should be saved; "
+             "this flag determines if a classification report is generated")
+    parser_prediction.add_argument(
+        "--leaf_shape", "-ls", type=str, metavar="\b",
+        help="leaf shape, please separate each number by a ';'")
     args = parser.parse_args()
     return args
 
@@ -356,7 +458,7 @@ def interactive_prompt():
     options_list = set((-1,))
     operation_names = ["extract_images", "extract_tiles", "plot_profile",
                        "plot_embolism_counts", "eda_df", "databunch_df",
-                       "trim_sequence"]
+                       "predict", "trim_sequence"]
 
     while not happy:
         if -1 in options_list:
@@ -372,11 +474,13 @@ def interactive_prompt():
                   "--------------- EDA ----------------\n"
                   "5. EDA DataFrame\n"
                   "6. DataBunch DataFrame\n"
+                  "------------ Prediction ------------\n"
+                  "7. Tensorflow Model\n"
                   "------------- General --------------\n"
-                  "7. Trim sequence")
+                  "8. Trim sequence")
 
             operation = int(input("Please select your option: "))
-            output_dict["which"] = operation_names[operation-1]
+            output_dict["which"] = operation_names[operation - 1]
 
             # Include the max of all options: 1 - 10
             options_list.update(range(1, 10))
@@ -421,7 +525,7 @@ def interactive_prompt():
                     for path in mask_input_path.split(";"):
                         folder_path, filename = path.rsplit("/", 1)
                         output_dict["masks"]["input"]["folder_path"].append(
-                            folder_path+"/")
+                            folder_path + "/")
                         output_dict["masks"]["input"][
                             "filename_pattern"].append(filename)
 
@@ -661,13 +765,39 @@ def interactive_prompt():
                     teo = input("Please choose a number: ")
                     teo = int(teo) == 1
                 else:
-                    teo=False
+                    teo = False
 
                 output_dict["tile_embolism_only"] = teo
 
                 options_list.remove(6)
 
         if operation == 7:
+            if 3 in options_list:
+                model_path = input("\n3. Please provide the model weights "
+                                   "path: ")
+
+                output_dict["model_path"] = model_path
+
+                options_list.remove(3)
+
+            if 4 in options_list:
+                leaf_shape = input("\n4. Please enter the leaf image shape: ")
+
+                output_dict["leaf_shape"] = leaf_shape
+
+                options_list.remove(4)
+
+            if 5 in options_list:
+                csv_path = input(
+                    "\n5. Please provide a .csv save path if you would "
+                    "like to generate a classification report."
+                    "\n(Leave this blank to skip)\nAnswer: ")
+
+                output_dict["csv_path"] = csv_path
+
+                options_list.remove(5)
+
+        if operation == 8:
             if 3 in options_list:
                 ysd = input(
                     "\n3. What is the y output size and directions?"
