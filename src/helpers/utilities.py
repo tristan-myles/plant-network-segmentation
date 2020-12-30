@@ -450,6 +450,11 @@ def parse_arguments() -> argparse.Namespace:
         "--val_split", "-vs", type=float, metavar="\b",
         help="the fraction of the data to use for a val set")
 
+    # TODO: add either or to lolo and test split
+    parser_dataset.add_argument(
+        "--lolo", "-l", type=int, metavar="\b",
+        help="the leaf to leave out for the test set")
+
     args = parser.parse_args()
     return args
 
@@ -903,24 +908,39 @@ def interactive_prompt():
                 output_dict["downsample_split"] = float(downsample_split)
 
             if 5 in options_list:
-                test_split = input(
-                    "\n5. What fraction of the data would you like to use "
-                    "for a test set ? "
-                    "\n Please enter a value between 0 and <1; enter 0 for no "
-                    "test set."
-                    "\nAnswer: ")
-
-                output_dict["test_split"] = float(test_split)
-
-            if 6 in options_list:
                 val_split = input(
-                    "\n6. What fraction of the data would you like to use "
+                    "\n5. What fraction of the data would you like to use "
                     "for a validation set ? "
                     "\n Please enter a value between 0 and <1; enter 0 for no "
                     "validation set."
                     "\nAnswer: ")
 
                 output_dict["val_split"] = float(val_split)
+
+
+            if 6 in options_list:
+                test_split = input(
+                    "\n6. What fraction of the data would you like to use "
+                    "for a test set? "
+                    "\n Please enter a value between 0 and <1; enter 0 for no "
+                    "test set."
+                    "\n If you want to use a complete leaf as a test set, "
+                    "please enter 0 and answer the next question."
+                    "\nAnswer: ")
+
+                output_dict["test_split"] = float(test_split)
+
+            if 7 in options_list:
+                lolo = input(
+                    "\n7. If you would like to use a complete leaf for the "
+                    "test test, please provide the number of the leaf in "
+                    "from questions 1 and 2; i.e. the position of the leaf "
+                    "in your entry string." 
+                    "\n Note: the count starts at 1"
+                    "\n Leave this blank to skip"
+                    "\nAnswer: ")
+
+                output_dict["lolo"] = lolo
 
         if operation not in list(range(1, 10)):
             raise ValueError("Please choose an option from the input list")
