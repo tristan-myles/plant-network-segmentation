@@ -223,9 +223,26 @@ def main():
         load_image_objects(LSEQS)
         load_image_objects(MSEQS)
 
+        if ARGS_DICT["lolo"]:
+            if len(LSEQS) == 1:
+                raise ValueError("You need to provide at least two leaf "
+                                 "sequences to create a leave one leaf out "
+                                 "test set.")
+
+            ARGS_DICT["lolo"] = int(ARGS_DICT["lolo"]) - 1
+
+            if ARGS_DICT["test_split"] > 0:
+                LOGGER.warning("You provided both a leaf to leave out and a "
+                               "test split for a test set. The test set split "
+                               "will now be set to 0.")
+
+                ARGS_DICT["test_split"] = 0
+        else:
+            ARGS_DICT["lolo"] = None
+
         extract_dataset(LSEQS, MSEQS, ARGS_DICT["dataset_path"],
                         ARGS_DICT["downsample_split"], ARGS_DICT["test_split"],
-                        ARGS_DICT["val_split"])
+                        ARGS_DICT["val_split"], ARGS_DICT["lolo"])
 
 
 if __name__ == "__main__":
