@@ -434,11 +434,21 @@ def parse_arguments() -> argparse.Namespace:
         help="leaf shape, please separate each number by a ';'")
 
     parser_dataset = subparsers.add_parser(
-        "dataset", help="create a dataset for model training")
+        "create_dataset", help="create a dataset for model training")
     parser_dataset.set_defaults(which="create_dataset")
     parser_dataset.add_argument(
         "--dataset_path", "-dp", type=str, metavar="\b",
-        help="the path where the dataset should be created")
+        help="the path where the dataset should be created,including the "
+             "dataset name")
+    parser_dataset.add_argument(
+        "--downsample_split", "-ds", type=float, metavar="\b",
+        help="the fraction of non-embolism images to remove")
+    parser_dataset.add_argument(
+        "--test_split", "-ts", type=float, metavar="\b",
+        help="the fraction of the data to use for a test set")
+    parser_dataset.add_argument(
+        "--val_split", "-vs", type=float, metavar="\b",
+        help="the fraction of the data to use for a val set")
 
     args = parser.parse_args()
     return args
@@ -460,14 +470,22 @@ def print_options_dict(output_dict):
         print(f"{num} {(' '.join(key.split('_'))).capitalize() :<20}:"
               f" {print_str}")
 
+def requirements(operation: int) -> None:
+    if operation == 9:
+        print("\nRequirements:"
+              "\n - This action currently only works using the default "
+              "chips-<> object locations; that is the chips-<> folder "
+              "should be in the parent folder of where your mask and "
+              "leaf images respectively."
+              "\n - All mask tiles and leaf tiles must have the same "
+              "extension respectively.")
 
 def interactive_prompt():
     happy = False
     options_list = set((-1,))
     operation_names = ["extract_images", "extract_tiles", "plot_profile",
                        "plot_embolism_counts", "eda_df", "databunch_df",
-                       "predict", "trim_sequence", "create_dataset",
-                       "augment_dataset"]
+                       "predict", "trim_sequence", "create_dataset"]
 
     while not happy:
         if -1 in options_list:
@@ -486,13 +504,12 @@ def interactive_prompt():
                   "------------ Prediction ------------\n"
                   " 7. Tensorflow Model\n"
                   "------------- General --------------\n"
-                  " 8. Trim sequence"
+                  " 8. Trim sequence\n"
                   "------------- Dataset --------------\n"
-                  " 9. Create Dataset\n"
-                  "10. Augment Dataset"
+                  " 9. Create Dataset"
                   )
 
-            operation = int(input("Please select your operation"))
+            operation = int(input("Please select your operation: "))
             output_dict["which"] = operation_names[operation - 1]
 
             # Include the max of all options: 1 - 11
@@ -502,6 +519,8 @@ def interactive_prompt():
             options_list.remove(-1)
         print("Please separate multiple answers by a ';'. NOTE: the individual"
               "file paths cannot contain semi-colons")
+
+        requirements(operation)
 
         if 1 in options_list:
             leaf_input_path = input(
@@ -868,10 +887,40 @@ def interactive_prompt():
             if 3 in options_list:
                 dataset_path = input(
                     "\n3. Where would you like to save the dataset? "
-                    "\nPlease provide a path: "
+                    "\nPlease provide a path, including the dataset name"
                     "\nAnswer: ")
 
                 output_dict["dataset_path"] = dataset_path
+
+            if 4 in options_list:
+                downsample_split = input(
+                    "\n4. What fraction of the non-embolism samples would you "
+                    "like to remove? "
+                    "\n Please enter a value between 0 and <1; enter 0 for no "
+                    "downsampling."
+                    "\nAnswer: ")
+
+                output_dict["downsample_split"] = float(downsample_split)
+
+            if 5 in options_list:
+                test_split = input(
+                    "\n5. What fraction of the data would you like to use "
+                    "for a test set ? "
+                    "\n Please enter a value between 0 and <1; enter 0 for no "
+                    "test set."
+                    "\nAnswer: ")
+
+                output_dict["test_split"] = float(test_split)
+
+            if 6 in options_list:
+                val_split = input(
+                    "\n6. What fraction of the data would you like to use "
+                    "for a validation set ? "
+                    "\n Please enter a value between 0 and <1; enter 0 for no "
+                    "validation set."
+                    "\nAnswer: ")
+
+                output_dict["val_split"] = float(val_split)
 
         if operation not in list(range(1, 10)):
             raise ValueError("Please choose an option from the input list")
