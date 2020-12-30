@@ -32,7 +32,6 @@ def create_dataset_structure(base_dir: Union[Path, str]) -> None:
             path.joinpath(folder, "masks").mkdir(parents=True,
                                                  exist_ok=True)
 
-
     base_dir.joinpath("not_used", "masks").mkdir(parents=True,
                                                  exist_ok=True)
     base_dir.joinpath("not_used", "leaves").mkdir(parents=True,
@@ -79,31 +78,32 @@ def move_data(lseqs, mseqs, dest_root_path,
         leaf_chip_folder = Path(*leaf_chip_path.parts[:-1])
 
         # Masks
-        LOGGER.info("Moving embolism masks")
+        LOGGER.info("Moving masks")
         embolism_df[embolism_df.has_embolism].names.map(
             lambda x: shutil.copyfile(
                 mask_chip_folder.joinpath(x),
                 dest_root_path.joinpath(dest_folder, "embolism", "masks", x)))
 
-        LOGGER.info("Moving non-embolism masks")
         embolism_df[~embolism_df.has_embolism].names.map(
             lambda x: shutil.copyfile(
                 mask_chip_folder.joinpath(x),
                 dest_root_path.joinpath(dest_folder, "no-embolism", "masks", x)))
 
         # Leaves
-        LOGGER.info("Moving embolism leaves")
+        LOGGER.info("Moving leaves")
         embolism_df[embolism_df.has_embolism].links.map(
             lambda x: shutil.copyfile(
                 leaf_chip_folder.joinpath(x),
                 dest_root_path.joinpath(dest_folder, "embolism", "leaves", x)))
 
-        LOGGER.info("Moving non-embolism leaves")
         embolism_df[~embolism_df.has_embolism].links.map(
             lambda x: shutil.copyfile(
                 leaf_chip_folder.joinpath(x),
-                dest_root_path.joinpath(dest_folder, "no-embolism", "leaves", x)))
+                dest_root_path.joinpath(dest_folder, "no-embolism",
+                                        "leaves", x)))
 
+        LOGGER.info(f"Moved {len(embolism_df)} images to "
+                    f"{dest_root_path.joinpath(dest_folder, '*')}")
 
     #Note: All leaf and mask tiles must have the same file extension
     # Get the extension using the filenames of the chips of the last chip
@@ -250,7 +250,7 @@ def split_dataset(dataset_root_path, embolism_objects, non_embolism_objects,
 
     train_size = total_size - val_size - test_size
     LOGGER.info(
-        f"Summary: (% of total number of images) "
+        f"Summary: (% of total number of images used in this split) "
         f"\nTraining set size   :  {train_size} "
         f"({round((train_size/total_size) * 100)  }%)"
         f"\nValidation set size :  {val_size} "
@@ -263,7 +263,7 @@ def split_dataset(dataset_root_path, embolism_objects, non_embolism_objects,
 def extract_dataset(lseqs: [LeafSequence], mseqs: [MaskSequence],
                     dataset_path: Union[Path, str],
                     downsample_split: float, test_split: float,
-                    val_split: float) -> None:
+                    val_split: float, lolo: int=None) -> None:
     """
 
     :param lseqs:
@@ -277,6 +277,18 @@ def extract_dataset(lseqs: [LeafSequence], mseqs: [MaskSequence],
     # will create a structure iff one does not exist in the correct
     # format at the specified path
     create_dataset_structure(dataset_path)
+
+    if isinstance(lolo, int):
+        # isolate the leaf to leave out
+        lseq_lolo = [lseqs[-lolo]]
+        mseq_lolo = [mseqs[-lolo]]
+
+        _ = move_data(lseq_lolo, mseq_lolo, dataset_path, "test")
+
+        # remove the leaf to leave out from seqs
+        del lseqs[lolo]
+        del mseqs[lolo]
+
     filename_patterns = move_data(lseqs, mseqs, dataset_path)
 
     # non_emb_list will contain the filenames of chosen non-embolism images
