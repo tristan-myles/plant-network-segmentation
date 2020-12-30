@@ -6,6 +6,7 @@ from os import path
 from src.helpers.extraction import *
 from src.helpers.plots import *
 from src.helpers.utilities import *
+from src.helpers.dataset import *
 
 abs_path = path.dirname(path.abspath(__file__))
 
@@ -217,6 +218,12 @@ def main():
                            leaf_shape=leaf_shape,
                            cr_csv_list=ARGS_DICT["csv_path"],
                            mseqs=MSEQS)
+
+    if ARGS_DICT["which"] == "create_dataset":
+        load_image_objects(LSEQS)
+        load_image_objects(MSEQS)
+        create_dataset_structure(ARGS_DICT["dataset_path"])
+        create_train_dataset(LSEQS, MSEQS, ARGS_DICT["dataset_path"])
 
 
 if __name__ == "__main__":
