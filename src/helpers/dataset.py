@@ -9,7 +9,7 @@ from pathlib import Path
 
 
 # *============================= create dataset ==============================*
-def create_dataset_structure(base_dir: Union[Path, str]) -> Path:
+def create_dataset_structure(base_dir: Union[Path, str]) -> None:
     """
     Creates a skeleton dataset structure
     :param base_dir: the directory where the dataset should be created,
@@ -38,10 +38,9 @@ def create_dataset_structure(base_dir: Union[Path, str]) -> Path:
     base_dir.joinpath("not_used", "leaves").mkdir(parents=True,
                                                   exist_ok=True)
 
-    return base_dir
 
-
-def create_train_dataset(lseqs, mseqs, dest_root_path) -> [str, str]:
+def move_data(lseqs, mseqs, dest_root_path,
+                         dest_folder="train") -> [str, str]:
     """
     Populates the train folder in the dataset folder, where the dataset 
     folder and its constituents were created using the create_dataset_structure
@@ -84,26 +83,26 @@ def create_train_dataset(lseqs, mseqs, dest_root_path) -> [str, str]:
         embolism_df[embolism_df.has_embolism].names.map(
             lambda x: shutil.copyfile(
                 mask_chip_folder.joinpath(x),
-                dest_root_path.joinpath("train", "embolism", "masks", x)))
+                dest_root_path.joinpath(dest_folder, "embolism", "masks", x)))
 
         LOGGER.info("Moving non-embolism masks")
         embolism_df[~embolism_df.has_embolism].names.map(
             lambda x: shutil.copyfile(
                 mask_chip_folder.joinpath(x),
-                dest_root_path.joinpath("train", "no-embolism", "masks", x)))
+                dest_root_path.joinpath(dest_folder, "no-embolism", "masks", x)))
 
         # Leaves
         LOGGER.info("Moving embolism leaves")
         embolism_df[embolism_df.has_embolism].links.map(
             lambda x: shutil.copyfile(
                 leaf_chip_folder.joinpath(x),
-                dest_root_path.joinpath("train", "embolism", "leaves", x)))
+                dest_root_path.joinpath(dest_folder, "embolism", "leaves", x)))
 
         LOGGER.info("Moving non-embolism leaves")
         embolism_df[~embolism_df.has_embolism].links.map(
             lambda x: shutil.copyfile(
                 leaf_chip_folder.joinpath(x),
-                dest_root_path.joinpath("train", "no-embolism", "leaves", x)))
+                dest_root_path.joinpath(dest_folder, "no-embolism", "leaves", x)))
 
 
     #Note: All leaf and mask tiles must have the same file extension
@@ -258,3 +257,32 @@ def split_dataset(dataset_root_path, embolism_objects, non_embolism_objects,
         f"({round((val_size/total_size)* 100)}%) "
         f"\nTest set size       :  {test_size} "
         f"({round((test_size/total_size) * 100)}%)")
+
+
+# *============================ package __main__ =============================*
+def extract_dataset(lseqs: [LeafSequence], mseqs: [MaskSequence],
+                    dataset_path: Union[Path, str],
+                    downsample_split: float, test_split: float,
+                    val_split: float) -> None:
+    """
+
+    :param lseqs:
+    :param mseqs:
+    :param dataset_path:
+    :param downsample_split:
+    :param test_split:
+    :param val_split:
+    :return:
+    """
+    # will create a structure iff one does not exist in the correct
+    # format at the specified path
+    create_dataset_structure(dataset_path)
+    filename_patterns = move_data(lseqs, mseqs, dataset_path)
+
+    # non_emb_list will contain the filenames of chosen non-embolism images
+    emb_list, non_emb_list = downsample_dataset(dataset_path,
+                                                filename_patterns,
+                                                downsample_split)
+
+    split_dataset(dataset_path, emb_list, non_emb_list, test_split, val_split)
+# *===========================================================================*
