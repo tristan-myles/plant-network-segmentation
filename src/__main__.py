@@ -222,8 +222,10 @@ def main():
     if ARGS_DICT["which"] == "create_dataset":
         load_image_objects(LSEQS)
         load_image_objects(MSEQS)
-        create_dataset_structure(ARGS_DICT["dataset_path"])
-        create_train_dataset(LSEQS, MSEQS, ARGS_DICT["dataset_path"])
+
+        extract_dataset(LSEQS, MSEQS, ARGS_DICT["dataset_path"],
+                        ARGS_DICT["downsample_split"], ARGS_DICT["test_split"],
+                        ARGS_DICT["val_split"])
 
 
 if __name__ == "__main__":
