@@ -153,8 +153,108 @@ def downsample_dataset(dataset_root_path, filename_patterns,
                  shutil.move(x, not_used_path.joinpath(*Path(x).parts[-2:])),
                  ignored_masks + ignored_leaves))
 
-    LOGGER.info(f"Downsampled {len(ignored_leaves)} ("
-                f"{len(ignored_leaves)/len(ignored_masks+chosen_masks)})% "
-                f"non-embolism images")
+    percent_moved = len(ignored_leaves) / len(ignored_masks + chosen_masks)
+    LOGGER.info(f"Downsampled by {len(ignored_leaves)} "
+                f"({round(percent_moved * 100)})% non-embolism images")
 
-    return [e_leaves, e_masks], [ne_leaves, ne_masks]
+    return [e_leaves, e_masks], [chosen_leaves, chosen_masks]
+
+
+def split_dataset(dataset_root_path, embolism_objects, non_embolism_objects,
+                  test_split=0.2, val_split=0.2):
+    """
+
+    :param dataset_root_path:
+    :param embolism_objects: a list containing paths to embolism masks and
+    leaves; leaves at item 0 and masks at item 1
+    :param non_embolism_objects:  list containing paths to non-embolism masks
+    and leaves; leaves at item 0 and masks at item 1
+    :param test_size:
+    :param val_size:
+    :return:
+    """
+    e_leaves = embolism_objects[0]
+    e_masks = embolism_objects[1]
+
+    ne_leaves = non_embolism_objects[0]
+    ne_masks = non_embolism_objects[1]
+
+    total_size = len(e_leaves + ne_leaves)
+    val_size = 0
+    test_size = 0
+
+    if not isinstance(dataset_root_path, Path):
+        dataset_root_path = Path(dataset_root_path)
+
+    # Splitting test set and (train + val) set
+    if test_split > 0:
+        test_path = dataset_root_path.joinpath("test")
+
+        # Embolism
+        # split testset and keep the remaining files together to be split again
+        e_train_val_masks, e_test_masks, e_train_val_leaves, e_test_leaves = \
+            train_test_split(e_masks, e_leaves, test_size=test_split,
+                             random_state=3141)
+
+        # Non-embolism
+        ne_train_val_masks, ne_test_masks, ne_train_val_leaves, \
+        ne_test_leaves = train_test_split(ne_masks, ne_leaves,
+                                          test_size=test_split,
+                                          random_state=3141)
+
+        # Move files
+        # Requires default folder structure
+        _ = list(map(lambda x: shutil.move(
+            x, test_path.joinpath(*Path(x).parts[-3:])),
+                     e_test_masks + e_test_leaves + ne_test_masks +
+                     ne_test_leaves))
+
+        test_size = len(e_test_leaves + ne_test_leaves)
+        percent_moved = (test_size / total_size) * 100
+        LOGGER.info(f"Moved {test_size} "
+                    f"({round(percent_moved)} %) samples to the test folder")
+
+    else:
+        # If no test set, then split all images between train and val
+        e_train_val_masks = e_masks
+        e_train_val_leaves = e_leaves
+
+        ne_train_val_masks = ne_masks
+        ne_train_val_leaves = ne_leaves
+
+    # split train_val set into train and val set
+    if val_split > 0:
+        val_path = dataset_root_path.joinpath("val")
+        # Getting val set, % of train set after test set has been removed
+        # Embolism
+        _, e_val_masks, _, e_val_leaves = \
+            train_test_split(e_train_val_masks, e_train_val_leaves,
+                             test_size=val_split, random_state=3141)
+
+        # Non-embolism
+        ne_train_masks, ne_val_masks, ne_train_leaves, ne_val_leaves = \
+            train_test_split(ne_train_val_masks, ne_train_val_leaves,
+                             test_size=val_split, random_state=3141)
+
+        val_size = len(e_val_leaves + ne_val_leaves)
+        percent_moved = (val_size /
+                         len(e_train_val_leaves + ne_train_val_leaves)) * 100
+        LOGGER.info(
+            f"Moved {val_size} ("
+            f"{round(percent_moved)} %) of the remaining train samples to "
+            f"the val folder")
+
+        # Move files
+        _ = list(map(lambda x: shutil.move(
+            x, val_path.joinpath(*Path(x).parts[-3:])),
+                     e_val_masks + e_val_leaves + ne_val_masks + ne_val_leaves))
+
+    train_size = total_size - val_size - test_size
+    LOGGER.info(
+        f"Summary: (% of total number of images) "
+        f"\nTraining set size   :  {train_size} "
+        f"({round((train_size/total_size) * 100)  }%)"
+        f"\nValidation set size :  {val_size} "
+        f"({round((val_size/total_size)* 100)}%) "
+        f"\nTest set size       :  {test_size} "
+        f"({round((test_size/total_size) * 100)}%)")
