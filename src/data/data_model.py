@@ -865,8 +865,14 @@ class _FullImageMixin:
     def load_tile_paths(self, folder_path: str = None,
                         filename_pattern: str = None):
         if folder_path is None and filename_pattern is None:
-            folder_path, filename_pattern = self.path.rsplit("/", 1)
-            folder_path = folder_path + "-chips"
+            folder_path, _, filename_pattern = self.path.rsplit(
+                "/", 2)
+            if isinstance(self, Mask):
+                folder_name = "/chips-mask"
+            else:
+                folder_name = "/chips-leaf"
+
+            folder_path = folder_path + folder_name
             filename_pattern = filename_pattern.rsplit(".")[0] + "*"
 
         self.file_list = sorted([
