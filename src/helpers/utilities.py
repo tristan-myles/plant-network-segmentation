@@ -432,6 +432,14 @@ def parse_arguments() -> argparse.Namespace:
     parser_prediction.add_argument(
         "--leaf_shape", "-ls", type=str, metavar="\b",
         help="leaf shape, please separate each number by a ';'")
+
+    parser_dataset = subparsers.add_parser(
+        "dataset", help="create a dataset for model training")
+    parser_dataset.set_defaults(which="create_dataset")
+    parser_dataset.add_argument(
+        "--dataset_path", "-dp", type=str, metavar="\b",
+        help="the path where the dataset should be created")
+
     args = parser.parse_args()
     return args
 
@@ -458,7 +466,8 @@ def interactive_prompt():
     options_list = set((-1,))
     operation_names = ["extract_images", "extract_tiles", "plot_profile",
                        "plot_embolism_counts", "eda_df", "databunch_df",
-                       "predict", "trim_sequence"]
+                       "predict", "trim_sequence", "create_dataset",
+                       "augment_dataset"]
 
     while not happy:
         if -1 in options_list:
@@ -466,24 +475,29 @@ def interactive_prompt():
 
             print("* What action would you like to take?\n"
                   "------------ Extraction ------------\n"
-                  "1. Extract images\n"
-                  "2. Extract tiles\n"
+                  " 1. Extract images\n"
+                  " 2. Extract tiles\n"
                   "------------- Plotting -------------\n"
-                  "3. Plot embolism profile\n"
-                  "4. Plot embolism count barplot\n"
+                  " 3. Plot embolism profile\n"
+                  " 4. Plot embolism count barplot\n"
                   "--------------- EDA ----------------\n"
-                  "5. EDA DataFrame\n"
-                  "6. DataBunch DataFrame\n"
+                  " 5. EDA DataFrame\n"
+                  " 6. DataBunch DataFrame\n"
                   "------------ Prediction ------------\n"
-                  "7. Tensorflow Model\n"
+                  " 7. Tensorflow Model\n"
                   "------------- General --------------\n"
-                  "8. Trim sequence")
+                  " 8. Trim sequence"
+                  "------------- Dataset --------------\n"
+                  " 9. Create Dataset\n"
+                  "10. Augment Dataset"
+                  )
 
-            operation = int(input("Please select your option: "))
+            operation = int(input("Please select your operation"))
             output_dict["which"] = operation_names[operation - 1]
 
-            # Include the max of all options: 1 - 10
-            options_list.update(range(1, 10))
+            # Include the max of all options: 1 - 11
+            # This is the number of unique questions
+            options_list.update(range(1, 8))
 
             options_list.remove(-1)
         print("Please separate multiple answers by a ';'. NOTE: the individual"
@@ -850,7 +864,16 @@ def interactive_prompt():
 
                 options_list.remove(6)
 
-        if operation not in list(range(1, 8)):
+        if operation == 9:
+            if 3 in options_list:
+                dataset_path = input(
+                    "\n3. Where would you like to save the dataset? "
+                    "\nPlease provide a path: "
+                    "\nAnswer: ")
+
+                output_dict["dataset_path"] = dataset_path
+
+        if operation not in list(range(1, 10)):
             raise ValueError("Please choose an option from the input list")
 
         print_options_dict(output_dict)
