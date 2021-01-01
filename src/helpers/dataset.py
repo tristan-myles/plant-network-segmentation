@@ -3,6 +3,7 @@ import shutil
 from sklearn.model_selection import train_test_split
 
 from src.data.data_model import *
+from src.helpers.utilities import create_subfolders
 from typing import Union
 
 from pathlib import Path
@@ -27,15 +28,9 @@ def create_dataset_structure(base_dir: Union[Path, str]) -> None:
 
     for path in path_list:
         for folder in ["embolism", "no-embolism"]:
-            path.joinpath(folder, "leaves").mkdir(parents=True,
-                                                  exist_ok=True)
-            path.joinpath(folder, "masks").mkdir(parents=True,
-                                                 exist_ok=True)
+            create_subfolders(path, folder)
 
-    base_dir.joinpath("not_used", "masks").mkdir(parents=True,
-                                                 exist_ok=True)
-    base_dir.joinpath("not_used", "leaves").mkdir(parents=True,
-                                                  exist_ok=True)
+    create_subfolders(base_dir, "not_used")
 
 
 def move_data(lseqs, mseqs, dest_root_path,

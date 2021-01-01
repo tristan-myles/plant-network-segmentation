@@ -223,6 +223,14 @@ def update_plot_format(default: bool = False):
         mpl.rcParams['ytick.labelsize'] = 12
 
 
+# *================================= dataset =================================*
+def create_subfolders(path, folder):
+    path.joinpath(folder, "leaves").mkdir(parents=True,
+                                          exist_ok=True)
+    path.joinpath(folder, "masks").mkdir(parents=True,
+                                         exist_ok=True)
+
+
 # *============================== all __main__ ===============================*
 def create_sequence_objects(sequence_input):
     lseqs = []
