@@ -463,6 +463,10 @@ def parse_arguments() -> argparse.Namespace:
         "--lolo", "-l", type=int, metavar="\b",
         help="the leaf to leave out for the test set")
 
+    parser_dataset = subparsers.add_parser(
+        "augment_dataset", help="augment a dataset for model training")
+    parser_dataset.set_defaults(which="augment_dataset")
+
     args = parser.parse_args()
     return args
 
@@ -483,6 +487,7 @@ def print_options_dict(output_dict):
         print(f"{num} {(' '.join(key.split('_'))).capitalize() :<20}:"
               f" {print_str}")
 
+
 def requirements(operation: int) -> None:
     if operation == 9:
         print("\nRequirements:"
@@ -492,13 +497,24 @@ def requirements(operation: int) -> None:
               "leaf images respectively."
               "\n - All mask tiles and leaf tiles must have the same "
               "extension respectively.")
+    if operation == 10:
+        print("\nNote: Only embolism leaves will be augmented"
+              "\nRequirements:"
+              "\n - The dataset folder structure should follow the default "
+              "structure, which is created when using option 9 (above)."
+              "\n -  Please ensure that the following format is followed in "
+              "the images to be augmented: "
+              "<name>_<image_number>_<tile_number>; this is required both "
+              "for linking and for naming")
+
 
 def interactive_prompt():
     happy = False
     options_list = set((-1,))
     operation_names = ["extract_images", "extract_tiles", "plot_profile",
                        "plot_embolism_counts", "eda_df", "databunch_df",
-                       "predict", "trim_sequence", "create_dataset"]
+                       "predict", "trim_sequence", "create_dataset",
+                       "augment_dataset"]
 
     while not happy:
         if -1 in options_list:
@@ -519,7 +535,8 @@ def interactive_prompt():
                   "------------- General --------------\n"
                   " 8. Trim sequence\n"
                   "------------- Dataset --------------\n"
-                  " 9. Create Dataset"
+                  " 9. Create Dataset\n"
+                  "10. Augment Dataset"
                   )
 
             operation = int(input("Please select your operation: "))
@@ -950,7 +967,7 @@ def interactive_prompt():
 
                 output_dict["lolo"] = lolo
 
-        if operation not in list(range(1, 10)):
+        if operation not in list(range(1, 11)):
             raise ValueError("Please choose an option from the input list")
 
         print_options_dict(output_dict)
