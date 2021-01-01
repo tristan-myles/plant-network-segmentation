@@ -5,6 +5,7 @@ from sklearn.model_selection import train_test_split
 from src.data.data_model import *
 from src.helpers.utilities import create_subfolders
 from typing import Union
+import imgaug.augmenters as iaa
 
 from pathlib import Path
 
@@ -292,4 +293,99 @@ def extract_dataset(lseqs: [LeafSequence], mseqs: [MaskSequence],
                                                 downsample_split)
 
     split_dataset(dataset_path, emb_list, non_emb_list, test_split, val_split)
-# *===========================================================================*
+
+
+# *============================= augment dataset =============================*
+# *----------------------------- transformations -----------------------------*
+def flip_flop(dual_channel: np.array, orientation: str,
+              seed: int = 3141) -> np.array:
+    """
+
+    :param dual_channel:
+    :param orientation:
+    :param seed:
+    :return:
+    """
+    if orientation == "horizontal":
+        flip_hr = iaa.Fliplr(seed=seed)
+        flipped_images = flip_hr.augment_image(dual_channel)
+    elif orientation == "vertical":
+        flip_vr = iaa.Flipud(seed=seed)
+        flipped_images = flip_vr.augment_image(dual_channel)
+    else:
+        raise ValueError("please provide either 'horizontal' or 'vertical as "
+                         "the orientation'")
+
+    return flipped_images
+
+
+def translate_img(dual_channel: np.array, x: float, y: float,
+                  seed:int = 3141) -> np.array:
+    """
+
+    :param dual_channel:
+    :param x:
+    :param y:
+    :param seed:
+    :return:
+    """
+    rotate = iaa.Affine(translate_percent=(x, y), seed=seed)
+    return rotate.augment_image(dual_channel)
+
+
+def rotate_img(dual_channel: np.array, l: float, r: float,
+               seed: int = 3141) -> np.array:
+    """
+
+    :param dual_channel:
+    :param l:
+    :param r:
+    :param seed:
+    :return:
+    """
+    rotate = iaa.Affine(rotate=(l, r), seed=seed)
+    return rotate.augment_image(dual_channel)
+
+
+def shear_img(dual_channel: np.array, l: float, r: float,
+              seed: int = 3141) -> np.array:
+    """
+
+    :param dual_channel:
+    :param l:
+    :param r:
+    :param seed:
+    :return:
+    """
+    # Shear in degrees
+    shear = iaa.Affine(shear=(l, r), seed=seed)
+    return shear.augment_image(dual_channel)
+
+
+def crop_img(dual_channel: np.array, v: float, h: float,
+             seed: int = 3141) -> np.array:
+    """
+
+    :param dual_channel:
+    :param v:
+    :param h:
+    :param seed:
+    :return:
+    """
+    crop = iaa.Crop(percent=(v, h), seed=seed)
+    return crop.augment_image(dual_channel)
+
+
+def zoom_in_out(dual_channel: np.array, x: float, y: float,
+                seed: int = 3141) -> np.array:
+    """
+
+    :param dual_channel:
+    :param x:
+    :param y:
+    :param seed:
+    :return:
+    """
+    scale_im = iaa.Affine(scale={"x": x, "y": y}, seed=seed)
+    return scale_im.augment_image(dual_channel)
+
