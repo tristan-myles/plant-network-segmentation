@@ -244,6 +244,12 @@ def main():
                         ARGS_DICT["downsample_split"], ARGS_DICT["test_split"],
                         ARGS_DICT["val_split"], ARGS_DICT["lolo"])
 
+    if ARGS_DICT["which"] == "augment_dataset":
+        load_image_objects(LSEQS)
+        load_image_objects(MSEQS)
+
+        augment_dataset(LSEQS[0], MSEQS[0])
+
 
 if __name__ == "__main__":
     main()
