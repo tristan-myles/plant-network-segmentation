@@ -254,7 +254,7 @@ def split_dataset(dataset_root_path, embolism_objects, non_embolism_objects,
         f"({round((test_size/total_size) * 100)}%)")
 
 
-# *============================ package __main__ =============================*
+# *---------------------------- package __main__ -----------------------------*
 def extract_dataset(lseqs: [LeafSequence], mseqs: [MaskSequence],
                     dataset_path: Union[Path, str],
                     downsample_split: float, test_split: float,
