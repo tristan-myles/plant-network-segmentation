@@ -670,15 +670,21 @@ def interactive_prompt():
 
         if operation == 1:
             if 6 in options_list:
-                print("\n6. Would you like to save binarised masks - i.e."
-                      " pixel values as 0, 1?\n"
-                      "   Options:\n"
-                      "   0: False\n"
-                      "   1: True")
-                binarise = input("Please choose a number: ")
-                binarise = int(binarise) == 1
+                if mask_input_path:
+                    print("\n6. Would you like to save binarised masks - i.e."
+                          " pixel values as 0, 1?\n"
+                          "   Options:\n"
+                          "   0: False\n"
+                          "   1: True")
+                    binarise = input("Please choose a number: ")
+                    binarise = int(binarise) == 1
 
-                output_dict["binarise"] = binarise
+                    output_dict["binarise"] = binarise
+                else:
+                    print("\nYou did not enter a mask directory, so question 6"
+                          " will be skipped.")
+
+                    output_dict["binarise"] = None
 
                 options_list.remove(6)
 
