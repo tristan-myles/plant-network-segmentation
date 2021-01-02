@@ -253,13 +253,13 @@ def create_sequence_objects(sequence_input):
     return lseqs, mseqs
 
 
-def load_image_objects(seq_objects, load_images=False):
+def load_image_objects(seq_objects, load_images=False, **kwargs):
     LOGGER.info(f"Creating image objects for "
                 f"{seq_objects[0].__class__.__name__}")
 
     for seq in seq_objects:
         LOGGER.info(f"Creating {seq.num_files} objects")
-        seq.load_extracted_images(load_image=load_images)
+        seq.load_extracted_images(load_image=load_images, **kwargs)
 
 
 # *============================ package __main__ =============================*
