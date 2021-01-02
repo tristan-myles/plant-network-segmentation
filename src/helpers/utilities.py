@@ -343,6 +343,11 @@ def parse_arguments() -> argparse.Namespace:
              "the default path enter  \"default\", if the paths are in "
              "the input json enter  \"same\"")
 
+    parser_extract_tiles.add_argument(
+        "--overwrite", "-o", action="store_true", default=False,
+        help="overwrite existing images, note this flag is applied to both "
+             "mask and leaf images")
+
     parser_trim_sequence = subparsers.add_parser(
         "trim_sequence", help="trims every image in an image sequence ")
     parser_trim_sequence.set_defaults(which='trim_sequence')

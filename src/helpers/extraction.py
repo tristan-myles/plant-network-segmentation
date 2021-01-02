@@ -29,21 +29,25 @@ def extract_multipage_mask_images(mseq_list, output_path_list,
 
 
 def extract_tiles(seq_objects, length_x, stride_x, length_y,
-                  stride_y, output_path_list=None):
+                  stride_y, output_path_list=None, overwrite=False,
+                  **kwargs):
     LOGGER.info(f"Extracting tiles from {seq_objects[0].__class__.__name__} "
                 f"with the following configuration:"
                 f" length (x, y): ({length_x}, {length_y}) |"
                 f" stride (x, y): ({stride_x}, {stride_y})")
 
     if output_path_list is None:
-        for seq in seq_objects:
-            seq.tile_sequence(length_x=length_x, stride_x=stride_x,
-                              length_y=length_y, stride_y=stride_y)
-    else:
-        for seq, output_path in zip(seq_objects, output_path_list):
-            seq.tile_sequence(length_x=length_x, stride_x=stride_x,
-                              length_y=length_y, stride_y=stride_y,
-                              output_path=output_path)
+        output_path_list = [None for _ in range(len(seq_objects))]
+
+    for i, seq in enumerate(seq_objects):
+        seq.load_image_array(**kwargs)
+
+        seq.tile_sequence(length_x=length_x, stride_x=stride_x,
+                          length_y=length_y, stride_y=stride_y,
+                          output_path=output_path_list[i],
+                          overwrite=overwrite)
+
+        seq.unload_extracted_images()
 
 
 # *=============================== DataFrames ================================*

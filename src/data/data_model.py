@@ -346,10 +346,13 @@ class _CurveSequenceMixin:
     Adds functions to allow curve sequences to operate at a tile level
     """
     # *__________________ tiling & loading | linking Tiles ___________________*
-    def tile_sequence(self, **kwargs):
+    def tile_sequence(self, length_x: int, stride_x: int, length_y: int,
+                      stride_y: int, output_path: str = None,
+                      overwrite: bool = False):
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for image in self.image_objects:
-                image.tile_me(**kwargs)
+                image.tile_me(length_x, stride_x, length_y, stride_y,
+                              output_path, overwrite)
                 pbar.update(1)
 
     def load_tile_sequence(self, load_image: bool = False,
@@ -871,8 +874,8 @@ class _FullImageMixin:
     """
     # *_______________________________ tiling ________________________________*
     def tile_me(self, TileClass, length_x: int, stride_x: int,
-                length_y: int,
-                stride_y: int, output_path: str = None):
+                length_y: int, stride_y: int, output_path: str = None,
+                overwrite: bool = False):
 
         if output_path is None:
             output_folder_path, output_file_name = self.path.rsplit("/", 1)
@@ -880,9 +883,6 @@ class _FullImageMixin:
         else:
             output_folder_path, output_file_name = output_path.rsplit("/",
                                                                       1)
-
-        if self.image_array is None:
-            self.load_image()
 
         input_y_length = self.image_array.shape[0]  # rows = y
         input_x_length = self.image_array.shape[1]  # cols = x
@@ -904,7 +904,8 @@ class _FullImageMixin:
                 self.image_objects.append(TileClass(sequence_parent=self,
                                                     path=final_filename))
                 self.image_objects[counter].create_tile(
-                    length_x, length_y, x_range, y_range, final_filename)
+                    length_x, length_y, x_range, y_range, final_filename,
+                    overwrite)
 
                 counter += 1
 
@@ -994,9 +995,10 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
 
     # *_______________________________ tiling ________________________________*
     def tile_me(self, length_x: int, stride_x: int, length_y: int,
-                stride_y: int, output_path: str = None):
+                stride_y: int, output_path: str = None,
+                overwrite: bool = False):
         super().tile_me(LeafTile, length_x, stride_x, length_y, stride_y,
-                        output_path)
+                        output_path, overwrite)
 
     # *_____________________________ prediction ______________________________*
     def predict_leaf(self, model, x_tile_length: int = None,
@@ -1121,7 +1123,8 @@ class Mask(_FullImageMixin, _MaskImage, _ImageSequence):
 
     # *_______________________________ tiling ________________________________*
     def tile_me(self, length_x: int, stride_x: int, length_y: int,
-                stride_y: int, output_path: str = None):
+                stride_y: int, output_path: str = None,
+                overwrite: bool = False):
         super().tile_me(MaskTile, length_x, stride_x, length_y, stride_y,
                         output_path)
 
