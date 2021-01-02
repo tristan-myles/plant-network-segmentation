@@ -469,7 +469,7 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
     # *____________________________ extraction ______________________________*
     def extract_changed_leaves(
             self, output_path: str, dif_len: int = 1, overwrite: bool = False,
-            combination_function=ImageChops.subtract_modulo):
+            shift_256=False, combination_function=ImageChops.subtract_modulo):
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
         Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 
@@ -495,7 +495,7 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
                 self.image_objects.append(Leaf(parents=[old_image, new_image],
                                                sequence_parent=self))
                 self.image_objects[i].extract_me(
-                    final_filename, combination_function, overwrite)
+                    final_filename, combination_function, shift_256, overwrite)
 
                 pbar.update(1)
 
@@ -905,7 +905,7 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
     # *_____________________________ extraction ______________________________*
     def extract_me(self, filepath: os.path,
                    combination_function=ImageChops.subtract_modulo,
-                   overwrite: bool = False):
+                   shift_256=False, overwrite: bool = False):
         try:
             old_image = PIL.Image.open(self.parents[0])
             new_image = PIL.Image.open(self.parents[1])
@@ -913,7 +913,14 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
             raise Exception(e, "Please check the parent file paths that "
                                "you provided...")
 
-        combined_image = combination_function(new_image, old_image)
+        if shift_256:
+            # shift the image so that the full subtraction range is preserved
+            # i.e. no wrapping due to using uint8
+            combined_image = (np.array(new_image).astype(np.int16) -
+                              np.array(old_image).astype(np.int16) + 256)
+            combined_image = PIL.Image.fromarray(combined_image)
+        else:
+            combined_image = combination_function(new_image, old_image)
 
         create_file = False
 
