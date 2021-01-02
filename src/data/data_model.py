@@ -77,7 +77,7 @@ class _ImageSequence(ABC):
     # abstract due to signature mismatch in child classes
     @abstractmethod
     def load_extracted_images(self, ImageClass, load_image: bool = False,
-                              disable_pb: bool = False):
+                              disable_pb: bool = False, **kwargs):
         """
         Instantiates using the file_list attribute objects of class
         ImageClass and appends to image_objects.
@@ -102,14 +102,14 @@ class _ImageSequence(ABC):
             for i, filename in enumerate(self.file_list):
                 self.image_objects.append(ImageClass(filename))
                 if load_image:
-                    self.image_objects[i].load_image()
+                    self.image_objects[i].load_image(**kwargs)
                 pbar.update(1)
 
-    def load_image_array(self, disable_pb=False):
+    def load_image_array(self, disable_pb=False, **kwargs):
         with tqdm(total=len(self.file_list), file=sys.stdout,
                   disable=disable_pb) as pbar:
             for image in self.image_objects:
-                image.load_image()
+                image.load_image(**kwargs)
                 pbar.update(1)
 
     def link_sequences(self, SequenceObject, sort_by_filename: bool = True):
@@ -352,11 +352,14 @@ class _CurveSequenceMixin:
                 image.tile_me(**kwargs)
                 pbar.update(1)
 
-    def load_tile_sequence(self, load_image: bool = False, **kwargs):
+    def load_tile_sequence(self, load_image: bool = False,
+                           folder_path: str = None, filename_pattern=None,
+                           **kwargs):
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for image in self.image_objects:
-                image.load_tile_paths(**kwargs)
-                image.load_extracted_images(load_image, disable_pb=True)
+                image.load_tile_paths(folder_path, filename_pattern)
+                image.load_extracted_images(load_image, disable_pb=True,
+                                            **kwargs)
                 pbar.update(1)
 
     def link_tiles(self, sort_by_filename: bool = True):
@@ -501,8 +504,24 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
 
     # *_______________________________ loading _______________________________*
     def load_extracted_images(self, load_image: bool = False,
-                              disable_pb: bool = False):
-        super().load_extracted_images(Leaf, load_image, disable_pb)
+                              disable_pb: bool = False, shift_256=False,
+                              transform_uint8=True):
+        super().load_extracted_images(Leaf, load_image, disable_pb,
+                                      shift_256=shift_256,
+                                      transform_uint8=transform_uint8)
+
+    def load_image_array(self, disable_pb=False, shift_256=False,
+                         transform_uint8=True):
+        # not strictly necessary but more user friendly
+        super().load_image_array(disable_pb, shift_256=shift_256,
+                                 transform_uint8=transform_uint8)
+
+    def load_tile_sequence(self, load_image: bool = False,
+                           folder_path: str = None, filename_pattern=None,
+                           shift_256=False, transform_uint8=True):
+        super().load_tile_sequence(load_image, folder_path, filename_pattern,
+                                   shift_256=shift_256,
+                                   transform_uint8=transform_uint8)
 
     # *_____________________________ prediction ______________________________*
     def predict_leaf_sequence(self, model, x_tile_length: int = None,
@@ -603,6 +622,16 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
     def load_extracted_images(self, load_image: bool = False,
                               disable_pb: bool = False):
         super().load_extracted_images(Mask, load_image, disable_pb)
+
+    def load_image_array(self, disable_pb=False):
+        # not strictly necessary but more user friendly
+        super().load_image_array(disable_pb)
+
+    def load_tile_sequence(self, load_image: bool = False,
+                           folder_path: str = None, filename_pattern=None):
+        # not strictly necessary but more user friendly
+        super().load_tile_sequence(load_image, folder_path, filename_pattern)
+
 
     # *______________________________ utilities ______________________________*
     def get_databunch_dataframe(self, embolism_only: bool = False,
@@ -791,8 +820,22 @@ class _LeafImage(_Image):
             return super().extract_intersection(self.image_array,
                                                 combined_image)
 
+    def load_image(self, shift_256=False, transform_uint8=True):
+        # default is uint8, since this is usually how images are displayed
+        super(_LeafImage, self).load_image()
 
-# *__________________________________ Mask ___________________________________*
+        # shift 256 will take preference since it's default is false
+        if shift_256:
+            # if the image was shifted by 256 when saved, then shift back to
+            # restore negative values
+            self.image_array = self.image_array.astype(np.int16) - 256
+        elif transform_uint8:
+            # if a shifted image was provided convert back to a uint8 to view
+            # note, can't convert back
+            self.image_array = self.image_array.astype(np.uint8)
+
+
+            # *__________________________________ Mask ___________________________________*
 class _MaskImage(_Image):
     """
      Contains implementations of abstract functions from _Image that apply to
@@ -940,9 +983,11 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
 
     # *__________________________ loading | linking __________________________*
     def load_extracted_images(self, load_image: bool = False,
-                              disable_pb=False):
+                              disable_pb=False, shift_256=False,
+                              transform_uint8=True):
         _ImageSequence.load_extracted_images(self, LeafTile, load_image,
-                                             disable_pb)
+                                             disable_pb, shift_256=shift_256,
+                                             transform_uint8=transform_uint8)
 
     # *_______________________________ tiling ________________________________*
     def tile_me(self, length_x: int, stride_x: int, length_y: int,
