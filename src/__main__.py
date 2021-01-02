@@ -35,7 +35,8 @@ def main():
             INPUT_JSON_DICT = json.load(JSON_FILE)
 
         ARGS_DICT = vars(ARGS)
-        ARGS_DICT["leaves"] = {"input": INPUT_JSON_DICT["leaves"]["input"]}
+        ARGS_DICT["leaves"] = {"input": INPUT_JSON_DICT["leaves"]["input"],
+                               "format": INPUT_JSON_DICT["leaves"]["format"]}
         ARGS_DICT["masks"] = {"input": INPUT_JSON_DICT["masks"]["input"]}
 
     LSEQS, MSEQS = create_sequence_objects(ARGS_DICT)
@@ -49,7 +50,9 @@ def main():
                 LEAF_OUTPUT_LIST = str.split(ARGS_DICT["leaf_output_path"],
                                              ";")
 
-            extract_leaf_images(LSEQS, LEAF_OUTPUT_LIST, ARGS_DICT["overwrite"])
+            extract_leaf_images(LSEQS, LEAF_OUTPUT_LIST,
+                                ARGS_DICT["overwrite"],
+                                ARGS_DICT["leaves"]["format"])
 
         if ARGS_DICT["mask_output_path"] is not None:
             if ARGS_DICT["mask_output_path"] == "same":

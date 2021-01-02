@@ -4,12 +4,13 @@ LOGGER = logging.getLogger(__name__)
 
 
 # *================================= images ==================================*
-def extract_leaf_images(lseq_list, output_path_list, overwrite):
+def extract_leaf_images(lseq_list, output_path_list, overwrite, format_dict):
     LOGGER.info("Extracting differenced leaf images")
     for lseq, output_path in zip(lseq_list, output_path_list):
         LOGGER.info(f"Differencing images in {lseq.folder_path} and saving "
                     f"to {output_path}")
-        lseq.extract_changed_leaves(output_path, overwrite=overwrite)
+        lseq.extract_changed_leaves(output_path, overwrite=overwrite,
+                                    **format_dict)
 
 
 def extract_multipage_mask_images(mseq_list, output_path_list,
