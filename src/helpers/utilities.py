@@ -544,7 +544,7 @@ def interactive_prompt():
 
             # Include the max of all options: 1 - 11
             # This is the number of unique questions
-            options_list.update(range(1, 8))
+            options_list.update(range(1, 11))
 
             options_list.remove(-1)
         print("Please separate multiple answers by a ';'. NOTE: the individual"
@@ -559,7 +559,36 @@ def interactive_prompt():
                 " necessary\n(Leave this blank to skip)\nAnswer: ")
 
             output_dict["leaves"] = {
-                "input": {"folder_path": [], "filename_pattern": []}}
+                "input": {"folder_path": [], "filename_pattern": []},
+                "format": {}}
+
+            # capture leave format, questions depends on whether leaves have
+            # been extracted. Grouped with option 1
+            if operation == 1:
+                print("\nWould you like to shift the leaves by 256 before "
+                      "extracting?\n"
+                      "   Options:\n"
+                      "   0: No\n"
+                      "   1: Yes")
+                leaves_format = int(input("Please choose a number: "))
+
+                output_dict["leaves"]["format"]["shift_256"] = (
+                        leaves_format == 1)
+            else:
+                print("\nWould you like to load your image in a specific "
+                      "format?\n"
+                      "Note: if this is left blank, the images will be loaded "
+                      "in their default format\n"
+                      "   Options:\n"
+                      "   0: uint8\n"
+                      "   1: shifted -256 (don't chose this option unless "
+                      "images were shifted by +256 when saved)")
+                leaves_format = int(input("Please choose a number: "))
+
+                if leaves_format == 0:
+                    output_dict["leaves"]["format"]["transform_uint8"] = True
+                elif leaves_format == 1:
+                    output_dict["leaves"]["format"]["shift_256"] = True
 
             if leaf_input_path:
                 for path in leaf_input_path.split(";"):
