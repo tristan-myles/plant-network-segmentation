@@ -505,20 +505,20 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
     # *_______________________________ loading _______________________________*
     def load_extracted_images(self, load_image: bool = False,
                               disable_pb: bool = False, shift_256=False,
-                              transform_uint8=True):
+                              transform_uint8=False):
         super().load_extracted_images(Leaf, load_image, disable_pb,
                                       shift_256=shift_256,
                                       transform_uint8=transform_uint8)
 
     def load_image_array(self, disable_pb=False, shift_256=False,
-                         transform_uint8=True):
+                         transform_uint8=False):
         # not strictly necessary but more user friendly
         super().load_image_array(disable_pb, shift_256=shift_256,
                                  transform_uint8=transform_uint8)
 
     def load_tile_sequence(self, load_image: bool = False,
                            folder_path: str = None, filename_pattern=None,
-                           shift_256=False, transform_uint8=True):
+                           shift_256=False, transform_uint8=False):
         super().load_tile_sequence(load_image, folder_path, filename_pattern,
                                    shift_256=shift_256,
                                    transform_uint8=transform_uint8)
@@ -820,10 +820,13 @@ class _LeafImage(_Image):
             return super().extract_intersection(self.image_array,
                                                 combined_image)
 
-    def load_image(self, shift_256=False, transform_uint8=True):
+    def load_image(self, shift_256=False, transform_uint8=False):
         # default is uint8, since this is usually how images are displayed
         super(_LeafImage, self).load_image()
 
+        if shift_256 and transform_uint8:
+            LOGGER.warning("Both shift_256 and transform_uint8 were set to "
+                           "true. The shift_256 parameter will be used.")
         # shift 256 will take preference since it's default is false
         if shift_256:
             # if the image was shifted by 256 when saved, then shift back to
@@ -984,7 +987,7 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
     # *__________________________ loading | linking __________________________*
     def load_extracted_images(self, load_image: bool = False,
                               disable_pb=False, shift_256=False,
-                              transform_uint8=True):
+                              transform_uint8=False):
         _ImageSequence.load_extracted_images(self, LeafTile, load_image,
                                              disable_pb, shift_256=shift_256,
                                              transform_uint8=transform_uint8)
