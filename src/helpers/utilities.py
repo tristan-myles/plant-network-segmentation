@@ -58,7 +58,11 @@ def get_workaround_details(compilation_dict):
 
 # *=============================== prediction ================================*
 def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list=None,
-                       mseqs=None):
+                       mseqs=None, format_dict=None):
+
+    if format_dict is None:
+        format_dict = {}
+
     with open(model_weight_path + "compilation.json", "r") as json_file:
         compilation_dict = json.load(json_file)
 
@@ -77,7 +81,8 @@ def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list=None,
         lseq.predict_leaf_sequence(model, leaf_shape[0],
                                    leaf_shape[1],
                                    memory_saving=memory_saving,
-                                   leaf_shape=leaf_shape)
+                                   leaf_shape=leaf_shape,
+                                   **format_dict)
 
         if cr_csv_list:
             mseqs[i].load_extracted_images(load_image=True)

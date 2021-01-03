@@ -532,12 +532,14 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
                               memory_saving: bool = True,
                               overwrite: bool = False,
                               save_prediction: bool = True,
+                              shift_256: bool = False,
+                              transform_uint8: bool = False,
                               **kwargs):
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for leaf in self.image_objects:
                 leaf.predict_leaf(model, x_tile_length, y_tile_length,
                                   memory_saving, overwrite, save_prediction,
-                                  **kwargs)
+                                  shift_256, transform_uint8, **kwargs)
                 pbar.update(1)
 
     # *______________________________ utilities ______________________________*
@@ -1004,10 +1006,12 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
     def predict_leaf(self, model, x_tile_length: int = None,
                      y_tile_length: int = None, memory_saving: bool = True,
                      overwrite: bool = False, save_prediction: bool = True,
+                     shift_256: bool = False, transform_uint8: bool = False,
                      **kwargs):
 
         if self.image_array is None:
-            self.load_image()
+            self.load_image(shift_256=shift_256,
+                            transform_uint8=transform_uint8)
 
         counter = 0
         y_length, x_length = self.image_array.shape

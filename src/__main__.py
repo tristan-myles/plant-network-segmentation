@@ -211,14 +211,15 @@ def main():
         load_image_objects(LSEQS)
 
         if ARGS_DICT["csv_path"]:
-            load_image_objects(LSEQS)
+            load_image_objects(MSEQS)
 
         leaf_shape = tuple([int(dim) for dim in
                             ARGS_DICT["leaf_shape"].split(";")])
         predict_tensorflow(LSEQS, model_weight_path=ARGS_DICT["model_path"],
                            leaf_shape=leaf_shape,
                            cr_csv_list=ARGS_DICT["csv_path"],
-                           mseqs=MSEQS)
+                           mseqs=MSEQS,
+                           format_dict=ARGS_DICT["leaves"]["format"])
 
     if ARGS_DICT["which"] == "create_dataset":
         load_image_objects(LSEQS)
