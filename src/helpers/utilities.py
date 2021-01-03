@@ -57,7 +57,7 @@ def get_workaround_details(compilation_dict):
 
 
 # *=============================== prediction ================================*
-def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list=None,
+def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list="",
                        mseqs=None, format_dict=None):
 
     if format_dict is None:
@@ -74,7 +74,7 @@ def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list=None,
     memory_saving = True
     cr_csv_list = cr_csv_list.split(";")
 
-    if cr_csv_list:
+    if cr_csv_list[0]:
         memory_saving = False
 
     for i, lseq in enumerate(lseqs):
@@ -84,7 +84,7 @@ def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list=None,
                                    leaf_shape=leaf_shape,
                                    **format_dict)
 
-        if cr_csv_list:
+        if cr_csv_list[0]:
             mseqs[i].load_extracted_images(load_image=True)
 
             temp_pred_list = []
