@@ -588,7 +588,12 @@ def interactive_prompt():
                       "   0: uint8\n"
                       "   1: shifted -256 (don't chose this option unless "
                       "images were shifted by +256 when saved)")
-                leaves_format = int(input("Please choose a number: "))
+
+                leaves_format = input("Please choose a number: ")
+                if leaves_format == "":
+                    leaves_format = None
+                else:
+                    leaves_format = int(leaves_format)
 
                 if leaves_format == 0:
                     output_dict["leaves"]["format"]["transform_uint8"] = True
