@@ -561,7 +561,7 @@ def augmentation_algorithm(dual_channel: np.array, aug_df: pd.DataFrame,
 
 
 # *---------------------------- package __main__ -----------------------------*
-def augment_dataset(lseq: LeafSequence, mseq: MaskSequence):
+def augment_dataset(lseq: LeafSequence, mseq: MaskSequence, **kwargs):
     """
 
         :param lseq:
@@ -605,7 +605,7 @@ def augment_dataset(lseq: LeafSequence, mseq: MaskSequence):
             aug_df["leaf"][i] = leaf_path
             aug_df["mask"][i] = mask_path
 
-            leaf.load_image()
+            leaf.load_image(**kwargs)
             mask.load_image()
 
             # Should load image array to keep loading consistent

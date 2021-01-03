@@ -253,7 +253,7 @@ def main():
         load_image_objects(LSEQS)
         load_image_objects(MSEQS)
 
-        augment_dataset(LSEQS[0], MSEQS[0])
+        augment_dataset(LSEQS[0], MSEQS[0], **ARGS_DICT["leaves"]["format"])
 
 
 if __name__ == "__main__":
