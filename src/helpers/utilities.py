@@ -57,8 +57,12 @@ def get_workaround_details(compilation_dict):
 
 
 # *=============================== prediction ================================*
-def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list=None,
-                       mseqs=None):
+def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list="",
+                       mseqs=None, format_dict=None):
+
+    if format_dict is None:
+        format_dict = {}
+
     with open(model_weight_path + "compilation.json", "r") as json_file:
         compilation_dict = json.load(json_file)
 
@@ -70,16 +74,17 @@ def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list=None,
     memory_saving = True
     cr_csv_list = cr_csv_list.split(";")
 
-    if cr_csv_list:
+    if cr_csv_list[0]:
         memory_saving = False
 
     for i, lseq in enumerate(lseqs):
         lseq.predict_leaf_sequence(model, leaf_shape[0],
                                    leaf_shape[1],
                                    memory_saving=memory_saving,
-                                   leaf_shape=leaf_shape)
+                                   leaf_shape=leaf_shape,
+                                   **format_dict)
 
-        if cr_csv_list:
+        if cr_csv_list[0]:
             mseqs[i].load_extracted_images(load_image=True)
 
             temp_pred_list = []
@@ -253,22 +258,23 @@ def create_sequence_objects(sequence_input):
     return lseqs, mseqs
 
 
-def load_image_objects(seq_objects, load_images=False):
+def load_image_objects(seq_objects, load_images=False, **kwargs):
     LOGGER.info(f"Creating image objects for "
                 f"{seq_objects[0].__class__.__name__}")
 
     for seq in seq_objects:
         LOGGER.info(f"Creating {seq.num_files} objects")
-        seq.load_extracted_images(load_image=load_images)
+        seq.load_extracted_images(load_image=load_images, **kwargs)
 
 
 # *============================ package __main__ =============================*
 # *------------------------------- procedures --------------------------------*
 def trim_sequence_images(seq_objects, x_size_dir_list=None,
-                         y_size_dir_list=None, overwrite=False):
+                         y_size_dir_list=None, overwrite=False,
+                         **kwargs):
     for seq, x_size_dir, y_size_dir in \
             zip(seq_objects, x_size_dir_list, y_size_dir_list):
-        seq.load_image_array()
+        seq.load_image_array(**kwargs)
 
         seq.trim_image_sequence(x_size_dir, y_size_dir, overwrite)
 
@@ -342,6 +348,11 @@ def parse_arguments() -> argparse.Namespace:
         help="output paths, if you want to use "
              "the default path enter  \"default\", if the paths are in "
              "the input json enter  \"same\"")
+
+    parser_extract_tiles.add_argument(
+        "--overwrite", "-o", action="store_true", default=False,
+        help="overwrite existing images, note this flag is applied to both "
+             "mask and leaf images")
 
     parser_trim_sequence = subparsers.add_parser(
         "trim_sequence", help="trims every image in an image sequence ")
@@ -489,6 +500,10 @@ def print_options_dict(output_dict):
 
 
 def requirements(operation: int) -> None:
+    if operation == 8:
+         print("\nNote:"
+               "\n - Only one of either Mask or Leaf sequences can be trimmed "
+               "at a time")
     if operation == 9:
         print("\nRequirements:"
               "\n - This action currently only works using the default "
@@ -544,7 +559,7 @@ def interactive_prompt():
 
             # Include the max of all options: 1 - 11
             # This is the number of unique questions
-            options_list.update(range(1, 8))
+            options_list.update(range(1, 11))
 
             options_list.remove(-1)
         print("Please separate multiple answers by a ';'. NOTE: the individual"
@@ -559,7 +574,41 @@ def interactive_prompt():
                 " necessary\n(Leave this blank to skip)\nAnswer: ")
 
             output_dict["leaves"] = {
-                "input": {"folder_path": [], "filename_pattern": []}}
+                "input": {"folder_path": [], "filename_pattern": []},
+                "format": {}}
+
+            # capture leave format, questions depends on whether leaves have
+            # been extracted. Grouped with option 1
+            if operation == 1:
+                print("\nWould you like to shift the leaves by 256 before "
+                      "extracting?\n"
+                      "   Options:\n"
+                      "   0: No\n"
+                      "   1: Yes")
+                leaves_format = int(input("Please choose a number: "))
+
+                output_dict["leaves"]["format"]["shift_256"] = (
+                        leaves_format == 1)
+            else:
+                print("\nWould you like to load your image in a specific "
+                      "format?\n"
+                      "Note: if this is left blank, the images will be loaded "
+                      "in their default format\n"
+                      "   Options:\n"
+                      "   0: uint8\n"
+                      "   1: shifted -256 (don't chose this option unless "
+                      "images were shifted by +256 when saved)")
+
+                leaves_format = input("Please choose a number: ")
+                if leaves_format == "":
+                    leaves_format = None
+                else:
+                    leaves_format = int(leaves_format)
+
+                if leaves_format == 0:
+                    output_dict["leaves"]["format"]["transform_uint8"] = True
+                elif leaves_format == 1:
+                    output_dict["leaves"]["format"]["shift_256"] = True
 
             if leaf_input_path:
                 for path in leaf_input_path.split(";"):
@@ -641,15 +690,21 @@ def interactive_prompt():
 
         if operation == 1:
             if 6 in options_list:
-                print("\n6. Would you like to save binarised masks - i.e."
-                      " pixel values as 0, 1?\n"
-                      "   Options:\n"
-                      "   0: False\n"
-                      "   1: True")
-                binarise = input("Please choose a number: ")
-                binarise = int(binarise) == 1
+                if mask_input_path:
+                    print("\n6. Would you like to save binarised masks - i.e."
+                          " pixel values as 0, 1?\n"
+                          "   Options:\n"
+                          "   0: False\n"
+                          "   1: True")
+                    binarise = input("Please choose a number: ")
+                    binarise = int(binarise) == 1
 
-                output_dict["binarise"] = binarise
+                    output_dict["binarise"] = binarise
+                else:
+                    print("\nYou did not enter a mask directory, so question 6"
+                          " will be skipped.")
+
+                    output_dict["binarise"] = None
 
                 options_list.remove(6)
 
@@ -866,9 +921,13 @@ def interactive_prompt():
                     "\n3. What is the y output size and directions?"
                     "\n   Note, for direction, a 1 or -1 indicates to trim"
                     " either the left or right respectively."
+                    "\n Leave this blank to skip."
                     "\nPlease provide your answer as a tuple, and please"
                     " separate these answers by a ';' (if no trimming is "
-                    "required answer 'None'): ")
+                    "required for a particular sequence answer 'None'): ")
+
+                if ysd == "":
+                    ysd = None
 
                 output_dict["y_size_dir"] = ysd
 
@@ -879,9 +938,13 @@ def interactive_prompt():
                     "\n4. What is the x output size and directions?"
                     "\n   Note, for direction, a 1 or -1 indicates to trim"
                     " either the left or right respectively."
+                    "\n Leave this blank to skip."
                     "\nPlease provide your answer as a tuple, and please"
                     " separate these answers by a ';' (if no trimming is "
-                    "required answer 'None'): ")
+                    "required for a particular sequence answer 'None'): ")
+
+                if xsd == "":
+                    xsd = None
 
                 output_dict["x_size_dir"] = xsd
 

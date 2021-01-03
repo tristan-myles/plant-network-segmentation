@@ -77,7 +77,7 @@ class _ImageSequence(ABC):
     # abstract due to signature mismatch in child classes
     @abstractmethod
     def load_extracted_images(self, ImageClass, load_image: bool = False,
-                              disable_pb: bool = False):
+                              disable_pb: bool = False, **kwargs):
         """
         Instantiates using the file_list attribute objects of class
         ImageClass and appends to image_objects.
@@ -102,14 +102,14 @@ class _ImageSequence(ABC):
             for i, filename in enumerate(self.file_list):
                 self.image_objects.append(ImageClass(filename))
                 if load_image:
-                    self.image_objects[i].load_image()
+                    self.image_objects[i].load_image(**kwargs)
                 pbar.update(1)
 
-    def load_image_array(self, disable_pb=False):
+    def load_image_array(self, disable_pb=False, **kwargs):
         with tqdm(total=len(self.file_list), file=sys.stdout,
                   disable=disable_pb) as pbar:
             for image in self.image_objects:
-                image.load_image()
+                image.load_image(**kwargs)
                 pbar.update(1)
 
     def link_sequences(self, SequenceObject, sort_by_filename: bool = True):
@@ -346,17 +346,23 @@ class _CurveSequenceMixin:
     Adds functions to allow curve sequences to operate at a tile level
     """
     # *__________________ tiling & loading | linking Tiles ___________________*
-    def tile_sequence(self, **kwargs):
+    def tile_sequence(self, length_x: int, stride_x: int, length_y: int,
+                      stride_y: int, output_path: str = None,
+                      overwrite: bool = False):
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for image in self.image_objects:
-                image.tile_me(**kwargs)
+                image.tile_me(length_x, stride_x, length_y, stride_y,
+                              output_path, overwrite)
                 pbar.update(1)
 
-    def load_tile_sequence(self, load_image: bool = False, **kwargs):
+    def load_tile_sequence(self, load_image: bool = False,
+                           folder_path: str = None, filename_pattern=None,
+                           **kwargs):
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for image in self.image_objects:
-                image.load_tile_paths(**kwargs)
-                image.load_extracted_images(load_image, disable_pb=True)
+                image.load_tile_paths(folder_path, filename_pattern)
+                image.load_extracted_images(load_image, disable_pb=True,
+                                            **kwargs)
                 pbar.update(1)
 
     def link_tiles(self, sort_by_filename: bool = True):
@@ -469,7 +475,7 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
     # *____________________________ extraction ______________________________*
     def extract_changed_leaves(
             self, output_path: str, dif_len: int = 1, overwrite: bool = False,
-            combination_function=ImageChops.subtract_modulo):
+            shift_256=False, combination_function=ImageChops.subtract_modulo):
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
         Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 
@@ -495,14 +501,30 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
                 self.image_objects.append(Leaf(parents=[old_image, new_image],
                                                sequence_parent=self))
                 self.image_objects[i].extract_me(
-                    final_filename, combination_function, overwrite)
+                    final_filename, combination_function, shift_256, overwrite)
 
                 pbar.update(1)
 
     # *_______________________________ loading _______________________________*
     def load_extracted_images(self, load_image: bool = False,
-                              disable_pb: bool = False):
-        super().load_extracted_images(Leaf, load_image, disable_pb)
+                              disable_pb: bool = False, shift_256=False,
+                              transform_uint8=False):
+        super().load_extracted_images(Leaf, load_image, disable_pb,
+                                      shift_256=shift_256,
+                                      transform_uint8=transform_uint8)
+
+    def load_image_array(self, disable_pb=False, shift_256=False,
+                         transform_uint8=False):
+        # not strictly necessary but more user friendly
+        super().load_image_array(disable_pb, shift_256=shift_256,
+                                 transform_uint8=transform_uint8)
+
+    def load_tile_sequence(self, load_image: bool = False,
+                           folder_path: str = None, filename_pattern=None,
+                           shift_256=False, transform_uint8=False):
+        super().load_tile_sequence(load_image, folder_path, filename_pattern,
+                                   shift_256=shift_256,
+                                   transform_uint8=transform_uint8)
 
     # *_____________________________ prediction ______________________________*
     def predict_leaf_sequence(self, model, x_tile_length: int = None,
@@ -510,12 +532,14 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
                               memory_saving: bool = True,
                               overwrite: bool = False,
                               save_prediction: bool = True,
+                              shift_256: bool = False,
+                              transform_uint8: bool = False,
                               **kwargs):
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for leaf in self.image_objects:
                 leaf.predict_leaf(model, x_tile_length, y_tile_length,
                                   memory_saving, overwrite, save_prediction,
-                                  **kwargs)
+                                  shift_256, transform_uint8, **kwargs)
                 pbar.update(1)
 
     # *______________________________ utilities ______________________________*
@@ -603,6 +627,16 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
     def load_extracted_images(self, load_image: bool = False,
                               disable_pb: bool = False):
         super().load_extracted_images(Mask, load_image, disable_pb)
+
+    def load_image_array(self, disable_pb=False):
+        # not strictly necessary but more user friendly
+        super().load_image_array(disable_pb)
+
+    def load_tile_sequence(self, load_image: bool = False,
+                           folder_path: str = None, filename_pattern=None):
+        # not strictly necessary but more user friendly
+        super().load_tile_sequence(load_image, folder_path, filename_pattern)
+
 
     # *______________________________ utilities ______________________________*
     def get_databunch_dataframe(self, embolism_only: bool = False,
@@ -791,8 +825,25 @@ class _LeafImage(_Image):
             return super().extract_intersection(self.image_array,
                                                 combined_image)
 
+    def load_image(self, shift_256=False, transform_uint8=False):
+        # default is uint8, since this is usually how images are displayed
+        super(_LeafImage, self).load_image()
 
-# *__________________________________ Mask ___________________________________*
+        if shift_256 and transform_uint8:
+            LOGGER.warning("Both shift_256 and transform_uint8 were set to "
+                           "true. The shift_256 parameter will be used.")
+        # shift 256 will take preference since it's default is false
+        if shift_256:
+            # if the image was shifted by 256 when saved, then shift back to
+            # restore negative values
+            self.image_array = self.image_array.astype(np.int16) - 256
+        elif transform_uint8:
+            # if a shifted image was provided convert back to a uint8 to view
+            # note, can't convert back
+            self.image_array = self.image_array.astype(np.uint8)
+
+
+            # *__________________________________ Mask ___________________________________*
 class _MaskImage(_Image):
     """
      Contains implementations of abstract functions from _Image that apply to
@@ -825,8 +876,8 @@ class _FullImageMixin:
     """
     # *_______________________________ tiling ________________________________*
     def tile_me(self, TileClass, length_x: int, stride_x: int,
-                length_y: int,
-                stride_y: int, output_path: str = None):
+                length_y: int, stride_y: int, output_path: str = None,
+                overwrite: bool = False):
 
         if output_path is None:
             output_folder_path, output_file_name = self.path.rsplit("/", 1)
@@ -834,9 +885,6 @@ class _FullImageMixin:
         else:
             output_folder_path, output_file_name = output_path.rsplit("/",
                                                                       1)
-
-        if self.image_array is None:
-            self.load_image()
 
         input_y_length = self.image_array.shape[0]  # rows = y
         input_x_length = self.image_array.shape[1]  # cols = x
@@ -858,7 +906,8 @@ class _FullImageMixin:
                 self.image_objects.append(TileClass(sequence_parent=self,
                                                     path=final_filename))
                 self.image_objects[counter].create_tile(
-                    length_x, length_y, x_range, y_range, final_filename)
+                    length_x, length_y, x_range, y_range, final_filename,
+                    overwrite)
 
                 counter += 1
 
@@ -905,7 +954,7 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
     # *_____________________________ extraction ______________________________*
     def extract_me(self, filepath: os.path,
                    combination_function=ImageChops.subtract_modulo,
-                   overwrite: bool = False):
+                   shift_256=False, overwrite: bool = False):
         try:
             old_image = PIL.Image.open(self.parents[0])
             new_image = PIL.Image.open(self.parents[1])
@@ -913,7 +962,14 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
             raise Exception(e, "Please check the parent file paths that "
                                "you provided...")
 
-        combined_image = combination_function(new_image, old_image)
+        if shift_256:
+            # shift the image so that the full subtraction range is preserved
+            # i.e. no wrapping due to using uint8
+            combined_image = (np.array(new_image).astype(np.int16) -
+                              np.array(old_image).astype(np.int16) + 256)
+            combined_image = PIL.Image.fromarray(combined_image)
+        else:
+            combined_image = combination_function(new_image, old_image)
 
         create_file = False
 
@@ -933,24 +989,29 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
 
     # *__________________________ loading | linking __________________________*
     def load_extracted_images(self, load_image: bool = False,
-                              disable_pb=False):
+                              disable_pb=False, shift_256=False,
+                              transform_uint8=False):
         _ImageSequence.load_extracted_images(self, LeafTile, load_image,
-                                             disable_pb)
+                                             disable_pb, shift_256=shift_256,
+                                             transform_uint8=transform_uint8)
 
     # *_______________________________ tiling ________________________________*
     def tile_me(self, length_x: int, stride_x: int, length_y: int,
-                stride_y: int, output_path: str = None):
+                stride_y: int, output_path: str = None,
+                overwrite: bool = False):
         super().tile_me(LeafTile, length_x, stride_x, length_y, stride_y,
-                        output_path)
+                        output_path, overwrite)
 
     # *_____________________________ prediction ______________________________*
     def predict_leaf(self, model, x_tile_length: int = None,
                      y_tile_length: int = None, memory_saving: bool = True,
                      overwrite: bool = False, save_prediction: bool = True,
+                     shift_256: bool = False, transform_uint8: bool = False,
                      **kwargs):
 
         if self.image_array is None:
-            self.load_image()
+            self.load_image(shift_256=shift_256,
+                            transform_uint8=transform_uint8)
 
         counter = 0
         y_length, x_length = self.image_array.shape
@@ -1066,7 +1127,8 @@ class Mask(_FullImageMixin, _MaskImage, _ImageSequence):
 
     # *_______________________________ tiling ________________________________*
     def tile_me(self, length_x: int, stride_x: int, length_y: int,
-                stride_y: int, output_path: str = None):
+                stride_y: int, output_path: str = None,
+                overwrite: bool = False):
         super().tile_me(MaskTile, length_x, stride_x, length_y, stride_y,
                         output_path)
 
