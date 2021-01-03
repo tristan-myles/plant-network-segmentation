@@ -103,43 +103,39 @@ def main():
     if ARGS_DICT["which"] == "trim_sequence":
         if ARGS_DICT["mask"]:
             SEQS = MSEQS
+            FORMAT_DICT = {}
         else:
             SEQS = LSEQS
+            FORMAT_DICT = ARGS_DICT["leaves"]["format"]
 
         if ARGS_DICT["x_size_dir"] == "same":
             X_SIZE_DIR_LIST = INPUT_JSON_DICT["trim"]["x_size_dir"]
             X_SIZE_DIR_LIST = [tuple(X_SIZE_DIR) if X_SIZE_DIR else None for
                                X_SIZE_DIR in X_SIZE_DIR_LIST]
         elif not ARGS_DICT["x_size_dir"]:
-            X_SIZE_DIR_LIST = [None]
+            X_SIZE_DIR_LIST = None
         else:
             X_SIZE_DIR_LIST = [literal_eval(x_size_dir) for x_size_dir in
                                ARGS_DICT["x_size_dir"].split(";")]
-
-            # in the case of a single sequence with no x adjustment
-            if (not X_SIZE_DIR_LIST or
-                    isinstance(X_SIZE_DIR_LIST[0], int)):
-                X_SIZE_DIR_LIST = [X_SIZE_DIR_LIST]
 
         if ARGS_DICT["y_size_dir"] == "same":
             Y_SIZE_DIR_LIST = INPUT_JSON_DICT["trim"]["y_size_dir"]
             Y_SIZE_DIR_LIST = [tuple(Y_SIZE_DIR) if Y_SIZE_DIR else None for
                                Y_SIZE_DIR in Y_SIZE_DIR_LIST]
         elif not ARGS_DICT["y_size_dir"]:
-            Y_SIZE_DIR_LIST = [None]
+            Y_SIZE_DIR_LIST = [None for _ in range(len(X_SIZE_DIR_LIST))]
         else:
             Y_SIZE_DIR_LIST = [literal_eval(y_size_dir) for y_size_dir in
                                ARGS_DICT["y_size_dir"].split(";")]
 
-            # in the case of a single sequence with no y adjustment
-            if (not Y_SIZE_DIR_LIST or
-                    isinstance(Y_SIZE_DIR_LIST[0], int)):
-                Y_SIZE_DIR_LIST = [Y_SIZE_DIR_LIST]
+        if not X_SIZE_DIR_LIST:
+            X_SIZE_DIR_LIST = [None for _ in range(len(Y_SIZE_DIR_LIST))]
 
-        if ARGS_DICT["y_size_dir"]:
+        if ARGS_DICT["y_size_dir"] or ARGS_DICT["x_size_dir"]:
             load_image_objects(SEQS)
             trim_sequence_images(SEQS, X_SIZE_DIR_LIST, Y_SIZE_DIR_LIST,
-                                 overwrite=ARGS_DICT["overwrite"])
+                                 overwrite=ARGS_DICT["overwrite"],
+                                 **FORMAT_DICT)
 
     if (ARGS_DICT["which"] == "plot_profile" or
             ARGS_DICT["which"] == "plot_embolism_counts"):

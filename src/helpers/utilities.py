@@ -265,10 +265,11 @@ def load_image_objects(seq_objects, load_images=False, **kwargs):
 # *============================ package __main__ =============================*
 # *------------------------------- procedures --------------------------------*
 def trim_sequence_images(seq_objects, x_size_dir_list=None,
-                         y_size_dir_list=None, overwrite=False):
+                         y_size_dir_list=None, overwrite=False,
+                         **kwargs):
     for seq, x_size_dir, y_size_dir in \
             zip(seq_objects, x_size_dir_list, y_size_dir_list):
-        seq.load_image_array()
+        seq.load_image_array(**kwargs)
 
         seq.trim_image_sequence(x_size_dir, y_size_dir, overwrite)
 
@@ -494,6 +495,10 @@ def print_options_dict(output_dict):
 
 
 def requirements(operation: int) -> None:
+    if operation == 8:
+         print("\nNote:"
+               "\n - Only one of either Mask or Leaf sequences can be trimmed "
+               "at a time")
     if operation == 9:
         print("\nRequirements:"
               "\n - This action currently only works using the default "
@@ -911,9 +916,13 @@ def interactive_prompt():
                     "\n3. What is the y output size and directions?"
                     "\n   Note, for direction, a 1 or -1 indicates to trim"
                     " either the left or right respectively."
+                    "\n Leave this blank to skip."
                     "\nPlease provide your answer as a tuple, and please"
                     " separate these answers by a ';' (if no trimming is "
-                    "required answer 'None'): ")
+                    "required for a particular sequence answer 'None'): ")
+
+                if ysd == "":
+                    ysd = None
 
                 output_dict["y_size_dir"] = ysd
 
@@ -924,9 +933,13 @@ def interactive_prompt():
                     "\n4. What is the x output size and directions?"
                     "\n   Note, for direction, a 1 or -1 indicates to trim"
                     " either the left or right respectively."
+                    "\n Leave this blank to skip."
                     "\nPlease provide your answer as a tuple, and please"
                     " separate these answers by a ';' (if no trimming is "
-                    "required answer 'None'): ")
+                    "required for a particular sequence answer 'None'): ")
+
+                if xsd == "":
+                    xsd = None
 
                 output_dict["x_size_dir"] = xsd
 
