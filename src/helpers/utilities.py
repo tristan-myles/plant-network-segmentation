@@ -920,7 +920,7 @@ def interactive_prompt():
                 ysd = input(
                     "\n3. What is the y output size and directions?"
                     "\n   Note, for direction, a 1 or -1 indicates to trim"
-                    " either the left or right respectively."
+                    " either the top or bottom respectively."
                     "\n Leave this blank to skip."
                     "\nPlease provide your answer as a tuple, and please"
                     " separate these answers by a ';' (if no trimming is "
