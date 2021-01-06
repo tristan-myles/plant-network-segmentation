@@ -82,7 +82,7 @@ def main():
                     INPUT_JSON_DICT["leaves"]["output"]["output_path"]
             else:
                 LEAF_OUTPUT_LIST = str.split(ARGS_DICT["leaf_output_path"],
-                                             " ")
+                                             ";")
 
             extract_tiles(LSEQS, ARGS_DICT["length_x"], ARGS_DICT["stride_x"],
                           ARGS_DICT["length_y"], ARGS_DICT["stride_y"],
