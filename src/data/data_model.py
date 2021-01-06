@@ -880,8 +880,11 @@ class _FullImageMixin:
                 overwrite: bool = False):
 
         if output_path is None:
-            output_folder_path, output_file_name = self.path.rsplit("/", 1)
-            output_folder_path = output_folder_path + "-chips"
+            output_folder_path, _, output_file_name = self.path.rsplit("/",
+                                                                       2)
+            output_folder_path, _, output_file_name = self.path.rsplit("/", 2)
+            output_folder_path = (output_folder_path + "/chips-" +
+                                  self.__class__.__name__.lower())
         else:
             output_folder_path, output_file_name = output_path.rsplit("/",
                                                                       1)
