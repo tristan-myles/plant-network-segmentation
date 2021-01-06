@@ -88,14 +88,15 @@ class _TfPnsMixin(Model):
         # Load the state of the old model
         self.load_weights(chkpt_path)
 
-    def predict_tile(self, new_tile, leaf_shape):
+    def predict_tile(self, new_tile, leaf_shape, post_process=True):
         batch_shape = (1,) + leaf_shape
         img = parse_numpy_image(new_tile, batch_shape)
         prediction = self.predict(img)
         prediction = np.reshape(prediction, leaf_shape)
 
-        # temp post-process:
-        prediction[new_tile >= 0] = 0
+        # post-process only if shifted by 256:
+        if post_process:
+            prediction[new_tile >= 0] = 0
         prediction = prediction * 255
 
         return prediction

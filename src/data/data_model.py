@@ -535,6 +535,12 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
                               shift_256: bool = False,
                               transform_uint8: bool = False,
                               **kwargs):
+        # if shifted by 256 then apply im1 > im2 post processing
+        if shift_256:
+            kwargs["post_process"] = True
+        else:
+            kwargs["post_process"] = False
+
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for leaf in self.image_objects:
                 leaf.predict_leaf(model, x_tile_length, y_tile_length,
