@@ -172,6 +172,7 @@ def main():
                           loss, opt(lr), metrics, model_save_path)
 
     # check that recall is the same as the best val recall during training
+    LOGGER.info("Confirming that best model saved correctly: ")
     model.evaluate(val_dataset)
 
     # check test_set
@@ -185,6 +186,7 @@ def main():
             leaf_shape=ANSWERS['leaf_shape'],
             mask_shape=ANSWERS['mask_shape'])
 
+        LOGGER.info("Test set")
         model.evaluate(test_dataset)
 
         # Could have a memory issue by keeping all the predictions and all
