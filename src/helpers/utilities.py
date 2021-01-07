@@ -125,7 +125,8 @@ def classification_report(predictions, masks, save_path=None):
 
             y_pred = y_pred.round()
 
-            tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_pred).ravel()
+            tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_pred,
+                                                      labels=[0,1]).ravel()
             iou = get_iou_score(y_true, y_pred)
 
             # set values to 0 if there are no true positives
