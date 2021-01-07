@@ -20,6 +20,9 @@ def get_filepath_list(base_dir, leaf_ext, mask_ext, incl_aug=True):
 
     if incl_aug:
         im_type = "augmented"
+        leaf_dir = f"{base_dir}{im_type}/leaves/*.{leaf_ext}"
+        mask_dir = f"{base_dir}{im_type}/masks/*.{mask_ext}"
+
         aug_leaves = get_sorted_list(leaf_dir)
         aug_masks = get_sorted_list(mask_dir)
     else:
@@ -27,6 +30,9 @@ def get_filepath_list(base_dir, leaf_ext, mask_ext, incl_aug=True):
         aug_masks = []
 
     im_type = "no-embolism"
+    leaf_dir = f"{base_dir}{im_type}/leaves/*.{leaf_ext}"
+    mask_dir = f"{base_dir}{im_type}/masks/*.{mask_ext}"
+
     ne_leaves = get_sorted_list(leaf_dir)
     ne_masks = get_sorted_list(mask_dir)
 
