@@ -151,9 +151,13 @@ def downsample_dataset(dataset_root_path, filename_patterns,
                  shutil.move(x, not_used_path.joinpath(*Path(x).parts[-2:])),
                  ignored_masks + ignored_leaves))
 
-    percent_moved = len(ignored_leaves) / len(ignored_masks + chosen_masks)
+    total_ne_images = len(ignored_masks + chosen_masks)
+    percent_moved = len(ignored_leaves) / total_ne_images
     LOGGER.info(f"Downsampled by {len(ignored_leaves)} "
                 f"({round(percent_moved * 100)})% non-embolism images")
+    LOGGER.info(f"Ratio of embolism to non-embolism leaves has changed from "
+                f"1:{total_ne_images/len(e_masks)} to "
+                f"1:{chosen_masks/len(e_masks)}")
 
     return [e_leaves, e_masks], [chosen_leaves, chosen_masks]
 
