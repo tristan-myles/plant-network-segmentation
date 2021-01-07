@@ -279,14 +279,10 @@ def extract_dataset(lseqs: [LeafSequence], mseqs: [MaskSequence],
 
     if isinstance(lolo, int):
         # isolate the leaf to leave out
-        lseq_lolo = [lseqs[-lolo]]
-        mseq_lolo = [mseqs[-lolo]]
+        lseq_lolo = [lseqs.pop(lolo)]
+        mseq_lolo = [mseqs.pop(lolo)]
 
         _ = move_data(lseq_lolo, mseq_lolo, dataset_path, "test")
-
-        # remove the leaf to leave out from seqs
-        del lseqs[lolo]
-        del mseqs[lolo]
 
     filename_patterns = move_data(lseqs, mseqs, dataset_path)
 
