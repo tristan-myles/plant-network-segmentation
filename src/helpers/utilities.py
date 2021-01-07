@@ -90,7 +90,7 @@ def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list="",
             temp_pred_list = []
             temp_mask_list = []
 
-            for leaf, mask in zip(lseq.image_objects. mseqs.image_objects):
+            for leaf, mask in zip(lseq.image_objects, mseqs[i].image_objects):
                 temp_pred_list.append(leaf.prediction_array/255.0)
                 temp_mask_list.append(mask.image_array/255.0)
 
