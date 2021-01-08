@@ -1,89 +1,124 @@
-import tensorflow as tf
 from kerastuner import HyperModel
-from kerastuner.tuners import RandomSearch
+from kerastuner.tuners import Hyperband
 
-from tensorflow.keras.layers import Input, Conv2D
+import tensorflow as tf
+from tensorflow.keras.layers import (Input, Conv2D, MaxPool2D,
+                                     Conv2DTranspose, concatenate)
 
-from src.pipelines.tensorflow_v2.models.unet import UnetBlock
 
-
+# *========================== U-Net Building Block ===========================*
 class HyperUnet(HyperModel):
     def __init__(self, input_shape, output_channels):
         self.input_shape = input_shape
         self.output_channels = output_channels
 
-    def build(self, hp):
-        x = Input(shape=self.input_shape)
-
+    def build(self):
+        input = Input(shape=self.input_shape)
         he_initializer = tf.keras.initializers.he_normal(seed=3141)
+        activation = "relu"
+        padding = "same"
 
-        # Contracting
-        # Layer 1
-        conv_down1 = UnetBlock(num_filters=64, kernel_size=3, decode=True,
-                               initializer=he_initializer,
-                               name="down1")(x)
+        # Down 1
+        conv1 = Conv2D(filters=64, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(input)
+        conv1 = Conv2D(filters=64, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(conv1)
+        # Half the x,y dimensions
+        pool1 = MaxPool2D(pool_size=(2, 2), strides=2)(conv1)
+        conv2 = Conv2D(filters=128, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(pool1)
+        conv2 = Conv2D(filters=128, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(conv2)
 
-        # Layer 2
-        conv_down2 = UnetBlock(num_filters=128, kernel_size=3,
-                               decode=True,
-                               initializer=he_initializer,
-                               name="down2")(conv_down1)
+        pool2 = MaxPool2D(pool_size=(2, 2), strides=2)(conv2)
+        conv3 = Conv2D(filters=256, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(pool2)
+        conv3 = Conv2D(filters=256, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(conv3)
 
-        # Layer 3
-        conv_down3 = UnetBlock(num_filters=256, kernel_size=3,
-                               decode=True,
-                               initializer=he_initializer,
-                               name="down3")(conv_down2)
+        pool3 = MaxPool2D(pool_size=(2, 2), strides=2)(conv3)
+        conv4 = Conv2D(filters=512, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(pool3)
+        conv4 = Conv2D(filters=512, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(conv4)
 
-        # Layer 4
-        conv_down4 = UnetBlock(num_filters=512, kernel_size=3,
-                               decode=True,
-                               initializer=he_initializer,
-                               name="down4")(conv_down3)
+        #bottleneck
+        pool4 = MaxPool2D(pool_size=(2, 2), strides=2)(conv4)
+        conv5 = Conv2D(filters=1024, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(pool4)
+        conv5 = Conv2D(filters=1024, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(conv5)
 
-        # Bottleneck
-        conv_bottle = UnetBlock(num_filters=1024, kernel_size=3,
-                                     initializer=he_initializer,
-                                     name="bottleneck")(conv_down4)
+        #Upblock
+        uptrans1 = Conv2DTranspose(filters=512,
+                                   kernel_size=2, strides=2,
+                                   padding=padding,
+                                   kernel_initializer=he_initializer)(conv5)
+        skip1 = concatenate([conv4, uptrans1])
+        up1 = Conv2D(filters=512, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(skip1)
+        up1 = Conv2D(filters=512, kernel_size=3,
+                     padding=padding, activation=activation,
+                     kernel_initializer=he_initializer)(up1)
 
-        # Expanding
+        uptrans2 = Conv2DTranspose(filters=256,
+                                   kernel_size=2, strides=2,
+                                   padding=padding,
+                                   kernel_initializer=he_initializer)(up1)
+        skip2 = concatenate([conv3, uptrans2])
+        up2 = Conv2D(filters=256, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(skip2)
+        up2 = Conv2D(filters=256, kernel_size=3,
+                     padding=padding, activation=activation,
+                     kernel_initializer=he_initializer)(up2)
 
-        # Layer 1
-        # No activation ... Since skip happens before the activation
-        conv_up1 = UnetBlock(num_filters=512, kernel_size=3, encode=True,
-                             initializer=he_initializer,
-                             name="up1")(conv_bottle, conv_down4)
-        # Layer 2
-        conv_up2 = UnetBlock(num_filters=256, kernel_size=3, encode=True,
-                             initializer=he_initializer,
-                             name="up2")(conv_up1, conv_down3)
-        # Layer 3
-        conv_up3 = UnetBlock(num_filters=128, kernel_size=3, encode=True,
-                             initializer=he_initializer,
-                             name="up3")(conv_up2, conv_down2)
-        # Layer 4
-        conv_up4 = UnetBlock(num_filters=64, kernel_size=3, encode=True,
-                             initializer=he_initializer,
-                             name="up4")(conv_up3, conv_down1)
+        uptrans3 = Conv2DTranspose(filters=128,
+                                   kernel_size=2, strides=2,
+                                   padding=padding,
+                                   kernel_initializer=he_initializer)(up2)
+        skip3 = concatenate([conv2, uptrans3])
+        up3 = Conv2D(filters=128, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(skip3)
+        up3 = Conv2D(filters=128, kernel_size=3,
+                     padding=padding, activation=activation,
+                     kernel_initializer=he_initializer)(up3)
 
-        # Output
+        uptrans4 = Conv2DTranspose(filters=64,
+                                   kernel_size=2, strides=2,
+                                   padding=padding,
+                                   kernel_initializer=he_initializer)(up3)
+        skip4 = concatenate([conv1, uptrans4])
+        up4 = Conv2D(filters=64, kernel_size=3,
+                       padding=padding, activation=activation,
+                       kernel_initializer=he_initializer)(skip4)
+        up4 = Conv2D(filters=64, kernel_size=3,
+                     padding=padding, activation=activation,
+                     kernel_initializer=he_initializer)(up4)
+
         output_layer = Conv2D(self.output_channels, 1, strides=1,
-                              padding='same',
+                              padding=padding,
                               activation="sigmoid",
-                              name="classification_layer")(conv_up4)
+                              name="classification_layer")(up4)
 
-        model = tf.keras.Model(x, output_layer, name="Hyper-UNet")
+        model = tf.keras.Model(inputs=input, outputs=output_layer,
+                               name="Hyper-UNet")
+
         model.compile(
-            optimizer=tf.keras.optimizers.Adam(
-                hp.Float(
-                    'learning_rate',
-                    min_value=1e-4,
-                    max_value=1e-2,
-                    sampling='LOG',
-                    default=1e-3
-                )
-            ),
-            loss='cross-entropy',
+            optimizer=tf.keras.optimizers.Adam(0.1),
+            loss='binary_crossentropy',
             metrics=['accuracy']
         )
 
@@ -94,7 +129,7 @@ def tune_model(train_dataset, val_dataset, results_dir, run_name,
                input_shape, output_channels=1):
     hypermodel = HyperUnet(input_shape, output_channels)
 
-    tuner = RandomSearch(
+    tuner = Hyperband(
         hypermodel,
         objective='val_recall',
         max_trials=1,
@@ -106,7 +141,3 @@ def tune_model(train_dataset, val_dataset, results_dir, run_name,
                  validation_data=val_dataset)
 
     tuner.results_summary()
-
-
-
-
