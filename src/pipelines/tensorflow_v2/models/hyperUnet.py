@@ -105,5 +105,8 @@ def tune_model(train_dataset, val_dataset, results_dir, run_name,
                  epochs=1,
                  validation_data=val_dataset)
 
+    tuner.results_summary()
+
+
 
 
