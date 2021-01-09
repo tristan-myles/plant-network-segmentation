@@ -1,5 +1,5 @@
-from kerastuner import HyperModel
-from kerastuner.tuners import Hyperband
+from kerastuner import HyperModel, Objective
+from kerastuner.tuners import BayesianOptimization
 
 import tensorflow as tf
 from tensorflow.keras.layers import (Input, Conv2D, MaxPool2D,
@@ -12,101 +12,111 @@ class HyperUnet(HyperModel):
         self.input_shape = input_shape
         self.output_channels = output_channels
 
-    def build(self):
-        input = Input(shape=self.input_shape)
+    def build(self, hp):
+        # create the search space
         he_initializer = tf.keras.initializers.he_normal(seed=3141)
-        activation = "relu"
+        glorot = tf.keras.initializers.glorot_uniform(seed=3141)
+        initializer = hp.choice("initializer", [he_initializer, glorot])
+        activation = hp.Choice("activation", ["relu", "selu"])
+        filter = hp.Choice("filters", [1, 2, 3, 4, 5])
+        kernel_size = hp.Choice("kernel_size", [3, 5])
+        optimizer = hp.Choice("optimizer", [
+            tf.keras.optimizers.Adam(hp.Float('learning_rate', 1e-4, 1e-2,
+                                              sampling='log')),
+            tf.keras.optimizers.SGD(hp.Float('momentum', 0.5, 0.9))])
         padding = "same"
 
+        input = Input(shape=self.input_shape)
+
         # Down 1
-        conv1 = Conv2D(filters=64, kernel_size=3,
+        conv1 = Conv2D(filters=8 * filter, kernel_size=kernel_size,
                        padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(input)
-        conv1 = Conv2D(filters=64, kernel_size=3,
+                       kernel_initializer=initializer)(input)
+        conv1 = Conv2D(filters=8 * filter, kernel_size=kernel_size,
                        padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(conv1)
+                       kernel_initializer=initializer)(conv1)
         # Half the x,y dimensions
         pool1 = MaxPool2D(pool_size=(2, 2), strides=2)(conv1)
-        conv2 = Conv2D(filters=128, kernel_size=3,
+        conv2 = Conv2D(filters=16 * filter, kernel_size=kernel_size,
                        padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(pool1)
-        conv2 = Conv2D(filters=128, kernel_size=3,
+                       kernel_initializer=initializer)(pool1)
+        conv2 = Conv2D(filters=16 * filter, kernel_size=kernel_size,
                        padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(conv2)
+                       kernel_initializer=initializer)(conv2)
 
         pool2 = MaxPool2D(pool_size=(2, 2), strides=2)(conv2)
-        conv3 = Conv2D(filters=256, kernel_size=3,
+        conv3 = Conv2D(filters=32 * filter, kernel_size=kernel_size,
                        padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(pool2)
-        conv3 = Conv2D(filters=256, kernel_size=3,
+                       kernel_initializer=initializer)(pool2)
+        conv3 = Conv2D(filters=32 * filter, kernel_size=kernel_size,
                        padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(conv3)
+                       kernel_initializer=initializer)(conv3)
 
         pool3 = MaxPool2D(pool_size=(2, 2), strides=2)(conv3)
-        conv4 = Conv2D(filters=512, kernel_size=3,
+        conv4 = Conv2D(filters=64 * filter, kernel_size=kernel_size,
                        padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(pool3)
-        conv4 = Conv2D(filters=512, kernel_size=3,
+                       kernel_initializer=initializer)(pool3)
+        conv4 = Conv2D(filters=64 * filter, kernel_size=kernel_size,
                        padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(conv4)
+                       kernel_initializer=initializer)(conv4)
 
         #bottleneck
         pool4 = MaxPool2D(pool_size=(2, 2), strides=2)(conv4)
-        conv5 = Conv2D(filters=1024, kernel_size=3,
+        conv5 = Conv2D(filters=128 * filter, kernel_size=kernel_size,
                        padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(pool4)
-        conv5 = Conv2D(filters=1024, kernel_size=3,
+                       kernel_initializer=initializer)(pool4)
+        conv5 = Conv2D(filters=128 * filter, kernel_size=kernel_size,
                        padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(conv5)
+                       kernel_initializer=initializer)(conv5)
 
         #Upblock
-        uptrans1 = Conv2DTranspose(filters=512,
+        uptrans1 = Conv2DTranspose(filters=64 * filter,
                                    kernel_size=2, strides=2,
                                    padding=padding,
-                                   kernel_initializer=he_initializer)(conv5)
+                                   kernel_initializer=initializer)(conv5)
         skip1 = concatenate([conv4, uptrans1])
-        up1 = Conv2D(filters=512, kernel_size=3,
-                       padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(skip1)
-        up1 = Conv2D(filters=512, kernel_size=3,
+        up1 = Conv2D(filters=64 * filter, kernel_size=kernel_size,
                      padding=padding, activation=activation,
-                     kernel_initializer=he_initializer)(up1)
+                     kernel_initializer=initializer)(skip1)
+        up1 = Conv2D(filters=64 * filter, kernel_size=kernel_size,
+                     padding=padding, activation=activation,
+                     kernel_initializer=initializer)(up1)
 
-        uptrans2 = Conv2DTranspose(filters=256,
+        uptrans2 = Conv2DTranspose(filters=32 * filter,
                                    kernel_size=2, strides=2,
                                    padding=padding,
-                                   kernel_initializer=he_initializer)(up1)
+                                   kernel_initializer=initializer)(up1)
         skip2 = concatenate([conv3, uptrans2])
-        up2 = Conv2D(filters=256, kernel_size=3,
-                       padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(skip2)
-        up2 = Conv2D(filters=256, kernel_size=3,
+        up2 = Conv2D(filters=32 * filter, kernel_size=kernel_size,
                      padding=padding, activation=activation,
-                     kernel_initializer=he_initializer)(up2)
+                     kernel_initializer=initializer)(skip2)
+        up2 = Conv2D(filters=32 * filter, kernel_size=kernel_size,
+                     padding=padding, activation=activation,
+                     kernel_initializer=initializer)(up2)
 
-        uptrans3 = Conv2DTranspose(filters=128,
+        uptrans3 = Conv2DTranspose(filters=16 * filter,
                                    kernel_size=2, strides=2,
                                    padding=padding,
-                                   kernel_initializer=he_initializer)(up2)
+                                   kernel_initializer=initializer)(up2)
         skip3 = concatenate([conv2, uptrans3])
-        up3 = Conv2D(filters=128, kernel_size=3,
-                       padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(skip3)
-        up3 = Conv2D(filters=128, kernel_size=3,
+        up3 = Conv2D(filters=16 * filter, kernel_size=kernel_size,
                      padding=padding, activation=activation,
-                     kernel_initializer=he_initializer)(up3)
+                     kernel_initializer=initializer)(skip3)
+        up3 = Conv2D(filters=16 * filter, kernel_size=kernel_size,
+                     padding=padding, activation=activation,
+                     kernel_initializer=initializer)(up3)
 
-        uptrans4 = Conv2DTranspose(filters=64,
+        uptrans4 = Conv2DTranspose(filters=8 * filter,
                                    kernel_size=2, strides=2,
                                    padding=padding,
-                                   kernel_initializer=he_initializer)(up3)
+                                   kernel_initializer=initializer)(up3)
         skip4 = concatenate([conv1, uptrans4])
-        up4 = Conv2D(filters=64, kernel_size=3,
-                       padding=padding, activation=activation,
-                       kernel_initializer=he_initializer)(skip4)
-        up4 = Conv2D(filters=64, kernel_size=3,
+        up4 = Conv2D(filters=8 * filter, kernel_size=kernel_size,
                      padding=padding, activation=activation,
-                     kernel_initializer=he_initializer)(up4)
+                     kernel_initializer=initializer)(skip4)
+        up4 = Conv2D(filters=8 * filter, kernel_size=kernel_size,
+                     padding=padding, activation=activation,
+                     kernel_initializer=initializer)(up4)
 
         output_layer = Conv2D(self.output_channels, 1, strides=1,
                               padding=padding,
@@ -117,9 +127,10 @@ class HyperUnet(HyperModel):
                                name="Hyper-UNet")
 
         model.compile(
-            optimizer=tf.keras.optimizers.Adam(0.1),
+            optimizer=optimizer,
             loss='binary_crossentropy',
-            metrics=['accuracy']
+            metrics=['accuracy', tf.keras.metrics.Precision("precision"),
+                     tf.keras.metrics.Recall("recall")]
         )
 
         return model
@@ -129,15 +140,19 @@ def tune_model(train_dataset, val_dataset, results_dir, run_name,
                input_shape, output_channels=1):
     hypermodel = HyperUnet(input_shape, output_channels)
 
-    tuner = Hyperband(
+    tuner = BayesianOptimization(
         hypermodel,
-        objective='val_recall',
+        objective=Objective('val_loss', direction="min"),
         max_trials=1,
         directory=results_dir,
-        project_name=run_name)
+        project_name=run_name,
+        seed=3141)
 
     tuner.search(x=train_dataset,
                  epochs=1,
-                 validation_data=val_dataset)
+                 validation_data=val_dataset,
+                 seed=3141)
+
+    tuner.search_space_summary()
 
     tuner.results_summary()
