@@ -33,7 +33,7 @@ class ConvBridgeBlock(tf.keras.layers.Layer):
 
 
 # *================================== W-Net ==================================*
-class hyperWNet(HyperModel):
+class HyperWnet(HyperModel):
     """
     Combines two Mini U-Nets where the prediction of the first Mini U-Net is
     concatenated to the first
