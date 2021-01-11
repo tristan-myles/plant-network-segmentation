@@ -1,5 +1,4 @@
-from kerastuner import HyperModel, Objective
-from kerastuner.tuners import BayesianOptimization
+from kerastuner import HyperModel
 
 import tensorflow as tf
 from tensorflow.keras.layers import (Input, Conv2D, MaxPool2D,
@@ -14,17 +13,25 @@ class HyperUnet(HyperModel):
 
     def build(self, hp):
         # create the search space
-        he_initializer = tf.keras.initializers.he_normal(seed=3141)
-        glorot = tf.keras.initializers.glorot_uniform(seed=3141)
-        initializer = hp.choice("initializer", [he_initializer, glorot])
+        initializer = hp.Choice("initializer", ["he_normal", "glorot_uniform"])
         activation = hp.Choice("activation", ["relu", "selu"])
         filter = hp.Choice("filters", [1, 2, 3, 4, 5])
         kernel_size = hp.Choice("kernel_size", [3, 5])
-        optimizer = hp.Choice("optimizer", [
-            tf.keras.optimizers.Adam(hp.Float('learning_rate', 1e-4, 1e-2,
-                                              sampling='log')),
-            tf.keras.optimizers.SGD(hp.Float('momentum', 0.5, 0.9))])
+        optimizer = hp.Choice("optimizer", ["adam", "sgd"])
         padding = "same"
+
+        if optimizer == "adam":
+            opt = tf.keras.optimizers.Adam(
+                hp.Float('learning_rate', 1e-4, 1e-2, sampling='log'))
+        elif optimizer == "sgd":
+            opt = tf.keras.optimizers.SGD(
+                hp.Float('learning_rate', 1e-4, 1e-2, sampling='log'),
+                momentum=hp.Float('momentum', 0.5, 0.9))
+
+        if initializer == "he_normal":
+            initializer = tf.keras.initializers.he_normal(seed=3141)
+        elif initializer == "glorot_uniform":
+            initializer = tf.keras.initializers.glorot_uniform(seed=3141)
 
         input = Input(shape=self.input_shape)
 
@@ -127,32 +134,10 @@ class HyperUnet(HyperModel):
                                name="Hyper-UNet")
 
         model.compile(
-            optimizer=optimizer,
+            optimizer=opt,
             loss='binary_crossentropy',
-            metrics=['accuracy', tf.keras.metrics.Precision("precision"),
-                     tf.keras.metrics.Recall("recall")]
+            metrics=['accuracy', tf.keras.metrics.Precision(name="precision"),
+                     tf.keras.metrics.Recall(name="recall")]
         )
 
         return model
-
-
-def tune_model(train_dataset, val_dataset, results_dir, run_name,
-               input_shape, output_channels=1):
-    hypermodel = HyperUnet(input_shape, output_channels)
-
-    tuner = BayesianOptimization(
-        hypermodel,
-        objective=Objective('val_loss', direction="min"),
-        max_trials=1,
-        directory=results_dir,
-        project_name=run_name,
-        seed=3141)
-
-    tuner.search(x=train_dataset,
-                 epochs=1,
-                 validation_data=val_dataset,
-                 seed=3141)
-
-    tuner.search_space_summary()
-
-    tuner.results_summary()
