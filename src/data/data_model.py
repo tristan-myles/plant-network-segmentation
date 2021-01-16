@@ -680,7 +680,7 @@ class _Image(ABC):
 
     # *__________________________ loading | linking __________________________*
     def load_image(self):
-        self.image_array = np.array(PIL.Image.open(self.path))
+        self.image_array = cv2.imread(self.path, cv2.IMREAD_UNCHANGED)
 
     def link_me(self, image):
         self.link = image
