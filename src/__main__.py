@@ -22,6 +22,11 @@ pil_logger.setLevel(logging.WARNING)
 mpl_logger = logging.getLogger('matplotlib')
 mpl_logger.setLevel(logging.WARNING)
 
+seed = 3141
+os.environ['PYTHONHASHSEED'] = str(seed)
+random.seed(seed)
+np.random.seed(seed)
+
 
 def main():
     ARGS = parse_arguments()
