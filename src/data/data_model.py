@@ -535,6 +535,12 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
                               shift_256: bool = False,
                               transform_uint8: bool = False,
                               **kwargs):
+        # if shifted by 256 then apply im1 > im2 post processing
+        if shift_256:
+            kwargs["post_process"] = True
+        else:
+            kwargs["post_process"] = False
+
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for leaf in self.image_objects:
                 leaf.predict_leaf(model, x_tile_length, y_tile_length,
@@ -674,7 +680,7 @@ class _Image(ABC):
 
     # *__________________________ loading | linking __________________________*
     def load_image(self):
-        self.image_array = np.array(PIL.Image.open(self.path))
+        self.image_array = cv2.imread(self.path, cv2.IMREAD_UNCHANGED)
 
     def link_me(self, image):
         self.link = image
@@ -880,8 +886,11 @@ class _FullImageMixin:
                 overwrite: bool = False):
 
         if output_path is None:
-            output_folder_path, output_file_name = self.path.rsplit("/", 1)
-            output_folder_path = output_folder_path + "-chips"
+            output_folder_path, _, output_file_name = self.path.rsplit("/",
+                                                                       2)
+            output_folder_path, _, output_file_name = self.path.rsplit("/", 2)
+            output_folder_path = (output_folder_path + "/chips-" +
+                                  self.__class__.__name__.lower())
         else:
             output_folder_path, output_file_name = output_path.rsplit("/",
                                                                       1)

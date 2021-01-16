@@ -38,7 +38,7 @@ def configure_for_performance(ds, batch_size=2, buffer_size=100):
     ds = ds.batch(batch_size)
 
     # number of batches to prefetch
-    ds = ds.prefetch(buffer_size=2)
+    ds = ds.prefetch(buffer_size=batch_size)
     return ds
 
 
@@ -61,7 +61,7 @@ def global_contrast_normalization(img, s=1, lamb=10, eps=10e-8):
 def read_file(img_path):
     img = tf.convert_to_tensor(
         cv2.imread(img_path.decode("utf-8"), cv2.IMREAD_UNCHANGED),
-        dtype=tf.float32)
+        dtype=tf.float16)
 
     return img
 

@@ -90,7 +90,7 @@ def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list="",
             temp_pred_list = []
             temp_mask_list = []
 
-            for leaf, mask in zip(lseq.image_objects. mseqs.image_objects):
+            for leaf, mask in zip(lseq.image_objects, mseqs[i].image_objects):
                 temp_pred_list.append(leaf.prediction_array/255.0)
                 temp_mask_list.append(mask.image_array/255.0)
 
@@ -125,7 +125,8 @@ def classification_report(predictions, masks, save_path=None):
 
             y_pred = y_pred.round()
 
-            tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_pred).ravel()
+            tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_pred,
+                                                      labels=[0,1]).ravel()
             iou = get_iou_score(y_true, y_pred)
 
             # set values to 0 if there are no true positives
@@ -920,7 +921,7 @@ def interactive_prompt():
                 ysd = input(
                     "\n3. What is the y output size and directions?"
                     "\n   Note, for direction, a 1 or -1 indicates to trim"
-                    " either the left or right respectively."
+                    " either the top or bottom respectively."
                     "\n Leave this blank to skip."
                     "\nPlease provide your answer as a tuple, and please"
                     " separate these answers by a ';' (if no trimming is "

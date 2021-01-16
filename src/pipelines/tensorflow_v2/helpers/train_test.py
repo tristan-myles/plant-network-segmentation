@@ -20,6 +20,9 @@ def get_filepath_list(base_dir, leaf_ext, mask_ext, incl_aug=True):
 
     if incl_aug:
         im_type = "augmented"
+        leaf_dir = f"{base_dir}{im_type}/leaves/*.{leaf_ext}"
+        mask_dir = f"{base_dir}{im_type}/masks/*.{mask_ext}"
+
         aug_leaves = get_sorted_list(leaf_dir)
         aug_masks = get_sorted_list(mask_dir)
     else:
@@ -27,6 +30,9 @@ def get_filepath_list(base_dir, leaf_ext, mask_ext, incl_aug=True):
         aug_masks = []
 
     im_type = "no-embolism"
+    leaf_dir = f"{base_dir}{im_type}/leaves/*.{leaf_ext}"
+    mask_dir = f"{base_dir}{im_type}/masks/*.{mask_ext}"
+
     ne_leaves = get_sorted_list(leaf_dir)
     ne_masks = get_sorted_list(mask_dir)
 
@@ -88,14 +94,15 @@ class _TfPnsMixin(Model):
         # Load the state of the old model
         self.load_weights(chkpt_path)
 
-    def predict_tile(self, new_tile, leaf_shape):
+    def predict_tile(self, new_tile, leaf_shape, post_process=True):
         batch_shape = (1,) + leaf_shape
         img = parse_numpy_image(new_tile, batch_shape)
         prediction = self.predict(img)
         prediction = np.reshape(prediction, leaf_shape)
 
-        # temp post-process:
-        prediction[new_tile >= 0] = 0
+        # post-process only if shifted by 256:
+        if post_process:
+            prediction[new_tile >= 0] = 0
         prediction = prediction * 255
 
         return prediction
