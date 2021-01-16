@@ -3,6 +3,8 @@ import logging
 from pathlib import Path
 
 import numpy as np
+import os
+import random
 
 from src.helpers.utilities import classification_report
 from src.pipelines.tensorflow_v2.callbacks.lr_range_test import LRRangeTest
@@ -26,6 +28,15 @@ mpl_logger.setLevel(logging.WARNING)
 
 pil_logger = logging.getLogger('PIL')
 pil_logger.setLevel(logging.WARNING)
+
+seed = 3141
+os.environ['PYTHONHASHSEED'] = str(seed)
+random.seed(seed)
+np.random.seed(seed)
+tf.random.set_seed(seed)
+
+os.environ['TF_DETERMINISTIC_OPS'] = '1'
+os.environ['TF_CUDNN_DETERMINISTIC'] = '1'
 
 
 def main():
