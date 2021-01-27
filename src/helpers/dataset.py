@@ -104,6 +104,9 @@ def move_data(lseqs, mseqs, dest_root_path,
         LOGGER.info(f"Moved {len(embolism_df)} images to "
                     f"{dest_root_path.joinpath(dest_folder, '*')}")
 
+        lseq.unload_extracted_images()
+        mseq.unload_extracted_images()
+
     #Note: All leaf and mask tiles must have the same file extension
     # Get the extension using the filenames of the chips of the last chip
     # paths from the above loop
