@@ -348,11 +348,13 @@ class _CurveSequenceMixin:
     # *__________________ tiling & loading | linking Tiles ___________________*
     def tile_sequence(self, length_x: int, stride_x: int, length_y: int,
                       stride_y: int, output_path: str = None,
-                      overwrite: bool = False):
+                      overwrite: bool = False, memory_saving: bool = True):
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for image in self.image_objects:
                 image.tile_me(length_x, stride_x, length_y, stride_y,
                               output_path, overwrite)
+                if memory_saving:
+                    image.unload_extracted_images()
                 pbar.update(1)
 
     def load_tile_sequence(self, load_image: bool = False,
