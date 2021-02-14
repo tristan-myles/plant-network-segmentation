@@ -851,7 +851,7 @@ class _LeafImage(_Image):
             self.image_array = self.image_array.astype(np.uint8)
 
 
-            # *__________________________________ Mask ___________________________________*
+# *__________________________________ Mask ___________________________________*
 class _MaskImage(_Image):
     """
      Contains implementations of abstract functions from _Image that apply to
