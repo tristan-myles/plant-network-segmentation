@@ -70,17 +70,17 @@ def read_file(img_path, shift_256, transform_uint8):
         # note, can't convert back
         img = img.astype(np.uint8)
 
-    img = tf.convert_to_tensor(img, dtype=tf.float16)
+    img = tf.convert_to_tensor(img, dtype=tf.float32)
 
     return img
 
 
 def parse_numpy_image(img, batch_shape):
     img = tf.convert_to_tensor(img)
-    img = tf.cast(img, tf.float16)
-    img = tf.where(tf.greater_equal(img, tf.cast(0, tf.float16)),
-                   tf.cast(0, tf.float16), img)
-    img = tf.cast(img, tf.float16) / 255.0
+    img = tf.cast(img, tf.float32)
+    img = tf.where(tf.greater_equal(img, tf.cast(0, tf.float32)),
+                   tf.cast(0, tf.float32), img)
+    img = tf.cast(img, tf.float32) / 255.0
     img = tf.reshape(img, batch_shape)
 
     return img
@@ -92,9 +92,9 @@ def parse_image_fc(leaf_shape, mask_shape, train=False, shift_256=False,
         # load the raw data from the file as a string
         img = tf.numpy_function(read_file,
                                 [img_path, shift_256, transform_uint8],
-                                tf.float16)
-        img = tf.where(tf.greater_equal(img, tf.cast(0, tf.float16)),
-                       tf.cast(0, tf.float16), img)
+                                tf.float32)
+        img = tf.where(tf.greater_equal(img, tf.cast(0, tf.float32)),
+                       tf.cast(0, tf.float32), img)
         img = tf.reshape(img, leaf_shape)
 
         # Applying median filter
@@ -114,8 +114,8 @@ def parse_image_fc(leaf_shape, mask_shape, train=False, shift_256=False,
             img = tf.where((tf.equal(mask, 255) & tf.greater_equal(img, 0)),
                            -1e-9, img)
 
-        mask = tf.cast(mask, tf.float16) / 255.0
-        img = tf.cast(img, tf.float16) / 255.0
+        mask = tf.cast(mask, tf.float32) / 255.0
+        img = tf.cast(img, tf.float32) / 255.0
 
         return img, mask
 
