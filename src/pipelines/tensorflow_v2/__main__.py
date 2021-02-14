@@ -138,7 +138,10 @@ def main():
         incl_aug=ANSWERS['incl_aug'], batch_size=ANSWERS['batch_size'],
         buffer_size=ANSWERS['buffer_size'],
         leaf_shape=ANSWERS['leaf_shape'],
-        mask_shape=ANSWERS['mask_shape'], train=True)
+        mask_shape=ANSWERS['mask_shape'],
+        train=True,
+        shift_256=ANSWERS['shift_256'],
+        transform_uint8=ANSWERS['transform_uint8'])
 
     # val
     val_dataset = get_tf_dataset(
@@ -146,7 +149,9 @@ def main():
         leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
         batch_size=ANSWERS['batch_size'],
         buffer_size=None,
-        leaf_shape=ANSWERS['leaf_shape'], mask_shape=ANSWERS['mask_shape'])
+        leaf_shape=ANSWERS['leaf_shape'], mask_shape=ANSWERS['mask_shape'],
+        shift_256=ANSWERS['shift_256'],
+        transform_uint8=ANSWERS['transform_uint8'])
 
     # train model
     _ = model.train(train_dataset, val_dataset, metrics,
@@ -184,7 +189,9 @@ def main():
             batch_size=1,
             buffer_size=None,
             leaf_shape=ANSWERS['leaf_shape'],
-            mask_shape=ANSWERS['mask_shape'])
+            mask_shape=ANSWERS['mask_shape'],
+            shift_256=ANSWERS['shift_256'],
+            transform_uint8=ANSWERS['transform_uint8'])
 
         LOGGER.info("Test set")
         model.evaluate(test_dataset)
