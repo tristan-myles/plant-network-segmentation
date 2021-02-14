@@ -448,7 +448,7 @@ class _CurveSequenceMixin:
                 df = image.get_eda_dataframe(options, disable_pb=True)
                 eda_df_list.append(df)
 
-                self.unload_extracted_images()
+                image.unload_extracted_images()
 
                 pbar.update(1)
 
