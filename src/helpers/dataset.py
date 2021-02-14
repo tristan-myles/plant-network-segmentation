@@ -104,6 +104,9 @@ def move_data(lseqs, mseqs, dest_root_path,
         LOGGER.info(f"Moved {len(embolism_df)} images to "
                     f"{dest_root_path.joinpath(dest_folder, '*')}")
 
+        lseq.unload_extracted_images()
+        mseq.unload_extracted_images()
+
     #Note: All leaf and mask tiles must have the same file extension
     # Get the extension using the filenames of the chips of the last chip
     # paths from the above loop
@@ -157,7 +160,7 @@ def downsample_dataset(dataset_root_path, filename_patterns,
                 f"({round(percent_moved * 100)})% non-embolism images")
     LOGGER.info(f"Ratio of embolism to non-embolism leaves has changed from "
                 f"1:{total_ne_images/len(e_masks)} to "
-                f"1:{chosen_masks/len(e_masks)}")
+                f"1:{len(chosen_masks)/len(e_masks)}")
 
     return [e_leaves, e_masks], [chosen_leaves, chosen_masks]
 

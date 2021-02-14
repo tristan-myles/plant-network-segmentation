@@ -58,31 +58,43 @@ def global_contrast_normalization(img, s=1, lamb=10, eps=10e-8):
 
 
 # *------------------------------ image parsing ------------------------------*
-def read_file(img_path):
-    img = tf.convert_to_tensor(
-        cv2.imread(img_path.decode("utf-8"), cv2.IMREAD_UNCHANGED),
-        dtype=tf.float16)
+def read_file(img_path, shift_256, transform_uint8):
+    img = cv2.imread(img_path.decode("utf-8"), cv2.IMREAD_UNCHANGED)
+
+    if shift_256:
+        # if the image was shifted by 256 when saved, then shift back to
+        # restore negative values
+        img = img.astype(np.int16) - 256
+    elif transform_uint8:
+        # if a shifted image was provided convert back to a uint8 to view
+        # note, can't convert back
+        img = img.astype(np.uint8)
+
+    img = tf.convert_to_tensor(img, dtype=tf.float32)
 
     return img
 
 
 def parse_numpy_image(img, batch_shape):
     img = tf.convert_to_tensor(img)
-    img = tf.cast(img, tf.float16)
-    img = tf.where(tf.greater_equal(img, tf.cast(0, tf.float16)),
-                   tf.cast(0, tf.float16), img)
-    img = tf.cast(img, tf.float16) / 255.0
+    img = tf.cast(img, tf.float32)
+    img = tf.where(tf.greater_equal(img, tf.cast(0, tf.float32)),
+                   tf.cast(0, tf.float32), img)
+    img = tf.cast(img, tf.float32) / 255.0
     img = tf.reshape(img, batch_shape)
 
     return img
 
 
-def parse_image_fc(leaf_shape, mask_shape, train=False):
+def parse_image_fc(leaf_shape, mask_shape, train=False, shift_256=False,
+                   transform_uint8=False):
     def parse_image(img_path: str, mask_path: str):
         # load the raw data from the file as a string
-        img = tf.numpy_function(read_file, [img_path], tf.float16)
-        img = tf.where(tf.greater_equal(img, tf.cast(0, tf.float16)),
-                       tf.cast(0, tf.float16), img)
+        img = tf.numpy_function(read_file,
+                                [img_path, shift_256, transform_uint8],
+                                tf.float32)
+        img = tf.where(tf.greater_equal(img, tf.cast(0, tf.float32)),
+                       tf.cast(0, tf.float32), img)
         img = tf.reshape(img, leaf_shape)
 
         # Applying median filter
@@ -102,8 +114,8 @@ def parse_image_fc(leaf_shape, mask_shape, train=False):
             img = tf.where((tf.equal(mask, 255) & tf.greater_equal(img, 0)),
                            -1e-9, img)
 
-        mask = tf.cast(mask, tf.float16) / 255.0
-        img = tf.cast(img, tf.float16) / 255.0
+        mask = tf.cast(mask, tf.float32) / 255.0
+        img = tf.cast(img, tf.float32) / 255.0
 
         return img, mask
 
@@ -182,6 +194,8 @@ def parse_arguments() -> argparse.Namespace:
 def print_user_input(answers):
     print(f"\nYour chosen configuration is:\n"
           f"1.  {'Training base directory':<40}: {answers['train_base_dir']}\n"
+          f"    {'Shift 256':<40}: {answers['shift_256']}\n"
+          f"    {'Transform uint8':<40}: {answers['transform_uint8']}\n"
           f"2.  {'Validation base directory':<40}: {answers['val_base_dir']}\n"
           f"3.  {'Leaf, Mask extension':<40}: {answers['leaf_ext']},"
           f" {answers['mask_ext']}\n"
@@ -216,6 +230,27 @@ def interactive_prompt():
                                    " / at the end of the directory: ")
 
             options_list.remove(1)
+
+            print("\nWhat format should the images be loaded in?\n"
+                  "Note: this also applies to validation and test images\n"
+                  "   Options:\n"
+                  "   0: uint8\n"
+                  "   1: shifted -256 (don't chose this option unless "
+                  "images were shifted by +256 when saved)")
+
+            leaves_format = input("Please choose a number: ")
+            if leaves_format == "":
+                leaves_format = None
+            else:
+                leaves_format = int(leaves_format)
+
+            if leaves_format:
+                transform_uint8 = False
+                shift_256 = False
+            if leaves_format == 0:
+                transform_uint8 = True
+            elif leaves_format == 1:
+                shift_256 = True
 
         if 2 in options_list:
             val_base_dir = input("\n2. Where is the base directory of your"
@@ -366,6 +401,8 @@ def interactive_prompt():
             options_list.remove(17)
 
         answers = {"train_base_dir": train_base_dir,
+                   "transform_uint8": transform_uint8,
+                   "shift_256": shift_256,
                    "val_base_dir": val_base_dir,
                    "leaf_ext": leaf_ext, "mask_ext": mask_ext,
                    "incl_aug": incl_aug, "mask_shape": mask_shape,
