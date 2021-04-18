@@ -57,10 +57,10 @@ class MiniUnet(tf.keras.Model):
         self.bridge1 = ConvBridgeBlock(16)
         self.concat1 = Concatenate()
 
-        self.trans_conv2 = Conv2DTranspose(filters=32, kernel_size=2,
+        self.trans_conv2 = Conv2DTranspose(filters=8, kernel_size=2,
                                            strides=2, padding='same')
-        self.res_up2 = ResBlock(32)
-        self.bridge2 = ConvBridgeBlock(32)
+        self.res_up2 = ResBlock(8)
+        self.bridge2 = ConvBridgeBlock(8)
         self.concat2 = Concatenate()
 
         # Output
@@ -151,4 +151,26 @@ class WNet(tf.keras.Model, _TfPnsMixin):
     def model(self, shape=(512, 512, 1)):
         x = Input(shape=shape)
         return tf.keras.Model(inputs=[x], outputs=self.call(x))
+
+    def print_all_layers(self):
+        model_layers = self.model().layers
+
+        for layer in model_layers:
+            try:
+                for l in layer.layers:
+                    print(l)
+            except:
+                print(layer)
+
+    def get_all_layers(self):
+        model_layers = self.model().layers
+        layers = []
+        for layer in model_layers:
+            try:
+                for l in layer.layers:
+                    layers.append(l)
+            except:
+                layers.append(model_layers[-1])
+
+        return layers
 # *===========================================================================*

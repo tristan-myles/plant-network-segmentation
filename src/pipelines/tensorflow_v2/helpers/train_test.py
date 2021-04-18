@@ -1,6 +1,6 @@
 import tensorflow as tf
-
-from src.data.data_model import *
+import numpy as np
+import logging
 from src.model.model import Model
 from src.pipelines.tensorflow_v2.helpers.utilities import (
     get_sorted_list, configure_for_performance, parse_image_fc,

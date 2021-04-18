@@ -34,6 +34,7 @@ class ResBlock(tf.keras.Model):
 
         if self.decode or self.flag:
             # 1x1 convolution
+            # using for input that's been activated already
             self.conv3 = Conv2D(channels, 1, stride)
             self.bn3 = BatchNormalization()
 
@@ -46,6 +47,7 @@ class ResBlock(tf.keras.Model):
         x1 = self.bn2(x1)
 
         # Matching dims (i.e. projection shortcut)
+        # No need to activate
         if self.flag or self.decode:
             x = self.conv3(x)
             x = self.bn3(x)
@@ -65,6 +67,7 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
         he_initializer = tf.keras.initializers.he_normal(seed=3141)
 
         # Contracting
+        # valid padding since down sampling
         self.down_conv1 = Conv2D(filters=64, kernel_size=7, strides=2,
                                  padding='same',
                                  kernel_initializer=he_initializer)
@@ -92,8 +95,7 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
         self.down_block_5_2 = ResBlock(512)
         self.down_block_5_3 = ResBlock(512)
 
-        self.conv_up1 = Conv2DTranspose(filters=256, kernel_size=1, strides=2,
-                                        padding='valid',
+        self.conv_up1 = Conv2DTranspose(filters=256, kernel_size=2, strides=2,
                                         kernel_initializer=he_initializer)
         # default axis is -1 => the filter axis
         self.conv_up_concat_1 = Concatenate()
@@ -103,20 +105,22 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
         self.up_block_1_3 = ResBlock(256)
         self.up_block_1_4 = ResBlock(256)
         self.up_block_1_5 = ResBlock(256)
+        self.up_block_1_6 = ResBlock(256)
+
 
         # Layer 2
-        self.conv_up2 = Conv2DTranspose(filters=128, kernel_size=1, strides=2,
-                                        padding='valid',
+        self.conv_up2 = Conv2DTranspose(filters=128, kernel_size=2, strides=2,
                                         kernel_initializer=he_initializer)
         self.conv_up_concat_2 = Concatenate()
 
         self.up_block_2_1 = ResBlock(128, decode=True)
         self.up_block_2_2 = ResBlock(128)
         self.up_block_2_3 = ResBlock(128)
+        self.up_block_2_4 = ResBlock(128)
+
 
         # Layer 3
-        self.conv_up3 = Conv2DTranspose(filters=64, kernel_size=1, strides=2,
-                                        padding='same',
+        self.conv_up3 = Conv2DTranspose(filters=64, kernel_size=2, strides=2,
                                         kernel_initializer=he_initializer)
         self.conv_up_concat_3 = Concatenate()
 
@@ -125,19 +129,19 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
         self.up_block_3_3 = ResBlock(64)
 
         # Layer 4
-        self.conv_up4 = Conv2DTranspose(filters=64, kernel_size=3, strides=2,
-                                        padding='same',
+        self.conv_up4 = Conv2DTranspose(filters=64, kernel_size=2, strides=2,
                                         kernel_initializer=he_initializer)
 
         self.conv_up_concat_4 = Concatenate()
-        self.up_conv4 = Conv2D(filters=64, kernel_size=3, strides=2,
+        # Activation corresponding to first layer
+        self.up_conv4 = Conv2D(filters=64, kernel_size=7, strides=1,
                                padding='same',
                                kernel_initializer=he_initializer)
         self.up_bn = BatchNormalization()
 
-        # Think about whether this needs to be activated
-        self.conv_up5 = Conv2DTranspose(filters=64, kernel_size=7, strides=2,
-                                        padding='same',
+        # Think about whether this needs to be activated: No since activation
+        # corresponding to this first layer is dealt with above
+        self.conv_up5 = Conv2DTranspose(filters=64, kernel_size=2, strides=2,
                                         kernel_initializer=he_initializer)
         self.output_layer = Conv2D(output_channels, 1, strides=1,
                                    padding='same',
@@ -177,12 +181,14 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
         x = self.up_block_1_3(x)
         x = self.up_block_1_4(x)
         x = self.up_block_1_5(x)
+        x = self.up_block_1_6(x)
 
         x = self.conv_up2(x)
         x = self.conv_up_concat_2([x, down_3_4])
         x = self.up_block_2_1(x)
         x = self.up_block_2_2(x)
         x = self.up_block_2_3(x)
+        x = self.up_block_2_4(x)
 
         x = self.conv_up3(x)
         x = self.conv_up_concat_3([x, down_2_3])
@@ -192,10 +198,12 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
 
         x = self.conv_up4(x)
         x = self.conv_up_concat_4([x, down_conv1])
+        x = self.up_conv4(x)
         x = self.up_bn(x)
         x = tf.nn.relu(x)
 
-        # Think about this.....
+        # For each layer with a stride of 2 there will be both an activation
+        # and a transposed convolution (with no activation)
         x = self.conv_up5(x)
 
         x = self.output_layer(x)

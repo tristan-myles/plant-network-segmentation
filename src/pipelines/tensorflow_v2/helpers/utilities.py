@@ -7,6 +7,9 @@ import numpy as np
 import tensorflow as tf
 import tensorflow_addons as tfa
 
+from kerastuner import Objective
+from kerastuner.tuners import BayesianOptimization
+
 
 # *================================= general =================================*
 def save_compilation_dict(answers, lr, save_path):
@@ -40,6 +43,31 @@ def configure_for_performance(ds, batch_size=2, buffer_size=100):
     # number of batches to prefetch
     ds = ds.prefetch(buffer_size=batch_size)
     return ds
+
+
+def tune_model(hyperModel, train_dataset, val_dataset, results_dir, run_name,
+               input_shape, output_channels=1):
+    model = hyperModel(input_shape, output_channels)
+
+    tuner = BayesianOptimization(
+        model,
+        objective=Objective('val_loss', direction="min"),
+        max_trials=10,
+        directory=results_dir,
+        project_name=run_name,
+        seed=3141)
+
+    tuner.search(
+        x=train_dataset,
+        epochs=30,
+        validation_data=val_dataset,
+        callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',
+                                                    patience=3,
+                                                    min_delta=0.001)])
+
+    tuner.search_space_summary()
+
+    tuner.results_summary()
 
 
 # *============================ image processing =============================*
