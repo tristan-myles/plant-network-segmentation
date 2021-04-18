@@ -375,24 +375,30 @@ def interactive_prompt():
 
             options_list.remove(6)
 
-        if operation == 1:
             if 7 in options_list:
+                print("\n7. Please choose which model you would like to use\n"
+                      "Options:\n"
+                      "0: Vanilla U-Net\n"
+                      "1: U-Net with ResNet backbone \n"
+                      "2: W-Net\n")
+                model_choice = int(input("Please choose the relevant model"
+                                         " number: "))
+
+                output_dict["model_choice"] = model_choice
+
+                options_list.remove(7)
+
+        if operation == 1:
+            if 8 in options_list:
                 run_name = input(
-                    "\n7. Please enter the run name, this will be the name "
+                    "\n8. Please enter the run name, this will be the name "
                     "used to save your hyperparameter tuning output: ")
 
                 output_dict["run_name"] = run_name
 
-                options_list.remove(7)
+                options_list.remove(8)
 
         if operation == 2:
-            if 7 in options_list:
-                batch_size = int(input("\n7. Please provide a batch size: "))
-
-                output_dict["batch_size"] = batch_size
-
-                options_list.remove(7)
-
             if 8 in options_list:
                 buffer_size = int(input(
                     "\n8. Please provide a buffer size\nNote,"
@@ -404,15 +410,9 @@ def interactive_prompt():
                 options_list.remove(8)
 
             if 9 in options_list:
-                print("\n9. Please choose which model you would like to use\n"
-                      "Options:\n"
-                      "0: Vanilla U-Net\n"
-                      "1: U-Net with ResNet backbone \n"
-                      "2: W-Net\n")
-                model_choice = int(input("Please choose the relevant model"
-                                         " number: "))
+                batch_size = int(input("\n9. Please provide a batch size: "))
 
-                output_dict["model_choice"] = model_choice
+                output_dict["batch_size"] = batch_size
 
                 options_list.remove(9)
 
