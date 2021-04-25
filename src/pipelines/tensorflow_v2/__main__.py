@@ -181,19 +181,20 @@ def main():
         lr = model.optimizer.lr.numpy()
         save_compilation_dict(ANSWERS, lr, model_save_path)
 
-        # load the best model and check that it has the same validation recall
-        # as the best val recall achieved during training
-        del model
-        if ANSWERS["model_choice"] == 0:
-            model = Unet(1)
-        elif ANSWERS["model_choice"] == 1:
-            model = UnetResnet(1)
-        else:
-            model = WNet()
+        if 4 in ANSWERS["callback_choices"]:
+            # load the best model and check that it has the same validation
+            # recall as the best val recall achieved during training
+            del model
+            if ANSWERS["model_choice"] == 0:
+                model = Unet(1)
+            elif ANSWERS["model_choice"] == 1:
+                model = UnetResnet(1)
+            else:
+                model = WNet()
 
-        # load model with best val recall
-        model.load_workaround(ANSWERS["mask_shape"], ANSWERS['leaf_shape'],
-                              loss, opt(lr), metrics, model_save_path)
+            # load model with best val recall
+            model.load_workaround(ANSWERS["mask_shape"], ANSWERS['leaf_shape'],
+                                  loss, opt(lr), metrics, model_save_path)
 
         # check that recall is the same as the best val recall during training
         LOGGER.info("Confirming that best model saved correctly: ")
