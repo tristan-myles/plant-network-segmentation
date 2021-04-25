@@ -71,6 +71,14 @@ def tune_model(hyperModel, train_dataset, val_dataset, results_dir, run_name,
     tuner.results_summary()
 
 
+def save_lrt_results(lr_range_test, save_path):
+    lrt_dict = {"smooth loss": lr_range_test.smoothed_losses,
+                "batch num": lr_range_test.batch_nums,
+                "log lr": lr_range_test.batch_log_lr}
+    save_path = save_path + "_lrt_results.json"
+    with open(save_path, 'w') as file:
+        json.dump(lrt_dict, file)
+
 # *============================ image processing =============================*
 # *----------------------------- pre-processing ------------------------------*
 def global_contrast_normalization(img, s=1, lamb=10, eps=10e-8):

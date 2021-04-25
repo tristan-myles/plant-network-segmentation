@@ -15,7 +15,8 @@ from src.pipelines.tensorflow_v2.helpers.utilities import (
                                                         interactive_prompt,
                                                         im2_lt_im1,
                                                         save_compilation_dict,
-                                                        tune_model)
+                                                        tune_model,
+                                                        save_lrt_results)
 from src.pipelines.tensorflow_v2.losses.custom_losses import *
 from src.pipelines.tensorflow_v2.models.unet import Unet
 from src.pipelines.tensorflow_v2.models.hyper_unet import HyperUnet
@@ -180,6 +181,11 @@ def main():
         # save the compilation dict once training is complete
         lr = model.optimizer.lr.numpy()
         save_compilation_dict(ANSWERS, lr, model_save_path)
+
+        if 0 in ANSWERS['callback_choices']:
+            lrt_save_path = f"{OUTPUTS_DIR}lrt/"f"{ANSWERS['run_name']}"
+            Path(lrt_save_path ).mkdir(parents=True, exist_ok=True)
+            save_lrt_results(lr_range_test, lrt_save_path)
 
         if 4 in ANSWERS["callback_choices"]:
             # load the best model and check that it has the same validation
