@@ -13,7 +13,6 @@ from src.pipelines.tensorflow_v2.helpers.train_test import get_tf_dataset
 from src.pipelines.tensorflow_v2.helpers.utilities import (
                                                         parse_arguments,
                                                         interactive_prompt,
-                                                        format_input,
                                                         im2_lt_im1,
                                                         save_compilation_dict,
                                                         tune_model)
@@ -53,8 +52,6 @@ def main():
     elif ARGS.json_path:
         with open(ARGS.json_path, "r") as JSON_FILE:
             ANSWERS = json.load(JSON_FILE)
-
-    ANSWERS = format_input(ANSWERS)
 
     OUTPUTS_DIR = "data/run_data/"
 
@@ -164,8 +161,8 @@ def main():
             tf.keras.metrics.BinaryAccuracy(name='accuracy'),
             tf.keras.metrics.Precision(name='precision'),
             tf.keras.metrics.Recall(name='recall'),
-            tf.keras.metrics.AUC(name='auc'),
-        ])
+            tf.keras.metrics.AUC(name='auc', curve="PR"),
+            tf.keras.metrics.MeanIoU(2, name="IoU")])
 
         if ANSWERS["metric_choices"][0] == len(METRICS):
             metrics = list(METRICS)

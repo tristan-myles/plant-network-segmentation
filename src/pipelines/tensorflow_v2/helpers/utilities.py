@@ -362,7 +362,8 @@ def interactive_prompt():
                                "separating"
                                " each number by a space: ")
 
-            output_dict["leaf_shape"] = leaf_shape
+            output_dict["leaf_shape"] = tuple(
+                [int(size) for size in leaf_shape.split()])
 
             options_list.remove(5)
 
@@ -371,7 +372,8 @@ def interactive_prompt():
                                "separating"
                                " each number by a space: ")
 
-            output_dict["mask_shape"] = mask_shape
+            output_dict["mask_shape"] = tuple(
+                [int(size) for size in mask_shape.split()])
 
             options_list.remove(6)
 
@@ -384,38 +386,38 @@ def interactive_prompt():
                 model_choice = int(input("Please choose the relevant model"
                                          " number: "))
 
-                output_dict["model_choice"] = model_choice
+                output_dict["model_choice"] = int(model_choice)
 
                 options_list.remove(7)
 
-        if operation == 1:
-            if 8 in options_list:
-                run_name = input(
-                    "\n8. Please enter the run name, this will be the name "
-                    "used to save your hyperparameter tuning output: ")
-
-                output_dict["run_name"] = run_name
-
-                options_list.remove(8)
-
-        if operation == 2:
             if 8 in options_list:
                 buffer_size = int(input(
                     "\n8. Please provide a buffer size\nNote,"
                     " this influences the extent to which the data is "
                     "shuffled: "))
 
-                output_dict["buffer_size"] = buffer_size
+                output_dict["buffer_size"] = int(buffer_size)
 
                 options_list.remove(8)
 
             if 9 in options_list:
                 batch_size = int(input("\n9. Please provide a batch size: "))
 
-                output_dict["batch_size"] = batch_size
+                output_dict["batch_size"] = int(batch_size)
 
                 options_list.remove(9)
 
+        if operation == 1:
+            if 10 in options_list:
+                run_name = input(
+                    "\n10. Please enter the run name, this will be the name "
+                    "used to save your hyperparameter tuning output: ")
+
+                output_dict["run_name"] = run_name
+
+                options_list.remove(10)
+
+        if operation == 2:
             if 10 in options_list:
                 print("\n10. Please choose which loss function you would like"
                       " to use\n"
@@ -427,7 +429,7 @@ def interactive_prompt():
                 loss_choice = int(input("\nPlease choose the relevant loss"
                                         " function number: "))
 
-                output_dict["loss_choice"] = loss_choice
+                output_dict["loss_choice"] = int(loss_choice)
 
                 options_list.remove(10)
 
@@ -440,22 +442,22 @@ def interactive_prompt():
                 opt_choice = int(input("Please choose the relevant optimiser"
                                        " number: "))
 
-                output_dict["opt_choice"] = opt_choice
+                output_dict["opt_choice"] = int(opt_choice)
 
                 options_list.remove(11)
 
             if 12 in options_list:
                 lr = float(input("\n12. Please provide a learning rate: "))
 
-                output_dict["lr"] = lr
+                output_dict["lr"] = float(lr)
 
                 options_list.remove(12)
 
             if 13 in options_list:
-                epochs = float(input("\n13. Please provide the number of epochs"
-                                     " to run for: "))
+                epochs = float(input(
+                    "\n13. Please provide the number of epochs to run for: "))
 
-                output_dict["epochs"] = epochs
+                output_dict["epochs"] = int(epochs)
 
                 options_list.remove(13)
 
@@ -473,7 +475,8 @@ def interactive_prompt():
                 callback_choices = input("Choose the relevant number(s) separated"
                                          " by a space: ")
 
-                output_dict["callback_choices"] = callback_choices
+                output_dict["callback_choices"] = [
+                    int(size) for size in callback_choices.split()]
 
                 options_list.remove(14)
 
@@ -489,13 +492,14 @@ def interactive_prompt():
                       "5: Precision\n"
                       "6: Recall\n"
                       "7: AUC (ROC Curve) \n"
-                      "8: All")
+                      "8: IOU\n" 
+                      "9: All")
 
                 metric_choices = input(
                     "Choose the relevant number(s) separated by a space: ")
 
-                output_dict["metric_choices"] = metric_choices
-
+                output_dict["metric_choices"] = [
+                    int(size) for size in metric_choices.split()]
                 options_list.remove(15)
 
             if 16 in options_list:
@@ -545,26 +549,4 @@ def interactive_prompt():
 
     return output_dict
 
-
-def format_input(answers_dict):
-    to_tuple_keys = ["leaf_shape", "mask_shape"]
-
-    for key in to_tuple_keys:
-        answers_dict[key] = tuple(
-            [int(size) for size in answers_dict[key].split()])
-
-    to_list_keys = ["metric_choices", "callback_choices"]
-
-    for key in to_list_keys:
-        answers_dict[key] = [int(size) for size in answers_dict[key].split()]
-
-    to_int_keys = ["batch_size", "buffer_size", "model_choice",
-                   "loss_choice", "opt_choice", "epochs"]
-
-    for key in to_int_keys:
-        answers_dict[key] = int(answers_dict[key])
-
-    answers_dict["lr"] = float(answers_dict["lr"])
-
-    return answers_dict
 # *===========================================================================*
