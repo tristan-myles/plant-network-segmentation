@@ -1,6 +1,7 @@
 import argparse
 import json
 from glob import glob
+import pprint
 
 import cv2
 import numpy as np
@@ -69,6 +70,14 @@ def tune_model(hyperModel, train_dataset, val_dataset, results_dir, run_name,
 
     tuner.results_summary()
 
+
+def save_lrt_results(lr_range_test, save_path):
+    lrt_dict = {"smooth loss": lr_range_test.smoothed_losses,
+                "batch num": lr_range_test.batch_nums,
+                "log lr": lr_range_test.batch_log_lr}
+    save_path = save_path + "_lrt_results.json"
+    with open(save_path, 'w') as file:
+        json.dump(lrt_dict, file)
 
 # *============================ image processing =============================*
 # *----------------------------- pre-processing ------------------------------*
@@ -243,19 +252,58 @@ def print_user_input(answers):
           f"17. {'Test directory':<40}: {answers['test_dir']}\n")
 
 
+def print_options_dict(output_dict):
+    print(f"\nYour chosen configuration is:\n")
+    for i, (key, val) in enumerate(output_dict.items()):
+        if i == 0:
+            num = "  "
+        elif i == 1:
+            num = str(i) + "."
+        elif i == 2 or i == 3:
+            num = "  "
+        else:
+            num = str(i-2) + "."
+
+        if isinstance(val, dict):
+            print_str = "\n" + pprint.pformat(val) + "\n"
+        else:
+            print_str = val
+
+        print(f"{num} {(' '.join(key.split('_'))).capitalize() :<40}:"
+              f" {print_str}")
+
+
 def interactive_prompt():
     happy = False
-    # list options = 1 - 17
-    options_list = set(range(1, 18))
+    options_list = {-1}
 
     print("Hello and welcome to plant-network-segmentation's training module"
           "\nA few inputs will be required from you to begin...")
 
     while not happy:
+        if -1 in options_list:
+            output_dict = {}
+
+            print("* What action would you like to take?\n"
+                  "-------------------------------------\n"
+                  " 1. Tuning\n"
+                  " 2. Training"
+                  )
+
+            operation = int(input("Please select your operation: "))
+            output_dict["which"] = ["tuning", "training"][operation-1]
+
+            # list options = 1 - 18
+            options_list.update(range(1, 19))
+
+            options_list.remove(-1)
+
         if 1 in options_list:
-            train_base_dir = input("\n1. Where is the base directory of your"
+            train_base_dir = input("\n 1. Where is the base directory of your"
                                    " training images?\nNote, please include a"
                                    " / at the end of the directory: ")
+
+            output_dict["train_base_dir"] = train_base_dir
 
             options_list.remove(1)
 
@@ -280,24 +328,34 @@ def interactive_prompt():
             elif leaves_format == 1:
                 shift_256 = True
 
+            output_dict["transform_uint8"] = transform_uint8
+            output_dict["shift_256"] = shift_256
+
         if 2 in options_list:
-            val_base_dir = input("\n2. Where is the base directory of your"
+            val_base_dir = input("\n 2. Where is the base directory of your"
                                  " validation images?\nNote, please include a"
                                  " / at the end of the directory: ")
+
+            output_dict["val_base_dir"] = val_base_dir
 
             options_list.remove(2)
 
         if 3 in options_list:
-            leaf_ext, mask_ext = input(
-                "\n3. What are the the leaf and mask extensions respectively?"
-                "\nPlease provide the leaf extension first and separate your"
-                " answers with a space\nNote, not . should be included in the"
-                " ext name, e.g. \"png\": ").split()
+            leaf_ext = input("\n 3. What is the leaf extension: ")
+
+            output_dict["leaf_ext"] = leaf_ext
 
             options_list.remove(3)
 
         if 4 in options_list:
-            print("\n4. Should augmented images be included in the training "
+            mask_ext = input(
+                "\n 4. What is the mask extension: ")
+            output_dict["mask_ext"] = mask_ext
+
+            options_list.remove(4)
+
+        if 5 in options_list:
+            print("\n 5. Should augmented images be included in the training "
                   "set?\n"
                   "Options:\n"
                   "0: False\n"
@@ -305,36 +363,32 @@ def interactive_prompt():
             incl_aug = input("Please choose a number: ")
             incl_aug = int(incl_aug) == 1
 
-            options_list.remove(4)
-
-        if 5 in options_list:
-            leaf_shape = input("\n5. Please enter the leaf image shape, "
-                               "separating"
-                               " each number by a space: ")
+            output_dict["incl_aug"] = incl_aug
 
             options_list.remove(5)
 
         if 6 in options_list:
-            mask_shape = input("\n6. Please enter the mask image shape, "
+            leaf_shape = input("\n 6. Please enter the leaf image shape, "
                                "separating"
                                " each number by a space: ")
+
+            output_dict["leaf_shape"] = tuple(
+                [int(size) for size in leaf_shape.split()])
 
             options_list.remove(6)
 
         if 7 in options_list:
-            batch_size = int(input("\n7. Please provide a batch size: "))
+            mask_shape = input("\n 7. Please enter the mask image shape, "
+                               "separating"
+                               " each number by a space: ")
+
+            output_dict["mask_shape"] = tuple(
+                [int(size) for size in mask_shape.split()])
 
             options_list.remove(7)
 
         if 8 in options_list:
-            buffer_size = int(input(
-                "\n8. Please provide a buffer size\nNote, this influences the"
-                " extent to which the data is shuffled: "))
-
-            options_list.remove(8)
-
-        if 9 in options_list:
-            print("\n9. Please choose which model you would like to use\n"
+            print("\n 8. Please choose which model you would like to use\n"
                   "Options:\n"
                   "0: Vanilla U-Net\n"
                   "1: U-Net with ResNet backbone \n"
@@ -342,111 +396,150 @@ def interactive_prompt():
             model_choice = int(input("Please choose the relevant model"
                                      " number: "))
 
+            output_dict["model_choice"] = int(model_choice)
+
+            options_list.remove(8)
+
+        if 9 in options_list:
+            buffer_size = int(input(
+                "\n 9. Please provide a buffer size\nNote,"
+                " this influences the extent to which the data is "
+                "shuffled: "))
+
+            output_dict["buffer_size"] = int(buffer_size)
+
             options_list.remove(9)
 
         if 10 in options_list:
-            print("\n10. Please choose which loss function you would like to "
-                  "use\n"
-                  "Options:\n"
-                  "0: Balance cross-entropy\n"
-                  "1: Weighted cross-entropy \n"
-                  "2: Focal loss\n"
-                  "3: Soft dice loss\n")
-            loss_choice = int(input("\nPlease choose the relevant loss"
-                                    " function number: "))
+            batch_size = int(input("\n10. Please provide a batch size: "))
+
+            output_dict["batch_size"] = int(batch_size)
 
             options_list.remove(10)
 
-        if 11 in options_list:
-            print("\n11. Please choose which optimiser you would like to use\n"
-                  "Options:\n"
-                  "0: Adam\n"
-                  "1: SGD with momentum \n")
-            opt_choice = int(input("Please choose the relevant optimiser"
-                                   " number: "))
+        if operation == 1:
+            if 11 in options_list:
+                run_name = input(
+                    "\n11. Please enter the run name, this will be the name "
+                    "used to save your hyperparameter tuning output: ")
 
-            options_list.remove(11)
+                output_dict["run_name"] = run_name
 
-        if 12 in options_list:
-            lr = float(input("\n12. Please provide a learning rate: "))
+                options_list.remove(11)
 
-            options_list.remove(12)
+        if operation == 2:
+            if 11 in options_list:
+                print("\n11. Please choose which loss function you would like"
+                      " to use\n"
+                      "Options:\n"
+                      "0: Balance cross-entropy\n"
+                      "1: Weighted cross-entropy \n"
+                      "2: Focal loss\n"
+                      "3: Soft dice loss\n")
+                loss_choice = int(input("\nPlease choose the relevant loss"
+                                        " function number: "))
 
-        if 13 in options_list:
-            epochs = float(input("\n13. Please provide the number of epochs"
-                                 " to run for: "))
+                output_dict["loss_choice"] = int(loss_choice)
 
-            options_list.remove(13)
+                options_list.remove(11)
 
-        if 14 in options_list:
-            print("\n13. Please choose which callbacks you would like to use\n"
-                  "Options:\n"
-                  "0: Learning rate range test\n"
-                  "1: 1cycle policy\n"
-                  "2: Early stopping\n"
-                  "3: CSV Logger\n"
-                  "4: Model Checkpoint\n"
-                  "5: Tensor Board\n"
-                  "6: All\n")
-            callback_choices = input("Choose the relevant number(s) separated"
-                                     " by a space: ")
+            if 12 in options_list:
+                print("\n12. Please choose which optimiser you would like"
+                      " to use\n"
+                      "Options:\n"
+                      "0: Adam\n"
+                      "1: SGD with momentum \n")
+                opt_choice = int(input("Please choose the relevant optimiser"
+                                       " number: "))
 
-            options_list.remove(14)
+                output_dict["opt_choice"] = int(opt_choice)
 
-        if 15 in options_list:
-            print("\n14. Please choose which metrics you would like to "
-                  "report\n"
-                  "Options:\n"
-                  "0: True Positives\n"
-                  "1: False Positives\n"
-                  "2: True Negatives\n"
-                  "3: False Negatives\n"
-                  "4: Accuracy\n"
-                  "5: Precision\n"
-                  "6: Recall\n"
-                  "7: AUC (ROC Curve) \n"
-                  "8: All")
+                options_list.remove(12)
 
-            metric_choices = input("Choose the relevant number(s) separated by"
-                                   " a space: ")
+            if 13 in options_list:
+                lr = float(input("\n13. Please provide a learning rate: "))
 
-            options_list.remove(15)
+                output_dict["lr"] = float(lr)
 
-        if 16 in options_list:
-            run_name = input("\n15. Please enter the run name, this will be"
-                             " the name used to save your callback output"
-                             " (if applicable): ")
+                options_list.remove(13)
 
-            options_list.remove(16)
+            if 14 in options_list:
+                epochs = float(input(
+                    "\n4. Please provide the number of epochs to run for: "))
 
-        if 17 in options_list:
-            test_dir = input("\n16. If you would like to evaluate a test"
-                             " set please provide test directory. To"
-                             " skip this step leave this answer"
-                             " blank.\nNote, if providing a directory, "
-                             "please include a / at the end : ")
+                output_dict["epochs"] = int(epochs)
 
-            options_list.remove(17)
+                options_list.remove(14)
 
-        answers = {"train_base_dir": train_base_dir,
-                   "transform_uint8": transform_uint8,
-                   "shift_256": shift_256,
-                   "val_base_dir": val_base_dir,
-                   "leaf_ext": leaf_ext, "mask_ext": mask_ext,
-                   "incl_aug": incl_aug, "mask_shape": mask_shape,
-                   "leaf_shape": leaf_shape, "batch_size": batch_size,
-                   "buffer_size": buffer_size, "model_choice": model_choice,
-                   "loss_choice": loss_choice, "opt_choice": opt_choice,
-                   "lr": lr, "epochs": epochs, "run_name": run_name,
-                   "callback_choices": callback_choices, "test_dir": test_dir,
-                   "metric_choices": metric_choices}
+            if 15 in options_list:
+                print("\n15. Please choose which callbacks you would like"
+                      " to use\n"
+                      "Options:\n"
+                      "0: Learning rate range test\n"
+                      "1: 1cycle policy\n"
+                      "2: Early stopping\n"
+                      "3: CSV Logger\n"
+                      "4: Model Checkpoint\n"
+                      "5: Tensor Board\n"
+                      "6: All\n")
+                callback_choices = input("Choose the relevant number(s) separated"
+                                         " by a space: ")
 
-        print_user_input(answers)
+                output_dict["callback_choices"] = [
+                    int(size) for size in callback_choices.split()]
+
+                options_list.remove(15)
+
+            if 16 in options_list:
+                print("\n16. Please choose which metrics you would like to "
+                      "report\n"
+                      "Options:\n"
+                      "0: True Positives\n"
+                      "1: False Positives\n"
+                      "2: True Negatives\n"
+                      "3: False Negatives\n"
+                      "4: Accuracy\n"
+                      "5: Precision\n"
+                      "6: Recall\n"
+                      "7: AUC (ROC Curve) \n"
+                      "8: IOU\n" 
+                      "9: All")
+
+                metric_choices = input(
+                    "Choose the relevant number(s) separated by a space: ")
+
+                output_dict["metric_choices"] = [
+                    int(size) for size in metric_choices.split()]
+                options_list.remove(16)
+
+            if 17 in options_list:
+                test_dir = input("\n17. If you would like to evaluate a test"
+                                 " set please provide test directory. To"
+                                 " skip this step leave this answer"
+                                 " blank.\nNote, if providing a directory, "
+                                 "please include a / at the end : ")
+
+                output_dict["test_dir"] = test_dir
+
+                options_list.remove(17)
+
+            if 18 in options_list:
+                run_name = input(
+                    "\n18. Please enter the run name, this will be"
+                    " the name used to save your callback output"
+                    " (if applicable): ")
+
+                output_dict["run_name"] = run_name
+
+                options_list.remove(18)
+
+        print_options_dict(output_dict)
 
         options_list = input(
             "\nIf you are satisfied with this configurations, please enter 0."
             "\nIf not, please enter the number(s) of the options you would"
-            " like to change. Separate multiple options by a space: ")
+            " like to change.\nTo restart please enter -1."
+            "\nSeparate multiple options by a space: ")
         options_list = set([int(choice) for choice in options_list.split()])
 
         if len(options_list) == 1 and 0 in options_list:
@@ -462,30 +555,8 @@ def interactive_prompt():
 
     if save_path:
         with open(save_path, 'w') as file:
-            json.dump(answers, file)
+            json.dump(output_dict, file)
 
-    return answers
+    return output_dict
 
-
-def format_input(answers_dict):
-    to_tuple_keys = ["leaf_shape", "mask_shape"]
-
-    for key in to_tuple_keys:
-        answers_dict[key] = tuple(
-            [int(size) for size in answers_dict[key].split()])
-
-    to_list_keys = ["metric_choices", "callback_choices"]
-
-    for key in to_list_keys:
-        answers_dict[key] = [int(size) for size in answers_dict[key].split()]
-
-    to_int_keys = ["batch_size", "buffer_size", "model_choice",
-                   "loss_choice", "opt_choice", "epochs"]
-
-    for key in to_int_keys:
-        answers_dict[key] = int(answers_dict[key])
-
-    answers_dict["lr"] = float(answers_dict["lr"])
-
-    return answers_dict
 # *===========================================================================*
