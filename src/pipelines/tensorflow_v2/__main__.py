@@ -120,37 +120,40 @@ def main():
         else:
             opt = tf.keras.optimizers.SGD
 
-        lr_range_test = LRRangeTest(init_lr=1e-8, max_lr=3, iterations=12197,
-                                    verbose=1000)
+        if ANSWERS["callback_choices"]:
 
-        ocp = OneCycleLR(init_lr=1e-5, max_lr=1e-2, final_tail_lr=1e-9,
-                         tail_length=0.2, iterations=243940)
+            lr_range_test = LRRangeTest(init_lr=1e-8, max_lr=3,
+                                        iterations=12197, verbose=1000)
 
-        early_stopping = tf.keras.callbacks.EarlyStopping(monitor='precision',
-                                                          patience=8,
-                                                          min_delta=0.001)
-        csv_logger = tf.keras.callbacks.CSVLogger(
-            f"{OUTPUTS_DIR}csv_logs/{ANSWERS['run_name']}.log",
-            separator=',', append=False)
+            ocp = OneCycleLR(init_lr=1e-5, max_lr=1e-2, final_tail_lr=1e-9,
+                             tail_length=0.2, iterations=243940)
 
-        model_save_path = model_save_path + "/"
-        Path(model_save_path).mkdir(parents=True, exist_ok=True)
+            early_stopping = tf.keras.callbacks.EarlyStopping(
+                monitor='precision', patience=8, min_delta=0.001)
+            csv_logger = tf.keras.callbacks.CSVLogger(
+                f"{OUTPUTS_DIR}csv_logs/{ANSWERS['run_name']}.log",
+                separator=',', append=False)
 
-        model_cpt = tf.keras.callbacks.ModelCheckpoint(
-            filepath=model_save_path, save_weights_only=True, mode='max',
-            monitor='val_recall', save_best_only=True, save_format="tf")
+            model_save_path = model_save_path + "/"
+            Path(model_save_path).mkdir(parents=True, exist_ok=True)
 
-        tb = tf.keras.callbacks.TensorBoard(
-            log_dir=f"{OUTPUTS_DIR}tb_logs/{ANSWERS['run_name']}",
-            histogram_freq=1, update_freq="epoch", profile_batch=0)
+            model_cpt = tf.keras.callbacks.ModelCheckpoint(
+                filepath=model_save_path, save_weights_only=True, mode='max',
+                monitor='val_recall', save_best_only=True, save_format="tf")
 
-        CALLBACKS = np.array([
-            lr_range_test, ocp, early_stopping, csv_logger, model_cpt, tb])
+            tb = tf.keras.callbacks.TensorBoard(
+                log_dir=f"{OUTPUTS_DIR}tb_logs/{ANSWERS['run_name']}",
+                histogram_freq=1, update_freq="epoch", profile_batch=0)
 
-        if ANSWERS["callback_choices"][0] == len(CALLBACKS):
-            callbacks = list(CALLBACKS)
+            CALLBACKS = np.array([
+                lr_range_test, ocp, early_stopping, csv_logger, model_cpt, tb])
+
+            if ANSWERS["callback_choices"][0] == len(CALLBACKS):
+                callbacks = list(CALLBACKS)
+            else:
+                callbacks = list(CALLBACKS[ANSWERS["callback_choices"]])
         else:
-            callbacks = list(CALLBACKS[ANSWERS["callback_choices"]])
+            callbacks = []
 
         # convert to np.array for multi-element indexing
         METRICS = np.array([
