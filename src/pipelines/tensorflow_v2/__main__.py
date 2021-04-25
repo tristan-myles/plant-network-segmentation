@@ -202,9 +202,10 @@ def main():
             model.load_workaround(ANSWERS["mask_shape"], ANSWERS['leaf_shape'],
                                   loss, opt(lr), metrics, model_save_path)
 
-        # check that recall is the same as the best val recall during training
-        LOGGER.info("Confirming that best model saved correctly: ")
-        model.evaluate(val_dataset)
+            # check that recall is the same as the best val recall during
+            # training
+            LOGGER.info("Confirming that best model saved correctly: ")
+            model.evaluate(val_dataset)
 
         # check test_set
         if ANSWERS["test_dir"]:
