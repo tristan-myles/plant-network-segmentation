@@ -83,8 +83,8 @@ class _TfPnsMixin(Model):
         # Loading model weights, with the necessary workaround due to issues
         # using model.save and model.load with subclassed models, specifically
         # with custom objects
-        x_train_blank = np.zeros((1,) + leaf_shape)
-        y_train_blank = np.zeros((1,) + mask_shape)
+        x_train_blank = np.zeros((1,) + tuple(leaf_shape))
+        y_train_blank = np.zeros((1,) + tuple(mask_shape))
 
         self.compile(loss=loss, optimizer=opt, metrics=metrics)
 
