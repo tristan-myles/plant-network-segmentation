@@ -315,14 +315,15 @@ def interactive_prompt():
                   "images were shifted by +256 when saved)")
 
             leaves_format = input("Please choose a number: ")
+
             if leaves_format == "":
                 leaves_format = None
             else:
                 leaves_format = int(leaves_format)
 
-            if leaves_format:
-                transform_uint8 = False
-                shift_256 = False
+            transform_uint8 = False
+            shift_256 = False
+
             if leaves_format == 0:
                 transform_uint8 = True
             elif leaves_format == 1:
