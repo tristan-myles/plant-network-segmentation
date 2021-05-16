@@ -95,7 +95,6 @@ def get_class_weight(training_path, incl_aug):
         search_string = "*embolism/masks/*.png"
 
     for path in Path(training_path).rglob(search_string):
-        print(path)
         im = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
         embolism_pixels += np.sum(im[im == 255])
         total_pixels += im.size
