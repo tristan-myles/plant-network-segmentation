@@ -2,6 +2,8 @@ import argparse
 import json
 from glob import glob
 import pprint
+from pathlib import Path
+import logging
 
 import cv2
 import numpy as np
@@ -10,6 +12,9 @@ import tensorflow_addons as tfa
 
 from kerastuner import Objective
 from kerastuner.tuners import BayesianOptimization
+
+LOGGER = logging.getLogger(__name__)
+LOGGER.setLevel(logging.INFO)
 
 
 # *================================= general =================================*
@@ -78,6 +83,28 @@ def save_lrt_results(lr_range_test, save_path):
     save_path = save_path + "_lrt_results.json"
     with open(save_path, 'w') as file:
         json.dump(lrt_dict, file)
+
+
+def get_class_weight(training_path, incl_aug):
+    embolism_pixels = 0
+    total_pixels = 0
+
+    if incl_aug:
+        search_string = '*/masks/*.png'
+    else:
+        search_string = "*embolism/masks/*.png"
+
+    for path in Path(training_path).rglob(search_string):
+        print(path)
+        im = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
+        embolism_pixels += np.sum(im[im == 255])
+        total_pixels += im.size
+
+    class_pers = embolism_pixels / total_pixels
+    LOGGER.info(f"% of embolism pixels: {round(class_pers * 100, 2)}%")
+
+    return class_pers
+
 
 # *============================ image processing =============================*
 # *----------------------------- pre-processing ------------------------------*
