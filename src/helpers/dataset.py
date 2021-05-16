@@ -1,5 +1,6 @@
 import shutil
 
+import imgaug as ia
 from sklearn.model_selection import train_test_split
 
 from src.data.data_model import *
@@ -303,61 +304,73 @@ def extract_dataset(lseqs: [LeafSequence], mseqs: [MaskSequence],
 
 # *============================= augment dataset =============================*
 # *----------------------------- transformations -----------------------------*
-def flip_flop(dual_channel: np.array, orientation: str,
+def flip_flop(leaf_image_array, mask_segmap, orientation: str,
               seed: int = 3141) -> np.array:
     """
 
-    :param dual_channel:
+    :param leaf_image_array:
+    :param mask_segmap:
     :param orientation:
     :param seed:
     :return:
     """
     if orientation == "horizontal":
         flip_hr = iaa.Fliplr(seed=seed)
-        flipped_images = flip_hr.augment_image(dual_channel)
+        flipped_images = flip_hr.augment_image(leaf_image_array)
+        mask_segmap = flip_hr.augment_segmentation_maps(mask_segmap)
     elif orientation == "vertical":
         flip_vr = iaa.Flipud(seed=seed)
-        flipped_images = flip_vr.augment_image(dual_channel)
+        flipped_images = flip_vr.augment_image(leaf_image_array)
+        mask_segmap = flip_vr.augment_segmentation_maps(mask_segmap)
     else:
         raise ValueError("please provide either 'horizontal' or 'vertical as "
                          "the orientation'")
 
-    return flipped_images
+    return flipped_images, mask_segmap
 
 
-def translate_img(dual_channel: np.array, x: float, y: float,
-                  seed:int = 3141) -> np.array:
+def translate_img(leaf_image_array, mask_segmap, x: float, y: float,
+                  seed: int = 3141) -> np.array:
     """
 
-    :param dual_channel:
+    :param leaf_image_array:
+    :param mask_segmap:
     :param x:
     :param y:
     :param seed:
     :return:
     """
     rotate = iaa.Affine(translate_percent=(x, y), seed=seed)
-    return rotate.augment_image(dual_channel)
+    leaf_image = rotate.augment_image(leaf_image_array)
+    mask_segmap = rotate.augment_segmentation_maps(mask_segmap)
+
+    return leaf_image, mask_segmap
 
 
-def rotate_img(dual_channel: np.array, l: float, r: float,
+def rotate_img(leaf_image_array, mask_segmap, l: float, r: float,
                seed: int = 3141) -> np.array:
     """
 
-    :param dual_channel:
+    :param leaf_image_array:
+    :param mask_segmap:
     :param l:
     :param r:
     :param seed:
     :return:
     """
     rotate = iaa.Affine(rotate=(l, r), seed=seed)
-    return rotate.augment_image(dual_channel)
+    leaf_image = rotate.augment_image(leaf_image_array)
+    mask_segmap = rotate.augment_segmentation_maps(mask_segmap)
+
+    return leaf_image, mask_segmap
 
 
-def shear_img(dual_channel: np.array, l: float, r: float,
+def shear_img(leaf_image_array, mask_segmap, l: float, r: float,
               seed: int = 3141) -> np.array:
     """
 
-    :param dual_channel:
+    :param leaf_image_array:
+    :param mask_segmap:
     :param l:
     :param r:
     :param seed:
@@ -365,35 +378,47 @@ def shear_img(dual_channel: np.array, l: float, r: float,
     """
     # Shear in degrees
     shear = iaa.Affine(shear=(l, r), seed=seed)
-    return shear.augment_image(dual_channel)
+
+    leaf_image = shear.augment_image(leaf_image_array)
+    mask_segmap = shear.augment_segmentation_maps(mask_segmap)
+
+    return leaf_image, mask_segmap
 
 
-def crop_img(dual_channel: np.array, v: float, h: float,
+def crop_img(leaf_image_array, mask_segmap, v: float, h: float,
              seed: int = 3141) -> np.array:
     """
 
-    :param dual_channel:
+    :param leaf_image_array:
+    :param mask_segmap:
     :param v:
     :param h:
     :param seed:
     :return:
     """
     crop = iaa.Crop(percent=(v, h), seed=seed)
-    return crop.augment_image(dual_channel)
+    leaf_image = crop.augment_image(leaf_image_array)
+    mask_segmap = crop.augment_segmentation_maps(mask_segmap)
+
+    return leaf_image, mask_segmap
 
 
-def zoom_in_out(dual_channel: np.array, x: float, y: float,
+def zoom_in_out(leaf_image_array, mask_segmap, x: float, y: float,
                 seed: int = 3141) -> np.array:
     """
 
-    :param dual_channel:
+    :param leaf_image_array:
+    :param mask_segmap:
     :param x:
     :param y:
     :param seed:
     :return:
     """
     scale_im = iaa.Affine(scale={"x": x, "y": y}, seed=seed)
-    return scale_im.augment_image(dual_channel)
+    leaf_image = scale_im.augment_image(leaf_image_array)
+    mask_segmap = scale_im.augment_segmentation_maps(mask_segmap)
+
+    return leaf_image, mask_segmap
 
 
 # *--------------------------------- helpers ---------------------------------*
@@ -415,8 +440,7 @@ def stack_images(leaf_image: np.array, mask_image: np.array) -> np.array:
     return dual_channel
 
 
-def save_image(image: np.array, leaf_path: str, mask_path: str,
-               aug_type: str) -> None:
+def save_image(leaf, mask, aug_type: str) -> None:
     """
 
     :param image:
@@ -425,8 +449,7 @@ def save_image(image: np.array, leaf_path: str, mask_path: str,
     :param aug_type:
     :return:
     """
-    old_paths = [leaf_path, mask_path]
-    # ["leaf", "mask"]
+    old_paths = [leaf.path, mask.path]
     new_paths = ["", ""]
 
     for i, path in enumerate(old_paths):
@@ -446,34 +469,34 @@ def save_image(image: np.array, leaf_path: str, mask_path: str,
         new_paths[i] = Path(*path_list)
 
     # leaf is first in stacked array
-    cv2.imwrite(str(new_paths[0]), image[:, :, 0])
-    cv2.imwrite(str(new_paths[1]), image[:, :, 1])
+    cv2.imwrite(str(new_paths[0]), leaf.image_array)
+    cv2.imwrite(str(new_paths[1]), mask.image_array.astype(np.uint8))
 
 
-def augment_image(stacked_image: np.array, df: pd.DataFrame, aug_type: str,
-                  index: int, counts: [int, int], leaf_path: str,
-                  mask_path: str, func, **kwargs) -> [int, int]:
+def augment_image(leaf, mask, df: pd.DataFrame, aug_type: str,
+                  index: int, counts: [int, int], func, **kwargs) -> [int, int]:
     """
 
-    :param stacked_image:
+    :param leaf:
+    :param mask:
     :param df:
     :param aug_type:
     :param index:
     :param counts:
-    :param leaf_path:
-    :param mask_path:
     :param func:
     :param kwargs:
     :return:
     """
-    image = func(stacked_image, **kwargs)
-
+    segmap = ia.augmentables.segmaps.SegmentationMapsOnImage(
+        mask.image_array, mask.image_array.shape)
+    leaf.image_array, segmap = func(leaf.image_array, segmap, **kwargs)
+    mask.image_array = segmap.get_arr()
     # only save an image if it has an embolism
     # binary segmentation problem so we know that if there are two pixel
     # intensities there are embolisms
 
-    if len(np.unique(image[:, :, 1])) > 1:
-        save_image(image, leaf_path, mask_path, aug_type)
+    if len(np.unique(mask.image_array)) > 1:
+        save_image(leaf, mask, aug_type)
 
         df[aug_type][index] = ', '.join(
             [f'{k}: {v}' for k, v in kwargs.items()])
@@ -485,16 +508,14 @@ def augment_image(stacked_image: np.array, df: pd.DataFrame, aug_type: str,
     return counts
 
 
-def augmentation_algorithm(dual_channel: np.array, aug_df: pd.DataFrame,
-                           i: int, leaf_path: str, mask_path: str,
+def augmentation_algorithm(leaf, mask, aug_df: pd.DataFrame, i: int,
                            counts: [int, int]) -> (pd.DataFrame, [int, int]):
     """
 
-    :param dual_channel:
+    :param leaf:
+    :param mask:
     :param aug_df:
     :param i:
-    :param leaf_path:
-    :param mask_path:
     :param counts:
     :return:
     """
@@ -506,9 +527,8 @@ def augmentation_algorithm(dual_channel: np.array, aug_df: pd.DataFrame,
         else:
             orientation = "vertical"
 
-        counts = augment_image(dual_channel, aug_df, "flip", i, counts,
-                               leaf_path, mask_path, flip_flop,
-                               orientation=orientation)
+        counts = augment_image(leaf, mask, aug_df, "flip", i, counts,
+                              flip_flop, orientation=orientation)
 
     # P(translate) = 0.35
     if random.random() < 0.35:
@@ -516,9 +536,8 @@ def augmentation_algorithm(dual_channel: np.array, aug_df: pd.DataFrame,
         x_per = round(random.uniform(-0.25, 0.25), 2)
         y_per = round(random.uniform(-0.25, 0.25), 2)
 
-        counts = augment_image(dual_channel, aug_df, "translate", i, counts,
-                               leaf_path, mask_path, translate_img, x=x_per,
-                               y=y_per)
+        counts = augment_image(leaf, mask, aug_df, "translate", i, counts,
+                               translate_img, x=x_per,  y=y_per)
 
     # P(zoom) = 0.35
     if random.random() < 0.35:
@@ -526,9 +545,8 @@ def augmentation_algorithm(dual_channel: np.array, aug_df: pd.DataFrame,
         x_per = round(random.uniform(1.5, 0.5), 2)
         y_per = round(random.uniform(1.5, 0.5), 2)
 
-        counts = augment_image(dual_channel, aug_df, "zoom", i, counts,
-                               leaf_path, mask_path, zoom_in_out,
-                               x=x_per, y=y_per)
+        counts = augment_image(leaf, mask, aug_df, "zoom", i, counts,
+                               zoom_in_out, x=x_per, y=y_per)
 
     # P(crop) = 0.35
     if random.random() < 0.35:
@@ -536,9 +554,8 @@ def augmentation_algorithm(dual_channel: np.array, aug_df: pd.DataFrame,
         v_per = round(random.uniform(0.05, 0.3), 2)
         h_per = round(random.uniform(0.05, 0.3), 2)
 
-        counts = augment_image(dual_channel, aug_df, "crop", i, counts,
-                               leaf_path, mask_path, crop_img, v=v_per,
-                               h=h_per)
+        counts = augment_image(leaf, mask, aug_df, "crop", i, counts,
+                               crop_img, v=v_per, h=h_per)
 
     # P(rotate) = 0.35
     if random.random() < 0.35:
@@ -546,9 +563,8 @@ def augmentation_algorithm(dual_channel: np.array, aug_df: pd.DataFrame,
         l_deg = round(random.random() * -90)
         r_deg = round(random.random() * 90)
 
-        counts = augment_image(dual_channel, aug_df, "rotate", i, counts,
-                               leaf_path, mask_path, rotate_img, l=l_deg,
-                               r=r_deg)
+        counts = augment_image(leaf, mask, aug_df, "rotate", i, counts,
+                               rotate_img, l=l_deg, r=r_deg)
 
     # P(sheer) = 0.35
     if random.random() < 0.35:
@@ -556,9 +572,8 @@ def augmentation_algorithm(dual_channel: np.array, aug_df: pd.DataFrame,
         l_deg = round(random.random() * -30)
         r_deg = round(random.random() * 30)
 
-        counts = augment_image(dual_channel, aug_df, "shear", i, counts,
-                               leaf_path, mask_path, shear_img, l=l_deg,
-                               r=r_deg)
+        counts = augment_image(leaf, mask, aug_df, "shear", i, counts,
+                               shear_img, l=l_deg, r=r_deg)
 
     return aug_df, counts
 
@@ -600,8 +615,8 @@ def augment_dataset(lseq: LeafSequence, mseq: MaskSequence, **kwargs):
 
             # checking links using numbers explicitly (requires
             # <name>_<image_number>_<tile_number> naming format
-            assert (leaf_path.parts[-1].rsplit(".")[0].rsplit("_", 2)[-2:] ==
-                    mask_path.parts[-1].rsplit(".")[0].rsplit("_", 2)[-2:]), \
+            assert (leaf_path.parts[-1].rsplit(".")[0].rsplit("_", 2)[-1:] ==
+                    mask_path.parts[-1].rsplit(".")[0].rsplit("_", 2)[-1:]), \
                 (f"leaf: {leaf_path} is incorrectly matched with mask:"
                  f" {mask_path}; please check this")
 
@@ -612,15 +627,15 @@ def augment_dataset(lseq: LeafSequence, mseq: MaskSequence, **kwargs):
             mask.load_image()
 
             # Should load image array to keep loading consistent
-            dual_channel = stack_images(leaf.image_array, mask.image_array)
+            #dual_channel = stack_images(leaf.image_array, mask.image_array[
+            #                                              0:1024, 0:1024])
 
             # save RAM
             leaf.unload_extracted_images()
             mask.unload_extracted_images()
 
-            aug_df, counts = augmentation_algorithm(dual_channel, aug_df, i,
-                                                    leaf_path, mask_path,
-                                                    counts)
+            aug_df, counts = augmentation_algorithm(
+                leaf, mask, aug_df, i, counts)
             pbar.update(1)
 
     aug_df.to_csv(base_path.joinpath("augmented", "augmentation_details.csv"))
