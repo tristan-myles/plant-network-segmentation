@@ -96,7 +96,7 @@ def get_class_weight(training_path, incl_aug):
 
     for path in Path(training_path).rglob(search_string):
         im = cv2.imread(str(path), cv2.IMREAD_UNCHANGED)
-        embolism_pixels += np.sum(im[im == 255])
+        embolism_pixels += np.sum(im == 255)
         total_pixels += im.size
 
     class_pers = embolism_pixels / total_pixels
