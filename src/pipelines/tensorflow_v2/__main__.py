@@ -111,13 +111,13 @@ def main():
         elif ANSWERS["loss_choice"] == 1:
             class_weight = get_class_weight(ANSWERS["train_base_dir"],
                                             ANSWERS['incl_aug'])
-            loss = weighted_CE(1-class_weight)
+            loss = WeightedCE(1-class_weight)
         elif ANSWERS["loss_choice"] == 2:
             class_weight = get_class_weight(ANSWERS["train_base_dir"],
                                             ANSWERS['incl_aug'])
-            loss = focal_loss(1-class_weight)
+            loss = FocalLoss(1-class_weight)
         else:
-            loss = soft_dice_loss
+            loss = SoftDiceLoss()
 
         if ANSWERS["opt_choice"] == 0:
             opt = tf.keras.optimizers.Adam
