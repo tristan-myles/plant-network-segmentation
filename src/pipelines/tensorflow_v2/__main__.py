@@ -16,7 +16,8 @@ from src.pipelines.tensorflow_v2.helpers.utilities import (
                                                         im2_lt_im1,
                                                         save_compilation_dict,
                                                         tune_model,
-                                                        save_lrt_results)
+                                                        save_lrt_results,
+                                                        get_class_weight)
 from src.pipelines.tensorflow_v2.losses.custom_losses import *
 from src.pipelines.tensorflow_v2.models.unet import Unet
 from src.pipelines.tensorflow_v2.models.hyper_unet import HyperUnet
@@ -108,13 +109,15 @@ def main():
         if ANSWERS["loss_choice"] == 0:
             loss = tf.keras.losses.binary_crossentropy
         elif ANSWERS["loss_choice"] == 1:
-            loss = weighted_CE(0.5)
+            class_weight = get_class_weight(ANSWERS["train_base_dir"],
+                                            ANSWERS['incl_aug'])
+            loss = weighted_CE(1-class_weight)
         elif ANSWERS["loss_choice"] == 2:
-            loss = focal_loss(0.5)
-            model_save_path = model_save_path
+            class_weight = get_class_weight(ANSWERS["train_base_dir"],
+                                            ANSWERS['incl_aug'])
+            loss = focal_loss(1-class_weight)
         else:
             loss = soft_dice_loss
-            model_save_path = model_save_path
 
         if ANSWERS["opt_choice"] == 0:
             opt = tf.keras.optimizers.Adam
