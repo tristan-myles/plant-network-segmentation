@@ -76,7 +76,7 @@ Python Command
 """"""""""""""
 .. prompt:: bash $
 
-python -m src.__main__ -fj <input.json> extract_tiles
+  python -m src.__main__ -fj <input.json> extract_tiles
 
 usage: Perform operations using the plant-image-segmentation code base json_path extract_tiles
 
