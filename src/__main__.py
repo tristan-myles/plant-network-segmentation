@@ -224,6 +224,7 @@ def main():
                            leaf_shape=leaf_shape,
                            cr_csv_list=ARGS_DICT["csv_path"],
                            mseqs=MSEQS,
+                           threshold=ARGS_DICT["threshold"],
                            format_dict=ARGS_DICT["leaves"]["format"])
 
     if ARGS_DICT["which"] == "create_dataset":

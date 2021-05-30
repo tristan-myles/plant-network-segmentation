@@ -536,6 +536,7 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
                               save_prediction: bool = True,
                               shift_256: bool = False,
                               transform_uint8: bool = False,
+                              threshold: float = 0.5,
                               **kwargs):
         # if shifted by 256 then apply im1 > im2 post processing
         if shift_256:
@@ -547,7 +548,8 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
             for leaf in self.image_objects:
                 leaf.predict_leaf(model, x_tile_length, y_tile_length,
                                   memory_saving, overwrite, save_prediction,
-                                  shift_256, transform_uint8, **kwargs)
+                                  shift_256, transform_uint8, threshold,
+                                  **kwargs)
                 pbar.update(1)
 
     # *______________________________ utilities ______________________________*
@@ -1018,7 +1020,7 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
                      y_tile_length: int = None, memory_saving: bool = True,
                      overwrite: bool = False, save_prediction: bool = True,
                      shift_256: bool = False, transform_uint8: bool = False,
-                     **kwargs):
+                     threshold: float = 0.5, **kwargs):
 
         if self.image_array is None:
             self.load_image(shift_256=shift_256,
@@ -1079,11 +1081,16 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
                 create_file = True
 
             if create_file:
-                cv2.imwrite(filepath, self.prediction_array)
+                temp_pred = self.prediction_array.copy()
+                temp_pred[temp_pred < threshold] = 0
+                temp_pred[temp_pred >= threshold] = 255
+
+                cv2.imwrite(filepath, temp_pred)
 
         if memory_saving:
             self.image_array = None
             self.prediction_array = None
+
 
     # *______________________________ utilities ______________________________*
     def get_databunch_dataframe(self, embolism_only: bool = False,
