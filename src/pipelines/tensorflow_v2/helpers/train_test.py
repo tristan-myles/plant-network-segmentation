@@ -104,7 +104,6 @@ class _TfPnsMixin(Model):
         # post-process only if shifted by 256:
         if post_process:
             prediction[new_tile >= 0] = 0
-        prediction = prediction * 255
 
         return prediction
 # *===========================================================================*

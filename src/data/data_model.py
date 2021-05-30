@@ -1018,7 +1018,7 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
                      y_tile_length: int = None, memory_saving: bool = True,
                      overwrite: bool = False, save_prediction: bool = True,
                      shift_256: bool = False, transform_uint8: bool = False,
-                     **kwargs):
+                     threshold: float = 0.5, **kwargs):
 
         if self.image_array is None:
             self.load_image(shift_256=shift_256,
@@ -1079,11 +1079,16 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
                 create_file = True
 
             if create_file:
-                cv2.imwrite(filepath, self.prediction_array)
+                temp_pred = self.prediction_array.copy()
+                temp_pred[temp_pred < threshold] = 0
+                temp_pred[temp_pred >= threshold] = 255
+
+                cv2.imwrite(filepath, temp_pred)
 
         if memory_saving:
             self.image_array = None
             self.prediction_array = None
+
 
     # *______________________________ utilities ______________________________*
     def get_databunch_dataframe(self, embolism_only: bool = False,
