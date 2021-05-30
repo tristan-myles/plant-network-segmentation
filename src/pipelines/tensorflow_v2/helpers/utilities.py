@@ -170,12 +170,9 @@ def parse_image_fc(leaf_shape, mask_shape, train=False, shift_256=False,
         mask = tf.reshape(mask, mask_shape)
 
         if train:
-            # mask = tf.image.resize(mask, [512, 512])
             mask = tfa.image.gaussian_filter2d(mask)
             # will return 255 where the condition is met else 0
             mask = tf.where(tf.greater(mask, 0), 255, 0)
-            img = tf.where((tf.equal(mask, 255) & tf.greater_equal(img, 0)),
-                           -1e-9, img)
 
         mask = tf.cast(mask, tf.float32) / 255.0
         img = tf.cast(img, tf.float32) / 255.0
