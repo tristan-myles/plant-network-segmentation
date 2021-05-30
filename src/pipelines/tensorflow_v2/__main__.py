@@ -237,9 +237,6 @@ def main():
                 masks.append(imageset[1][0])
                 leaves.append(imageset[0][0])
 
-            masks = [imageset[1] for imageset in
-                     test_dataset.as_numpy_iterator()]
-
             csv_save_path = (f"{OUTPUTS_DIR}classification_reports/"
                              f"{ANSWERS['run_name']}.csv")
 
