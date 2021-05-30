@@ -139,10 +139,7 @@ def read_file(img_path, shift_256, transform_uint8):
 
 
 def parse_numpy_image(img, batch_shape):
-    img = tf.convert_to_tensor(img)
-    img = tf.cast(img, tf.float32)
-    img = tf.where(tf.greater_equal(img, tf.cast(0, tf.float32)),
-                   tf.cast(0, tf.float32), img)
+    img = tf.convert_to_tensor(img, dtype=tf.float32)
     img = tf.cast(img, tf.float32) / 255.0
     img = tf.reshape(img, batch_shape)
 
