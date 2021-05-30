@@ -47,11 +47,11 @@ def get_filepath_list(base_dir, leaf_ext, mask_ext, incl_aug=True):
 def get_tf_dataset(base_dir, leaf_ext, mask_ext,
                    incl_aug=False, cfp=True, batch_size=2, buffer_size=200,
                    leaf_shape=(512, 512, 1), mask_shape=(512, 512, 1),
-                   train=False, shift_256=False, transform_uint8=False):
+                   test=False, shift_256=False, transform_uint8=False):
 
     data_x, data_y = get_filepath_list(base_dir, leaf_ext, mask_ext, incl_aug)
 
-    parse_img_func = parse_image_fc(leaf_shape, mask_shape, train,
+    parse_img_func = parse_image_fc(leaf_shape, mask_shape, test,
                                     shift_256, transform_uint8)
 
     dataset = tf.data.Dataset.from_tensor_slices((data_x, data_y))

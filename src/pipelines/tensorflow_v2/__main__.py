@@ -66,7 +66,6 @@ def main():
         buffer_size=ANSWERS['buffer_size'],
         leaf_shape=ANSWERS['leaf_shape'],
         mask_shape=ANSWERS['mask_shape'],
-        train=True,
         shift_256=ANSWERS['shift_256'],
         transform_uint8=ANSWERS['transform_uint8'])
 
@@ -220,6 +219,7 @@ def main():
                 buffer_size=None,
                 leaf_shape=ANSWERS['leaf_shape'],
                 mask_shape=ANSWERS['mask_shape'],
+                test=True,
                 shift_256=ANSWERS['shift_256'],
                 transform_uint8=ANSWERS['transform_uint8'])
 
@@ -236,9 +236,6 @@ def main():
             for imageset in test_dataset.as_numpy_iterator():
                 masks.append(imageset[1][0])
                 leaves.append(imageset[0][0])
-
-            masks = [imageset[1] for imageset in
-                     test_dataset.as_numpy_iterator()]
 
             csv_save_path = (f"{OUTPUTS_DIR}classification_reports/"
                              f"{ANSWERS['run_name']}.csv")
