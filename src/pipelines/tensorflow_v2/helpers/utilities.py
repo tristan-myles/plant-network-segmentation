@@ -149,7 +149,7 @@ def parse_numpy_image(img, batch_shape):
     return img
 
 
-def parse_image_fc(leaf_shape, mask_shape, train=False, shift_256=False,
+def parse_image_fc(leaf_shape, mask_shape, test=False, shift_256=False,
                    transform_uint8=False):
     def parse_image(img_path: str, mask_path: str):
         # load the raw data from the file as a string
@@ -169,7 +169,7 @@ def parse_image_fc(leaf_shape, mask_shape, train=False, shift_256=False,
         mask = tf.image.decode_png(mask, channels=1)
         mask = tf.reshape(mask, mask_shape)
 
-        if train:
+        if not test:
             mask = tfa.image.gaussian_filter2d(mask)
             # will return 255 where the condition is met else 0
             mask = tf.where(tf.greater(mask, 0), 255, 0)

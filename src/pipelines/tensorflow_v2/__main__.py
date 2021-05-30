@@ -66,7 +66,6 @@ def main():
         buffer_size=ANSWERS['buffer_size'],
         leaf_shape=ANSWERS['leaf_shape'],
         mask_shape=ANSWERS['mask_shape'],
-        train=True,
         shift_256=ANSWERS['shift_256'],
         transform_uint8=ANSWERS['transform_uint8'])
 
@@ -220,6 +219,7 @@ def main():
                 buffer_size=None,
                 leaf_shape=ANSWERS['leaf_shape'],
                 mask_shape=ANSWERS['mask_shape'],
+                test=True,
                 shift_256=ANSWERS['shift_256'],
                 transform_uint8=ANSWERS['transform_uint8'])
 
