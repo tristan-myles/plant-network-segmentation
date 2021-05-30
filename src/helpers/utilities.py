@@ -58,7 +58,7 @@ def get_workaround_details(compilation_dict):
 
 # *=============================== prediction ================================*
 def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list="",
-                       mseqs=None, format_dict=None):
+                       mseqs=None, threshold=0.5, format_dict=None):
 
     if format_dict is None:
         format_dict = {}
@@ -82,6 +82,7 @@ def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list="",
                                    leaf_shape[1],
                                    memory_saving=memory_saving,
                                    leaf_shape=leaf_shape,
+                                   threshold=threshold,
                                    **format_dict)
 
         if cr_csv_list[0]:
@@ -100,6 +101,7 @@ def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list="",
 
             _ = classification_report(temp_pred_list, temp_mask_list,
                                       save_path=cr_csv_list[i])
+
 
 # *================================= metrics =================================*
 def get_iou_score(y_true, y_pred):
@@ -445,6 +447,10 @@ def parse_arguments() -> argparse.Namespace:
     parser_prediction.add_argument(
         "--model_path", "-mp", type=str, metavar="\b",
         help="the path to the saved model weights to restore")
+    parser_prediction.add_argument(
+        "--threshold", "-t", type=str, metavar="\b",
+        help="classification threshold to determine if a pixel is an embolism "
+             "or not.")
     parser_prediction.add_argument(
         "--csv_path", "-cp", type=str, metavar="\b",
         help="csv path of where the classification report should be saved; "
@@ -907,14 +913,27 @@ def interactive_prompt():
                 options_list.remove(4)
 
             if 5 in options_list:
+                threshold = input(
+                    "\n5. Please enter the classification threshold to "
+                    "determine if a pixel is an embolism or not."
+                    "\n(Leave this blank to use 0.5) \nAnswer: ")
+
+                if not threshold:
+                    threshold = 0.5
+
+                output_dict["threshold"] = float(threshold)
+
+                options_list.remove(5)
+
+            if 6 in options_list:
                 csv_path = input(
-                    "\n5. Please provide a .csv save path if you would "
+                    "\n6 Please provide a .csv save path if you would "
                     "like to generate a classification report."
                     "\n(Leave this blank to skip)\nAnswer: ")
 
                 output_dict["csv_path"] = csv_path
 
-                options_list.remove(5)
+                options_list.remove(6)
 
         if operation == 8:
             if 3 in options_list:

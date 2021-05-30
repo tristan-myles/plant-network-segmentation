@@ -536,6 +536,7 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
                               save_prediction: bool = True,
                               shift_256: bool = False,
                               transform_uint8: bool = False,
+                              threshold: float = 0.5,
                               **kwargs):
         # if shifted by 256 then apply im1 > im2 post processing
         if shift_256:
@@ -547,7 +548,8 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
             for leaf in self.image_objects:
                 leaf.predict_leaf(model, x_tile_length, y_tile_length,
                                   memory_saving, overwrite, save_prediction,
-                                  shift_256, transform_uint8, **kwargs)
+                                  shift_256, transform_uint8, threshold,
+                                  **kwargs)
                 pbar.update(1)
 
     # *______________________________ utilities ______________________________*
