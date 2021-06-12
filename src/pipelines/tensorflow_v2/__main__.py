@@ -93,11 +93,11 @@ def main():
 
     elif ANSWERS["which"] == "training":
         if ANSWERS["model_choice"] == 0:
-            model = Unet(1)
+            model = Unet(1, ANSWERS['filters'])
         elif ANSWERS["model_choice"] == 1:
-            model = UnetResnet(1)
+            model = UnetResnet(1, ANSWERS['filters'])
         else:
-            model = WNet()
+            model = WNet(1, ANSWERS['filters'])
 
         model_save_path = (f"{OUTPUTS_DIR}saved_models/"
                            f"{ANSWERS['run_name']}")

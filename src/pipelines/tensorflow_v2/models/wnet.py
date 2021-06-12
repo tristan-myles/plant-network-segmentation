@@ -134,12 +134,12 @@ class WNet(tf.keras.Model, _TfPnsMixin):
     Combines two Mini U-Nets where the prediction of the first Mini U-Net is
     concatenated to the first
     """
-    def __init__(self):
+    def __init__(self, output_channels, filters=0):
         super().__init__()
 
         # Channels set for binary prediction
-        self.unet1 = MiniUnet(1)
-        self.unet2 = MiniUnet(1)
+        self.unet1 = MiniUnet(output_channels, filters)
+        self.unet2 = MiniUnet(output_channels, filters)
         self.concat = Concatenate()
 
     def call(self, input_tensor, training=True):
