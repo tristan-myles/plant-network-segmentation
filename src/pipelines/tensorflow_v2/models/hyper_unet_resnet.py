@@ -101,7 +101,7 @@ class HyperUnetResnet(HyperModel):
 
         # Contracting
         # valid padding since down sampling
-        down_conv1 = Conv2D(filters=16*filter, kernel_size=7, strides=2,
+        down_conv1 = Conv2D(filters=8 * 2**filter, kernel_size=7, strides=2,
                             padding='same')(input)
         down1_bn = BatchNormalization()(down_conv1)
         down1_activated = activation(down1_bn)
