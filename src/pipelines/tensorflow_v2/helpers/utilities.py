@@ -57,8 +57,8 @@ def tune_model(hyperModel, train_dataset, val_dataset, results_dir, run_name,
 
     tuner = BayesianOptimization(
         model,
-        objective=Objective('val_loss', direction="min"),
-        max_trials=10,
+        objective=Objective('val_auc', direction="max"),
+        max_trials=30,
         directory=results_dir,
         project_name=run_name,
         seed=3141)
@@ -68,8 +68,8 @@ def tune_model(hyperModel, train_dataset, val_dataset, results_dir, run_name,
         epochs=30,
         validation_data=val_dataset,
         callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',
-                                                    patience=3,
-                                                    min_delta=0.001)])
+                                                    patience=10,
+                                                    min_delta=0.000001)])
 
     tuner.search_space_summary()
 
@@ -166,10 +166,10 @@ def parse_image_fc(leaf_shape, mask_shape, test=False, shift_256=False,
         mask = tf.image.decode_png(mask, channels=1)
         mask = tf.reshape(mask, mask_shape)
 
-        if not test:
-            mask = tfa.image.gaussian_filter2d(mask)
-            # will return 255 where the condition is met else 0
-            mask = tf.where(tf.greater(mask, 0), 255, 0)
+        # if not test:
+        #     mask = tfa.image.gaussian_filter2d(mask)
+        #     # will return 255 where the condition is met else 0
+        #     mask = tf.where(tf.greater(mask, 0), 255, 0)
 
         mask = tf.cast(mask, tf.float32) / 255.0
         img = tf.cast(img, tf.float32) / 255.0

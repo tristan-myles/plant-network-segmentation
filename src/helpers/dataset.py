@@ -519,8 +519,8 @@ def augmentation_algorithm(leaf, mask, aug_df: pd.DataFrame, i: int,
     :param counts:
     :return:
     """
-    # P(flip) = 0.35
-    if random.random() < 0.35:
+    # P(flip) = 0.5
+    if random.random() < 0.5:
         # P(H | flip) = 0.5 | P(V | flip) = 0.5
         if random.random() < 0.5:
             orientation = "horizontal"
@@ -530,8 +530,8 @@ def augmentation_algorithm(leaf, mask, aug_df: pd.DataFrame, i: int,
         counts = augment_image(leaf, mask, aug_df, "flip", i, counts,
                               flip_flop, orientation=orientation)
 
-    # P(translate) = 0.35
-    if random.random() < 0.35:
+    # P(translate) = 0.5
+    if random.random() < 0.5:
         # zoom in and out between -25% and 25%
         x_per = round(random.uniform(-0.25, 0.25), 2)
         y_per = round(random.uniform(-0.25, 0.25), 2)
@@ -539,8 +539,8 @@ def augmentation_algorithm(leaf, mask, aug_df: pd.DataFrame, i: int,
         counts = augment_image(leaf, mask, aug_df, "translate", i, counts,
                                translate_img, x=x_per,  y=y_per)
 
-    # P(zoom) = 0.35
-    if random.random() < 0.35:
+    # P(zoom) = 0.5
+    if random.random() < 0.5:
         # zoom in and out between 150% and 50%
         x_per = round(random.uniform(1.5, 0.5), 2)
         y_per = round(random.uniform(1.5, 0.5), 2)
@@ -548,8 +548,8 @@ def augmentation_algorithm(leaf, mask, aug_df: pd.DataFrame, i: int,
         counts = augment_image(leaf, mask, aug_df, "zoom", i, counts,
                                zoom_in_out, x=x_per, y=y_per)
 
-    # P(crop) = 0.35
-    if random.random() < 0.35:
+    # P(crop) = 0.5
+    if random.random() < 0.5:
         # crop between 5% and 30% of the image
         v_per = round(random.uniform(0.05, 0.3), 2)
         h_per = round(random.uniform(0.05, 0.3), 2)
@@ -557,8 +557,8 @@ def augmentation_algorithm(leaf, mask, aug_df: pd.DataFrame, i: int,
         counts = augment_image(leaf, mask, aug_df, "crop", i, counts,
                                crop_img, v=v_per, h=h_per)
 
-    # P(rotate) = 0.35
-    if random.random() < 0.35:
+    # P(rotate) = 0.5
+    if random.random() < 0.5:
         # l element (-90;0) and r element (0;90) (degrees)
         l_deg = round(random.random() * -90)
         r_deg = round(random.random() * 90)
@@ -566,8 +566,8 @@ def augmentation_algorithm(leaf, mask, aug_df: pd.DataFrame, i: int,
         counts = augment_image(leaf, mask, aug_df, "rotate", i, counts,
                                rotate_img, l=l_deg, r=r_deg)
 
-    # P(sheer) = 0.35
-    if random.random() < 0.35:
+    # P(sheer) = 0.5
+    if random.random() < 0.5:
         # l element (-30;0) and r element (0;30) (degrees)
         l_deg = round(random.random() * -30)
         r_deg = round(random.random() * 30)
@@ -625,10 +625,6 @@ def augment_dataset(lseq: LeafSequence, mseq: MaskSequence, **kwargs):
 
             leaf.load_image(**kwargs)
             mask.load_image()
-
-            # Should load image array to keep loading consistent
-            #dual_channel = stack_images(leaf.image_array, mask.image_array[
-            #                                              0:1024, 0:1024])
 
             # save RAM
             leaf.unload_extracted_images()
