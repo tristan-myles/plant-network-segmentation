@@ -67,7 +67,7 @@ class HyperUnetResnet(HyperModel):
         # create the search space
         initializer = hp.Choice("initializer", ["he_normal", "glorot_uniform"])
         activation = hp.Choice("activation", ["relu", "selu"])
-        filter = hp.Choice("filters", [1, 2, 3, 4, 5])
+        filter = hp.Choice("filters", [0, 1, 2, 3, 4])
         kernel_size = hp.Choice("kernel_size", [3, 5])
         optimizer = hp.Choice("optimizer", ["adam", "sgd"])
 
@@ -100,157 +100,157 @@ class HyperUnetResnet(HyperModel):
         # Changed strides to pool size to 2
         mp1 = MaxPool2D(pool_size=2, strides=2)(down1_activated)
 
-        down_block_2_1 = ResBlock(channels=16*filter,
+        down_block_2_1 = ResBlock(channels=8 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(mp1)
-        down_block_2_2 = ResBlock(channels=16*filter,
+        down_block_2_2 = ResBlock(channels=8 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(down_block_2_1)
-        down_block_2_3 = ResBlock(channels=16*filter,
+        down_block_2_3 = ResBlock(channels=8 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(down_block_2_2)
 
-        down_block_3_1 = ResBlock(channels=32*filter,
+        down_block_3_1 = ResBlock(channels=16 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer,
                                   stride=2)(down_block_2_3)
-        down_block_3_2 = ResBlock(channels=32*filter,
+        down_block_3_2 = ResBlock(channels=16 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(down_block_3_1)
-        down_block_3_3 = ResBlock(channels=32*filter,
+        down_block_3_3 = ResBlock(channels=16 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(down_block_3_2)
-        down_block_3_4 = ResBlock(channels=32*filter,
+        down_block_3_4 = ResBlock(channels=16 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(down_block_3_3)
 
-        down_block_4_1 = ResBlock(channels=64*filter,
+        down_block_4_1 = ResBlock(channels=32 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer,
                                   stride=2)(down_block_3_4)
-        down_block_4_2 = ResBlock(channels=64*filter,
+        down_block_4_2 = ResBlock(channels=32 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(down_block_4_1)
-        down_block_4_3 = ResBlock(channels=64*filter,
+        down_block_4_3 = ResBlock(channels=32 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(down_block_4_2)
-        down_block_4_4 = ResBlock(channels=64*filter,
+        down_block_4_4 = ResBlock(channels=32 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(down_block_4_3)
-        down_block_4_5 = ResBlock(channels=64*filter,
+        down_block_4_5 = ResBlock(channels=32 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(down_block_4_4)
-        down_block_4_6 = ResBlock(channels=64*filter,
+        down_block_4_6 = ResBlock(channels=32 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(down_block_4_5)
 
-        down_block_5_1 = ResBlock(channels=128*filter,
+        down_block_5_1 = ResBlock(channels=64 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer,
                                   stride=2)(down_block_4_6)
-        down_block_5_2 = ResBlock(channels=128*filter,
+        down_block_5_2 = ResBlock(channels=64 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(down_block_5_1)
-        down_block_5_3 = ResBlock(channels=128*filter,
+        down_block_5_3 = ResBlock(channels=64 * 2**filter,
                                   kernel_size=kernel_size,
                                   activation=activation,
                                   initializer=initializer)(down_block_5_2)
 
-        conv_up1 = Conv2DTranspose(filters=64*filter, kernel_size=2,
+        conv_up1 = Conv2DTranspose(filters=32 * 2**filter, kernel_size=2,
                                    strides=2,
                                    kernel_initializer=initializer)(
             down_block_5_3)
         # default axis is -1 => the filter axis
         conv_up_concat_1 = concatenate([conv_up1, down_block_4_6])
 
-        up_block_1_1 = ResBlock(channels=64*filter,
+        up_block_1_1 = ResBlock(channels=32 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer,
                                 decode=True)(conv_up_concat_1)
-        up_block_1_2 = ResBlock(channels=64*filter,
+        up_block_1_2 = ResBlock(channels=32 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer)(up_block_1_1)
-        up_block_1_3 = ResBlock(channels=64*filter,
+        up_block_1_3 = ResBlock(channels=32 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer)(up_block_1_2)
-        up_block_1_4 = ResBlock(channels=64*filter,
+        up_block_1_4 = ResBlock(channels=32 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer)(up_block_1_3)
-        up_block_1_5 = ResBlock(channels=64*filter,
+        up_block_1_5 = ResBlock(channels=32 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer)(up_block_1_4)
-        up_block_1_6 = ResBlock(channels=64*filter,
+        up_block_1_6 = ResBlock(channels=32 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer)(up_block_1_5)
 
         # Layer 2
-        conv_up2 = Conv2DTranspose(filters=32*filter, kernel_size=2,
+        conv_up2 = Conv2DTranspose(filters=16 * 2**filter, kernel_size=2,
                                    strides=2,
                                    kernel_initializer=initializer)(
             up_block_1_6)
         conv_up_concat_2 = concatenate([conv_up2, down_block_3_4])
 
-        up_block_2_1 = ResBlock(channels=32*filter,
+        up_block_2_1 = ResBlock(channels=16 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer,
                                 decode=True)(conv_up_concat_2)
-        up_block_2_2 = ResBlock(channels=32*filter,
+        up_block_2_2 = ResBlock(channels=16 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer)(up_block_2_1)
-        up_block_2_3 = ResBlock(channels=32*filter,
+        up_block_2_3 = ResBlock(channels=16 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer)(up_block_2_2)
-        up_block_2_4 = ResBlock(channels=32*filter,
+        up_block_2_4 = ResBlock(channels=16 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer)(up_block_2_3)
 
         # Layer 3
-        conv_up3 = Conv2DTranspose(filters=16*filter, kernel_size=2, strides=2,
+        conv_up3 = Conv2DTranspose(filters=8 * 2**filter, kernel_size=2, strides=2,
                                    kernel_initializer=initializer)(
             up_block_2_4)
         conv_up_concat_3 = concatenate([conv_up3, down_block_2_3])
 
-        up_block_3_1 = ResBlock(channels=16*filter,
+        up_block_3_1 = ResBlock(channels=8 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer,
                                 decode=True)(conv_up_concat_3)
-        up_block_3_2 = ResBlock(channels=16*filter,
+        up_block_3_2 = ResBlock(channels=8 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer)(up_block_3_1)
-        up_block_3_3 = ResBlock(channels=16*filter,
+        up_block_3_3 = ResBlock(channels=8 * 2**filter,
                                 kernel_size=kernel_size,
                                 activation=activation,
                                 initializer=initializer)(up_block_3_2)
 
         # Layer 4
-        conv_up4 = Conv2DTranspose(filters=16*filter, kernel_size=2,
+        conv_up4 = Conv2DTranspose(filters=8 * 2**filter, kernel_size=2,
                                    strides=2,
                                    kernel_initializer=initializer)(
             up_block_3_3)
@@ -258,14 +258,14 @@ class HyperUnetResnet(HyperModel):
         conv_up_concat_4 = concatenate([conv_up4, down1_activated])
 
         # need same padding so that output image size is the same as mask
-        up_conv4 = Conv2D(filters=16*filter, kernel_size=7, strides=1,
+        up_conv4 = Conv2D(filters=8 * 2**filter, kernel_size=7, strides=1,
                           kernel_initializer=initializer,
                           padding="same")(conv_up_concat_4)
         up4_bn = BatchNormalization()(up_conv4)
         up4_activated = activation(up4_bn)
 
         # Think about whether this needs to be activated
-        conv_up5 = Conv2DTranspose(filters=16*filter, kernel_size=2, strides=2,
+        conv_up5 = Conv2DTranspose(filters=8 * 2**filter, kernel_size=2, strides=2,
                                    kernel_initializer=initializer)(
             up4_activated)
         output_layer = Conv2D(self.output_channels, 1, strides=1,
