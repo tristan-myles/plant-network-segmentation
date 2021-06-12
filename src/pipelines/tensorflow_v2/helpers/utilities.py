@@ -269,7 +269,8 @@ def print_user_input(answers):
           f"14. {'Callback choices':<40}: {answers['callback_choices']}\n"
           f"15. {'Metric choices':<40}: {answers['metric_choices']}\n"
           f"16. {'Run name':<40}: {answers['run_name']}\n"
-          f"17. {'Test directory':<40}: {answers['test_dir']}\n")
+          f"17. {'Test directory':<40}: {answers['test_dir']}\n"
+          f"18. {'Filter multiple':<40}: {answers['filters']}\n")
 
 
 def print_options_dict(output_dict):
@@ -314,7 +315,7 @@ def interactive_prompt():
             output_dict["which"] = ["tuning", "training"][operation-1]
 
             # list options = 1 - 18
-            options_list.update(range(1, 19))
+            options_list.update(range(1, 20))
 
             options_list.remove(-1)
 
@@ -545,6 +546,15 @@ def interactive_prompt():
                 options_list.remove(17)
 
             if 18 in options_list:
+                filters = input(
+                    "\n18. Please enter the filter multiple (filter multiple "
+                    "is 2^multiple): ")
+
+                output_dict["filters"] = int(filters)
+
+                options_list.remove(18)
+
+            if 19 in options_list:
                 run_name = input(
                     "\n18. Please enter the run name, this will be"
                     " the name used to save your callback output"
@@ -552,7 +562,7 @@ def interactive_prompt():
 
                 output_dict["run_name"] = run_name
 
-                options_list.remove(18)
+                options_list.remove(19)
 
         print_options_dict(output_dict)
 

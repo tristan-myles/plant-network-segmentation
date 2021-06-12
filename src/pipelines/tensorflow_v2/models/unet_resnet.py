@@ -62,86 +62,91 @@ class ResBlock(tf.keras.Model):
 
 # *============================== ResNet U-Net ===============================*
 class UnetResnet(tf.keras.Model, _TfPnsMixin):
-    def __init__(self, output_channels):
+    def __init__(self, output_channels, filters=3):
         super().__init__()
         he_initializer = tf.keras.initializers.he_normal(seed=3141)
 
         # Contracting
         # valid padding since down sampling
-        self.down_conv1 = Conv2D(filters=64, kernel_size=7, strides=2,
+        self.down_conv1 = Conv2D(filters=8 * 2**filters, kernel_size=7,
+                                 strides=2,
                                  padding='same',
                                  kernel_initializer=he_initializer)
         self.down_bn = BatchNormalization()
         # Changed strides to pool size to 2
         self.mp1 = MaxPool2D(pool_size=2, strides=2)
 
-        self.down_block_2_1 = ResBlock(64)
-        self.down_block_2_2 = ResBlock(64)
-        self.down_block_2_3 = ResBlock(64)
+        self.down_block_2_1 = ResBlock(8 * 2**filters)
+        self.down_block_2_2 = ResBlock(8 * 2**filters)
+        self.down_block_2_3 = ResBlock(8 * 2**filters)
 
-        self.down_block_3_1 = ResBlock(128, 2)
-        self.down_block_3_2 = ResBlock(128)
-        self.down_block_3_3 = ResBlock(128)
-        self.down_block_3_4 = ResBlock(128)
+        self.down_block_3_1 = ResBlock(16 * 2**filters, 2)
+        self.down_block_3_2 = ResBlock(16 * 2**filters)
+        self.down_block_3_3 = ResBlock(16 * 2**filters)
+        self.down_block_3_4 = ResBlock(16 * 2**filters)
 
-        self.down_block_4_1 = ResBlock(256, 2)
-        self.down_block_4_2 = ResBlock(256)
-        self.down_block_4_3 = ResBlock(256)
-        self.down_block_4_4 = ResBlock(256)
-        self.down_block_4_5 = ResBlock(256)
-        self.down_block_4_6 = ResBlock(256)
+        self.down_block_4_1 = ResBlock(32 * 2**filters, 2)
+        self.down_block_4_2 = ResBlock(32 * 2**filters)
+        self.down_block_4_3 = ResBlock(32 * 2**filters)
+        self.down_block_4_4 = ResBlock(32 * 2**filters)
+        self.down_block_4_5 = ResBlock(32 * 2**filters)
+        self.down_block_4_6 = ResBlock(32 * 2**filters)
 
-        self.down_block_5_1 = ResBlock(512, 2)
-        self.down_block_5_2 = ResBlock(512)
-        self.down_block_5_3 = ResBlock(512)
+        self.down_block_5_1 = ResBlock(64 * 2**filters, 2)
+        self.down_block_5_2 = ResBlock(64 * 2**filters)
+        self.down_block_5_3 = ResBlock(64 * 2**filters)
 
-        self.conv_up1 = Conv2DTranspose(filters=256, kernel_size=2, strides=2,
+        self.conv_up1 = Conv2DTranspose(filters=32 * 2**filters,
+                                        kernel_size=2, strides=2,
                                         kernel_initializer=he_initializer)
         # default axis is -1 => the filter axis
         self.conv_up_concat_1 = Concatenate()
 
-        self.up_block_1_1 = ResBlock(256, decode=True)
-        self.up_block_1_2 = ResBlock(256)
-        self.up_block_1_3 = ResBlock(256)
-        self.up_block_1_4 = ResBlock(256)
-        self.up_block_1_5 = ResBlock(256)
-        self.up_block_1_6 = ResBlock(256)
+        self.up_block_1_1 = ResBlock(32 * 2**filters, decode=True)
+        self.up_block_1_2 = ResBlock(32 * 2**filters)
+        self.up_block_1_3 = ResBlock(32 * 2**filters)
+        self.up_block_1_4 = ResBlock(32 * 2**filters)
+        self.up_block_1_5 = ResBlock(32 * 2**filters)
+        self.up_block_1_6 = ResBlock(32 * 2**filters)
 
 
         # Layer 2
-        self.conv_up2 = Conv2DTranspose(filters=128, kernel_size=2, strides=2,
+        self.conv_up2 = Conv2DTranspose(filters=16 * 2**filters,
+                                        kernel_size=2, strides=2,
                                         kernel_initializer=he_initializer)
         self.conv_up_concat_2 = Concatenate()
 
-        self.up_block_2_1 = ResBlock(128, decode=True)
-        self.up_block_2_2 = ResBlock(128)
-        self.up_block_2_3 = ResBlock(128)
-        self.up_block_2_4 = ResBlock(128)
+        self.up_block_2_1 = ResBlock(16 * 2**filters, decode=True)
+        self.up_block_2_2 = ResBlock(16 * 2**filters)
+        self.up_block_2_3 = ResBlock(16 * 2**filters)
+        self.up_block_2_4 = ResBlock(16 * 2**filters)
 
 
         # Layer 3
-        self.conv_up3 = Conv2DTranspose(filters=64, kernel_size=2, strides=2,
+        self.conv_up3 = Conv2DTranspose(filters=8 * 2**filters,
+                                        kernel_size=2, strides=2,
                                         kernel_initializer=he_initializer)
         self.conv_up_concat_3 = Concatenate()
 
-        self.up_block_3_1 = ResBlock(64, decode=True)
-        self.up_block_3_2 = ResBlock(64)
-        self.up_block_3_3 = ResBlock(64)
+        self.up_block_3_1 = ResBlock(8 * 2**filters, decode=True)
+        self.up_block_3_2 = ResBlock(8 * 2**filters)
+        self.up_block_3_3 = ResBlock(8 * 2**filters)
 
         # Layer 4
-        self.conv_up4 = Conv2DTranspose(filters=64, kernel_size=2, strides=2,
+        self.conv_up4 = Conv2DTranspose(filters=8 * 2**filters,
+                                        kernel_size=2, strides=2,
                                         kernel_initializer=he_initializer)
 
         self.conv_up_concat_4 = Concatenate()
         # Activation corresponding to first layer
-        self.up_conv4 = Conv2D(filters=64, kernel_size=7, strides=1,
+        self.up_conv4 = Conv2D(filters=8 * 2**filters, kernel_size=7, strides=1,
                                padding='same',
                                kernel_initializer=he_initializer)
         self.up_bn = BatchNormalization()
 
         # Think about whether this needs to be activated: No since activation
         # corresponding to this first layer is dealt with above
-        self.conv_up5 = Conv2DTranspose(filters=64, kernel_size=2, strides=2,
+        self.conv_up5 = Conv2DTranspose(filters=8 * 2**filters, kernel_size=2, strides=2,
                                         kernel_initializer=he_initializer)
         self.output_layer = Conv2D(output_channels, 1, strides=1,
                                    padding='same',

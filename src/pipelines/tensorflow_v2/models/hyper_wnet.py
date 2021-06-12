@@ -4,11 +4,11 @@
 # Link: https://arxiv.org/abs/2009.01907
 from kerastuner import HyperModel
 
-import tensorflow as tf
 from tensorflow.keras.layers import (Conv2D, MaxPool2D, Conv2DTranspose,
                                      Input, BatchNormalization, concatenate)
 
 from src.pipelines.tensorflow_v2.models.hyper_unet_resnet import ResBlock
+from src.pipelines.tensorflow_v2.losses.custom_losses import *
 
 
 # *============================ Conv Bridge Block ============================*
@@ -47,10 +47,11 @@ class HyperWnet(HyperModel):
         # create the search space
         initializer = hp.Choice("initializer", ["he_normal", "glorot_uniform"])
         activation = hp.Choice("activation", ["relu", "selu"])
-        filter = hp.Choice("filters", [1, 2, 3])
+        filter = hp.Choice("filters", [0, 1, 2, 3])
         kernel_size = hp.Choice("kernel_size", [3, 5])
         optimizer = hp.Choice("optimizer", ["adam", "sgd"])
         wnets = hp.Choice("num_wnets", [1, 2, 3, 4, 5])
+        loss_choice = hp.Choice("loss", ["focal", "wce", "bce"])
 
         if optimizer == "adam":
              opt = tf.keras.optimizers.Adam(
@@ -69,6 +70,13 @@ class HyperWnet(HyperModel):
              activation = tf.nn.relu
         elif activation == "selu":
              activation = tf.nn.selu
+
+        if loss_choice == "bce":
+            loss = tf.keras.losses.binary_crossentropy
+        elif loss_choice == "wce":
+            loss = WeightedCE(hp.Float("loss_weight", 0.5, 0.99))
+        elif loss_choice == "focal":
+            loss = FocalLossV2(hp.Float("loss_weight", 0.5, 0.99))
 
         input = []
         res_down1 = []
@@ -90,31 +98,31 @@ class HyperWnet(HyperModel):
 
         for i in range(wnets):
             # Mini-Unet
-            res_down1.append(ResBlock(8*filter,
+            res_down1.append(ResBlock(8 * 2**filter,
                                       kernel_size=kernel_size,
                                       activation=activation,
                                       initializer=initializer,
                                       decode=True)(input[i]))
             pool1.append(MaxPool2D(pool_size=2, strides=2)(res_down1[i]))
 
-            res_down2.append(ResBlock(16*filter,
+            res_down2.append(ResBlock(16 * 2**filter,
                                       kernel_size=kernel_size,
                                       activation=activation,
                                       initializer=initializer,
                                       decode=True)(pool1[i]))
             pool2.append(MaxPool2D(pool_size=2, strides=2)(res_down2[i]))
 
-            res_bottle.append(ResBlock(32*filter,
+            res_bottle.append(ResBlock(32 * 2**filter,
                                        kernel_size=kernel_size,
                                        activation=activation,
                                        initializer=initializer,
                                        decode=True)(pool2[i]))
 
             # Expanding
-            trans_conv1.append(Conv2DTranspose(filters=16*filter, kernel_size=2,
-                                               strides=2,
+            trans_conv1.append(Conv2DTranspose(filters=16 * 2**filter,
+                                               kernel_size=2, strides=2,
                                                padding='same')(res_bottle[i]))
-            res_up1.append(ResBlock(16*filter,
+            res_up1.append(ResBlock(16 * 2**filter,
                                     kernel_size=kernel_size,
                                     activation=activation,
                                     initializer=initializer)(trans_conv1[i]))
@@ -123,16 +131,16 @@ class HyperWnet(HyperModel):
                 initializer=initializer)(res_down2[i]))
             concat1.append(concatenate([res_up1[i], bridge1[i]]))
 
-            trans_conv2.append(Conv2DTranspose(filters=8*filter,
+            trans_conv2.append(Conv2DTranspose(filters=8 * 2**filter,
                                                kernel_size=2,
                                                strides=2,
                                                padding='same')(concat1[i]))
-            res_up2.append(ResBlock(8*filter,
+            res_up2.append(ResBlock(8 * 2**filter,
                                     kernel_size=kernel_size,
                                     activation=activation,
                                     initializer=initializer)(trans_conv2[i]))
             bridge2.append(ConvBridgeBlock(
-                8*filter, kernel_size=kernel_size, activation=activation,
+                8 * 2**filter, kernel_size=kernel_size, activation=activation,
                 initializer=initializer)(res_down1[i]))
             concat2.append(concatenate([res_up2[i], bridge2[i]]))
 
@@ -148,10 +156,11 @@ class HyperWnet(HyperModel):
                                name="Hyper-UNetResnet")
 
         model.compile(
-            optimizer=opt,
-            loss='binary_crossentropy',
+            optimizer=opt, loss=loss,
             metrics=['accuracy', tf.keras.metrics.Precision(name="precision"),
-                     tf.keras.metrics.Recall(name="recall")]
+                     tf.keras.metrics.Recall(name="recall"),
+                     tf.keras.metrics.AUC(name="auc", curve="PR"),
+                     ]
         )
 
         return model
