@@ -1,8 +1,8 @@
 from kerastuner import HyperModel
-import tensorflow as tf
 from tensorflow.keras.layers import (Input, Conv2D, MaxPool2D,
                                      Conv2DTranspose, concatenate,
                                      BatchNormalization)
+from src.pipelines.tensorflow_v2.losses.custom_losses import *
 
 
 # *============================= Residual Block ==============================*
@@ -70,6 +70,7 @@ class HyperUnetResnet(HyperModel):
         filter = hp.Choice("filters", [0, 1, 2, 3, 4])
         kernel_size = hp.Choice("kernel_size", [3, 5])
         optimizer = hp.Choice("optimizer", ["adam", "sgd"])
+        loss_choice = hp.Choice("loss", ["focal", "wce", "bce"])
 
         if optimizer == "adam":
             opt = tf.keras.optimizers.Adam(
@@ -88,6 +89,13 @@ class HyperUnetResnet(HyperModel):
             activation = tf.nn.relu
         elif activation == "selu":
             activation = tf.nn.selu
+
+        if loss_choice == "bce":
+            loss = tf.keras.losses.binary_crossentropy
+        elif loss_choice == "wce":
+            loss = WeightedCE(hp.Float("loss_weight", 0.5, 0.99))
+        elif loss_choice == "focal":
+            loss = FocalLossV2(hp.Float("loss_weight", 0.5, 0.99))
 
         input = Input(shape=self.input_shape)
 
@@ -276,10 +284,10 @@ class HyperUnetResnet(HyperModel):
                                name="Hyper-UNetResnet")
 
         model.compile(
-            optimizer=opt,
-            loss='binary_crossentropy',
+            optimizer=opt, loss=loss,
             metrics=['accuracy', tf.keras.metrics.Precision(name="precision"),
-                     tf.keras.metrics.Recall(name="recall")]
+                     tf.keras.metrics.Recall(name="recall"),
+                     tf.keras.metrics.AUC(name="auc", curve="PR")]
         )
 
         return model

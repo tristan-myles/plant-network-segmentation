@@ -1,8 +1,8 @@
 from kerastuner import HyperModel
 
-import tensorflow as tf
 from tensorflow.keras.layers import (Input, Conv2D, MaxPool2D,
                                      Conv2DTranspose, concatenate)
+from src.pipelines.tensorflow_v2.losses.custom_losses import *
 
 
 # *========================== U-Net Building Block ===========================*
@@ -19,6 +19,7 @@ class HyperUnet(HyperModel):
         kernel_size = hp.Choice("kernel_size", [3, 5])
         optimizer = hp.Choice("optimizer", ["adam", "sgd"])
         padding = "same"
+        loss_choice = hp.Choice("loss", ["focal", "wce", "bce"])
 
         if optimizer == "adam":
             opt = tf.keras.optimizers.Adam(
@@ -28,10 +29,23 @@ class HyperUnet(HyperModel):
                 hp.Float('learning_rate', 1e-4, 1e-2, sampling='log'),
                 momentum=hp.Float('momentum', 0.5, 0.9))
 
+
         if initializer == "he_normal":
             initializer = tf.keras.initializers.he_normal(seed=3141)
         elif initializer == "glorot_uniform":
             initializer = tf.keras.initializers.glorot_uniform(seed=3141)
+
+        if activation == "relu":
+            activation = tf.nn.relu
+        elif activation == "selu":
+            activation = tf.nn.selu
+
+        if loss_choice == "bce":
+            loss = tf.keras.losses.binary_crossentropy
+        elif loss_choice == "wce":
+            loss = WeightedCE(hp.Float("loss_weight", 0.5, 0.99))
+        elif loss_choice == "focal":
+            loss = FocalLossV2(hp.Float("loss_weight", 0.5, 0.99))
 
         input = Input(shape=self.input_shape)
 
@@ -134,10 +148,10 @@ class HyperUnet(HyperModel):
                                name="Hyper-UNet")
 
         model.compile(
-            optimizer=opt,
-            loss='binary_crossentropy',
+            optimizer=opt, loss=loss,
             metrics=['accuracy', tf.keras.metrics.Precision(name="precision"),
-                     tf.keras.metrics.Recall(name="recall")]
+                     tf.keras.metrics.Recall(name="recall"),
+                     tf.keras.metrics.AUC(name="auc", curve="PR")]
         )
 
         return model
