@@ -187,7 +187,7 @@ def im2_lt_im1(pred, input_image):
     pred[(input_image >= 0)] = 0
 
     return pred
-output_dict["loss_weight"]
+
 
 # *=============================== load model ================================*
 def check_model_save(model, new_model, new_loss, new_opt, answers, metrics,
