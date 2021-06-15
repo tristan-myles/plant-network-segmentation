@@ -27,6 +27,7 @@ def save_compilation_dict(answers, lr, save_path):
                         "loss": loss_choices[answers["loss_choice"]],
                         "opt": opt_choices[answers["opt_choice"]],
                         "filters": answers["filters"],
+                        "loss_weight": answers["loss_weight"],
                         "lr": str(lr)}
 
     save_path = save_path + "compilation.json"
@@ -186,7 +187,7 @@ def im2_lt_im1(pred, input_image):
     pred[(input_image >= 0)] = 0
 
     return pred
-
+output_dict["loss_weight"]
 
 # *=============================== load model ================================*
 def check_model_save(model, new_model, new_loss, new_opt, answers, metrics,
@@ -271,7 +272,8 @@ def print_user_input(answers):
           f"15. {'Metric choices':<40}: {answers['metric_choices']}\n"
           f"16. {'Run name':<40}: {answers['run_name']}\n"
           f"17. {'Test directory':<40}: {answers['test_dir']}\n"
-          f"18. {'Filter multiple':<40}: {answers['filters']}\n")
+          f"18. {'Filter multiple':<40}: {answers['filters']}\n"
+          f"19. {'Loss weight':<40}: {answers['loss_weight']}\n")
 
 
 def print_options_dict(output_dict):
@@ -316,7 +318,7 @@ def interactive_prompt():
             output_dict["which"] = ["tuning", "training"][operation-1]
 
             # list options = 1 - 18
-            options_list.update(range(1, 20))
+            options_list.update(range(1, 21))
 
             options_list.remove(-1)
 
@@ -556,14 +558,25 @@ def interactive_prompt():
                 options_list.remove(18)
 
             if 19 in options_list:
+                loss_weight = input(
+                    "\n19. Please enter a loss weight (leave this blank to "
+                    "skip, or used balanced weighting): ")
+                if loss_weight:
+                    output_dict["loss_weight"] = float(loss_weight)
+                else:
+                    output_dict["loss_weight"] = None
+
+                options_list.remove(19)
+
+            if 20 in options_list:
                 run_name = input(
-                    "\n18. Please enter the run name, this will be"
+                    "\n20. Please enter the run name, this will be"
                     " the name used to save your callback output"
                     " (if applicable): ")
 
                 output_dict["run_name"] = run_name
 
-                options_list.remove(19)
+                options_list.remove(20)
 
         print_options_dict(output_dict)
 
