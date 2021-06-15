@@ -108,13 +108,15 @@ def main():
         if ANSWERS["loss_choice"] == 0:
             loss = tf.keras.losses.binary_crossentropy
         elif ANSWERS["loss_choice"] == 1:
-            class_weight = get_class_weight(ANSWERS["train_base_dir"],
-                                            ANSWERS['incl_aug'])
-            loss = WeightedCE(1-class_weight)
+            if not ANSWERS["loss_weight"]:
+                ANSWERS["loss_weight"] = get_class_weight(
+                   ANSWERS["train_base_dir"], ANSWERS['incl_aug'])
+            loss = WeightedCE(1-ANSWERS["loss_weight"])
         elif ANSWERS["loss_choice"] == 2:
-            class_weight = get_class_weight(ANSWERS["train_base_dir"],
-                                            ANSWERS['incl_aug'])
-            loss = FocalLoss(1-class_weight)
+            if not ANSWERS["loss_weight"]:
+                ANSWERS["loss_weight"] = get_class_weight(
+                    ANSWERS["train_base_dir"], ANSWERS['incl_aug'])
+            loss = FocalLoss(1 - ANSWERS["loss_weight"])
         else:
             loss = SoftDiceLoss()
 
