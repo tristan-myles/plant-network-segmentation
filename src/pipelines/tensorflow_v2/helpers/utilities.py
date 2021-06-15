@@ -65,7 +65,7 @@ def tune_model(hyperModel, train_dataset, val_dataset, results_dir, run_name,
 
     tuner.search(
         x=train_dataset,
-        epochs=30,
+        epochs=50,
         validation_data=val_dataset,
         callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',
                                                     patience=10,
