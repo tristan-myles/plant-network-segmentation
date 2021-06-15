@@ -186,7 +186,7 @@ def main():
 
         if 0 in ANSWERS['callback_choices']:
             lrt_save_path = f"{OUTPUTS_DIR}lrt/"f"{ANSWERS['run_name']}"
-            Path(lrt_save_path ).mkdir(parents=True, exist_ok=True)
+            Path(lrt_save_path).mkdir(parents=True, exist_ok=True)
             save_lrt_results(lr_range_test, lrt_save_path)
 
         if 4 in ANSWERS["callback_choices"]:
@@ -194,11 +194,11 @@ def main():
             # recall as the best val recall achieved during training
             del model
             if ANSWERS["model_choice"] == 0:
-                model = Unet(1)
+                model = Unet(1, ANSWERS['filters'])
             elif ANSWERS["model_choice"] == 1:
-                model = UnetResnet(1)
+                model = UnetResnet(1, ANSWERS['filters'])
             else:
-                model = WNet()
+                model = WNet(1, ANSWERS['filters'])
 
             # load model with best val recall
             model.load_workaround(ANSWERS["mask_shape"], ANSWERS['leaf_shape'],
