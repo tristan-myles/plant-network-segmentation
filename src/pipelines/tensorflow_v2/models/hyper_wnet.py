@@ -127,7 +127,8 @@ class HyperWnet(HyperModel):
                                     activation=activation,
                                     initializer=initializer)(trans_conv1[i]))
             bridge1.append(ConvBridgeBlock(
-                16*filter, kernel_size=kernel_size, activation=activation,
+                16 * 2**filter, kernel_size=kernel_size,
+                activation=activation,
                 initializer=initializer)(res_down2[i]))
             concat1.append(concatenate([res_up1[i], bridge1[i]]))
 
