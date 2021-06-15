@@ -26,6 +26,7 @@ def save_compilation_dict(answers, lr, save_path):
     compilation_dict = {"model": model_choices[answers["model_choice"]],
                         "loss": loss_choices[answers["loss_choice"]],
                         "opt": opt_choices[answers["opt_choice"]],
+                        "filters": answers["filters"],
                         "lr": str(lr)}
 
     save_path = save_path + "compilation.json"
