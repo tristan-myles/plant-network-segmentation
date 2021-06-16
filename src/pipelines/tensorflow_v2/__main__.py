@@ -93,11 +93,14 @@ def main():
 
     elif ANSWERS["which"] == "training":
         if ANSWERS["model_choice"] == 0:
-            model = Unet(1, ANSWERS["initializer"], ANSWERS['filters'])
+            model = Unet(1, ANSWERS["activation"],
+                         ANSWERS["initializer"], ANSWERS['filters'])
         elif ANSWERS["model_choice"] == 1:
-            model = UnetResnet(1, ANSWERS["initializer"], ANSWERS['filters'])
+            model = UnetResnet(1, ANSWERS["activation"],
+                               ANSWERS["initializer"], ANSWERS['filters'])
         else:
-            model = WNet(1, ANSWERS["initializer"], ANSWERS['filters'])
+            model = WNet(1, ANSWERS["activation"],
+                         ANSWERS["initializer"], ANSWERS['filters'])
 
         model_save_path = (f"{OUTPUTS_DIR}saved_models/"
                            f"{ANSWERS['run_name']}")
@@ -196,12 +199,14 @@ def main():
             # recall as the best val recall achieved during training
             del model
             if ANSWERS["model_choice"] == 0:
-                model = Unet(1, ANSWERS["initializer"], ANSWERS['filters'])
+                model = Unet(1,  ANSWERS["activation"],
+                             ANSWERS["initializer"], ANSWERS['filters'])
             elif ANSWERS["model_choice"] == 1:
-                model = UnetResnet(1, ANSWERS["initializer"], ANSWERS[
-                    'filters'])
+                model = UnetResnet(1, ANSWERS["activation"],
+                                   ANSWERS["initializer"], ANSWERS['filters'])
             else:
-                model = WNet(1, ANSWERS["initializer"], ANSWERS['filters'])
+                model = WNet(1, ANSWERS["activation"],
+                             ANSWERS["initializer"], ANSWERS['filters'])
 
             # load model with best val recall
             model.load_workaround(ANSWERS["mask_shape"], ANSWERS['leaf_shape'],
