@@ -13,14 +13,12 @@ from src.pipelines.tensorflow_v2.helpers.train_test import _TfPnsMixin
 
 # *============================ Conv Bridge Block ============================*
 class ConvBridgeBlock(tf.keras.Model):
-    def __init__(self, channels):
+    def __init__(self, channels, initializer):
         super().__init__()
-
-        he_initializer = tf.keras.initializers.he_normal(seed=3141)
 
         self.conv = Conv2D(filters=channels, kernel_size=3, strides=1,
                            padding='same',
-                           kernel_initializer=he_initializer,
+                           kernel_initializer=initializer,
                            activation="relu")
         self.bn = BatchNormalization()
 
@@ -34,37 +32,44 @@ class ConvBridgeBlock(tf.keras.Model):
 # *=============================== Mini U-Net ================================*
 class MiniUnet(tf.keras.Model):
     # Olaf Ronneberger et al. U-Net
-    def __init__(self, output_channels, filters=0):
+    def __init__(self, output_channels, initializer="he_normal", filters=0):
         super().__init__()
-
-        he_initializer = tf.keras.initializers.he_normal(seed=3141)
+        if initializer == "he_normal":
+            initializer = tf.keras.initializers.he_normal(seed=3141)
+        else:
+            initializer = tf.keras.initializers.glorot_uniform(seed=3141)
 
         # Components
 
         # Contracting
-        self.res_down1 = ResBlock(8 * 2**filters, decode=True)
+        self.res_down1 = ResBlock(8 * 2**filters, decode=True,
+                                  initializer=initializer)
         self.pool1 = MaxPool2D(pool_size=2, strides=2)
 
-        self.res_down2 = ResBlock(16 * 2**filters, decode=True)
+        self.res_down2 = ResBlock(16 * 2**filters, decode=True,
+                                  initializer=initializer)
         self.pool2 = MaxPool2D(pool_size=2, strides=2)
 
-        self.res_bottle = ResBlock(32 * 2**filters, decode=True)
+        self.res_bottle = ResBlock(32 * 2**filters, decode=True,
+                                   initializer=initializer)
 
         # Expanding
         self.trans_conv1 = Conv2DTranspose(filters=16 * 2**filters,
                                            kernel_size=2, strides=2,
                                            padding='same',
-                                           kernel_initializer=he_initializer)
-        self.res_up1 = ResBlock(16 * 2**filters)
-        self.bridge1 = ConvBridgeBlock(16 * 2**filters)
+                                           kernel_initializer=initializer)
+        self.res_up1 = ResBlock(16 * 2**filters,
+                                initializer=initializer)
+        self.bridge1 = ConvBridgeBlock(16 * 2**filters,
+                                       initializer=initializer)
         self.concat1 = Concatenate()
 
         self.trans_conv2 = Conv2DTranspose(filters=8 * 2**filters,
                                            kernel_size=2,
                                            strides=2, padding='same',
-                                           kernel_initializer=he_initializer)
-        self.res_up2 = ResBlock(8 * 2**filters)
-        self.bridge2 = ConvBridgeBlock(8 * 2**filters)
+                                           kernel_initializer=initializer)
+        self.res_up2 = ResBlock(8 * 2**filters, initializer=initializer)
+        self.bridge2 = ConvBridgeBlock(8 * 2**filters, initializer=initializer)
         self.concat2 = Concatenate()
 
         # Output
@@ -134,12 +139,13 @@ class WNet(tf.keras.Model, _TfPnsMixin):
     Combines two Mini U-Nets where the prediction of the first Mini U-Net is
     concatenated to the first
     """
-    def __init__(self, output_channels, filters=0):
+    def __init__(self, output_channels, initializer="he_normal",
+                 filters=0):
         super().__init__()
 
         # Channels set for binary prediction
-        self.unet1 = MiniUnet(output_channels, filters)
-        self.unet2 = MiniUnet(output_channels, filters)
+        self.unet1 = MiniUnet(output_channels, initializer, filters)
+        self.unet2 = MiniUnet(output_channels, initializer, filters)
         self.concat = Concatenate()
 
     def call(self, input_tensor, training=True):
