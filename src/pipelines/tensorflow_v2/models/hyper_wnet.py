@@ -47,10 +47,10 @@ class HyperWnet(HyperModel):
         # create the search space
         initializer = hp.Choice("initializer", ["he_normal", "glorot_uniform"])
         activation = hp.Choice("activation", ["relu", "selu"])
-        filter = hp.Choice("filters", [0, 1, 2, 3])
-        kernel_size = hp.Choice("kernel_size", [3, 5])
+        filter = hp.Choice("filters", [0, 1, 2])
+        kernel_size = hp.Choice("kernel_size", [3])
         optimizer = hp.Choice("optimizer", ["adam", "sgd"])
-        wnets = hp.Choice("num_wnets", [1, 2, 3, 4, 5])
+        wnets = hp.Choice("num_wnets", [2])
         loss_choice = hp.Choice("loss", ["focal", "wce", "bce"])
 
         if optimizer == "adam":

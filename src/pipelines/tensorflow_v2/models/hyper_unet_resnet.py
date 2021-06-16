@@ -67,7 +67,7 @@ class HyperUnetResnet(HyperModel):
         # create the search space
         initializer = hp.Choice("initializer", ["he_normal", "glorot_uniform"])
         activation = hp.Choice("activation", ["relu", "selu"])
-        filter = hp.Choice("filters", [0, 1, 2, 3, 4])
+        filter = hp.Choice("filters", [0, 1, 2, 3])
         kernel_size = hp.Choice("kernel_size", [3, 5])
         optimizer = hp.Choice("optimizer", ["adam", "sgd"])
         loss_choice = hp.Choice("loss", ["focal", "wce", "bce"])
