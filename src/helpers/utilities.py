@@ -20,11 +20,14 @@ LOGGER = logging.getLogger(__name__)
 def get_workaround_details(compilation_dict):
     # model:
     if compilation_dict["model"] == "unet":
-        model = Unet(1, compilation_dict["filters"])
+        model = Unet(1,  compilation_dict["initializer"],
+                     compilation_dict["filters"])
     elif compilation_dict["model"] == "unet_resnet":
-        model = UnetResnet(1, compilation_dict["filters"])
+        model = UnetResnet(1,  compilation_dict["initializer"],
+                           compilation_dict["filters"])
     elif compilation_dict["model"] == "wnet":
-        model = WNet(1, compilation_dict["filters"])
+        model = WNet(1,  compilation_dict["initializer"],
+                     compilation_dict["filters"])
     else:
         raise ValueError("Please provide a valid answer for model choice, "
                          "options are unet, unet_resnet, or wnet")
@@ -49,9 +52,9 @@ def get_workaround_details(compilation_dict):
         raise ValueError("Please provide a valid answer for optimiser choice, "
                          "options are adam or sgd")
 
-    metrics = [ keras.metrics.BinaryAccuracy(name='accuracy'),
-                keras.metrics.Precision(name='precision'),
-                keras.metrics.Recall(name='recall')]
+    metrics = [keras.metrics.BinaryAccuracy(name='accuracy'),
+               keras.metrics.Precision(name='precision'),
+               keras.metrics.Recall(name='recall')]
 
     return model, loss, opt, metrics
 
