@@ -29,6 +29,7 @@ def save_compilation_dict(answers, lr, save_path):
                         "filters": answers["filters"],
                         "loss_weight": answers["loss_weight"],
                         "initializer":  answers["initializer"],
+                        "activation": answers["activation"],
                         "lr": str(lr)}
 
     save_path = save_path + "compilation.json"
@@ -275,7 +276,8 @@ def print_user_input(answers):
           f"17. {'Test directory':<40}: {answers['test_dir']}\n"
           f"18. {'Filter multiple':<40}: {answers['filters']}\n"
           f"19. {'Loss weight':<40}: {answers['loss_weight']}\n",
-          f"20. {'Initializer':<40}: {answers['initializer']}\n")
+          f"20. {'Initializer':<40}: {answers['initializer']}\n",
+          f"21. {'Activation':<40}: {answers['activation']}\n")
 
 
 def print_options_dict(output_dict):
@@ -320,7 +322,7 @@ def interactive_prompt():
             output_dict["which"] = ["tuning", "training"][operation-1]
 
             # list options = 1 - 18
-            options_list.update(range(1, 22))
+            options_list.update(range(1, 23))
 
             options_list.remove(-1)
 
@@ -572,7 +574,7 @@ def interactive_prompt():
 
             if 20 in options_list:
                 initializer = input(
-                    "\n20. Please enter the intializer you want to use:"
+                    "\n20. Please choose the intializer you want to use:"
                     "Options:\n"
                     "0: He Normal\n"
                     "1: Glorot Uniform\n"
@@ -586,14 +588,29 @@ def interactive_prompt():
                 options_list.remove(20)
 
             if 21 in options_list:
+                initializer = input(
+                    "\n21. Please choose the activation you want to use:"
+                    "Options:\n"
+                    "0: ReLU\n"
+                    "1: SELU\n"
+                )
+
+                if initializer == 0:
+                    output_dict["initializer"] = "relu"
+                else:
+                    output_dict["initializer"] = "selu"
+
+                options_list.remove(21)
+
+            if 22 in options_list:
                 run_name = input(
-                    "\n21. Please enter the run name, this will be"
+                    "\n22. Please enter the run name, this will be"
                     " the name used to save your callback output"
                     " (if applicable): ")
 
                 output_dict["run_name"] = run_name
 
-                options_list.remove(21)
+                options_list.remove(22)
 
         print_options_dict(output_dict)
 
