@@ -82,7 +82,7 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
         self.down_block_2_2 = ResBlock(8 * 2**filters, initializer=initializer)
         self.down_block_2_3 = ResBlock(8 * 2**filters, initializer=initializer)
 
-        self.down_block_3_1 = ResBlock(16 * 2**filters, 2,
+        self.down_block_3_1 = ResBlock(16 * 2**filters, stride=2,
                                        initializer=initializer)
         self.down_block_3_2 = ResBlock(16 * 2**filters,
                                        initializer=initializer)
@@ -91,7 +91,7 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
         self.down_block_3_4 = ResBlock(16 * 2**filters,
                                        initializer=initializer)
 
-        self.down_block_4_1 = ResBlock(32 * 2**filters, 2,
+        self.down_block_4_1 = ResBlock(32 * 2**filters, stride=2,
                                        initializer=initializer)
         self.down_block_4_2 = ResBlock(32 * 2**filters,
                                        initializer=initializer)
@@ -104,7 +104,7 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
         self.down_block_4_6 = ResBlock(32 * 2**filters,
                                        initializer=initializer)
 
-        self.down_block_5_1 = ResBlock(64 * 2**filters, 2,
+        self.down_block_5_1 = ResBlock(64 * 2**filters, stride=2,
                                        initializer=initializer)
         self.down_block_5_2 = ResBlock(64 * 2**filters,
                                        initializer=initializer)
@@ -174,7 +174,8 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
 
         # Think about whether this needs to be activated: No since activation
         # corresponding to this first layer is dealt with above
-        self.conv_up5 = Conv2DTranspose(filters=8 * 2**filters, kernel_size=2, strides=2,
+        self.conv_up5 = Conv2DTranspose(filters=8 * 2**filters, kernel_size=2,
+                                        strides=2,
                                         kernel_initializer=initializer)
         self.output_layer = Conv2D(output_channels, 1, strides=1,
                                    padding='same',
