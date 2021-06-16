@@ -20,13 +20,16 @@ LOGGER = logging.getLogger(__name__)
 def get_workaround_details(compilation_dict):
     # model:
     if compilation_dict["model"] == "unet":
-        model = Unet(1,  compilation_dict["initializer"],
+        model = Unet(1, compilation_dict["activation"],
+                     compilation_dict["initializer"],
                      compilation_dict["filters"])
     elif compilation_dict["model"] == "unet_resnet":
-        model = UnetResnet(1,  compilation_dict["initializer"],
+        model = UnetResnet(1, compilation_dict["activation"],
+                           compilation_dict["initializer"],
                            compilation_dict["filters"])
     elif compilation_dict["model"] == "wnet":
-        model = WNet(1,  compilation_dict["initializer"],
+        model = WNet(1,  compilation_dict["activation"],
+                     compilation_dict["initializer"],
                      compilation_dict["filters"])
     else:
         raise ValueError("Please provide a valid answer for model choice, "
