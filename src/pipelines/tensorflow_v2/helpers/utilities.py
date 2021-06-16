@@ -28,6 +28,7 @@ def save_compilation_dict(answers, lr, save_path):
                         "opt": opt_choices[answers["opt_choice"]],
                         "filters": answers["filters"],
                         "loss_weight": answers["loss_weight"],
+                        "initializer":  answers["initializer"],
                         "lr": str(lr)}
 
     save_path = save_path + "compilation.json"
@@ -273,7 +274,8 @@ def print_user_input(answers):
           f"16. {'Run name':<40}: {answers['run_name']}\n"
           f"17. {'Test directory':<40}: {answers['test_dir']}\n"
           f"18. {'Filter multiple':<40}: {answers['filters']}\n"
-          f"19. {'Loss weight':<40}: {answers['loss_weight']}\n")
+          f"19. {'Loss weight':<40}: {answers['loss_weight']}\n",
+          f"20. {'Initializer':<40}: {answers['initializer']}\n")
 
 
 def print_options_dict(output_dict):
@@ -318,7 +320,7 @@ def interactive_prompt():
             output_dict["which"] = ["tuning", "training"][operation-1]
 
             # list options = 1 - 18
-            options_list.update(range(1, 21))
+            options_list.update(range(1, 22))
 
             options_list.remove(-1)
 
@@ -569,14 +571,29 @@ def interactive_prompt():
                 options_list.remove(19)
 
             if 20 in options_list:
+                initializer = input(
+                    "\n20. Please enter the intializer you want to use:"
+                    "Options:\n"
+                    "0: He Normal\n"
+                    "1: Glorot Uniform\n"
+                )
+
+                if initializer == 0:
+                    output_dict["initializer"] = "he_normal"
+                else:
+                    output_dict["initializer"] = "glorot_uniform"
+
+                options_list.remove(20)
+
+            if 21 in options_list:
                 run_name = input(
-                    "\n20. Please enter the run name, this will be"
+                    "\n21. Please enter the run name, this will be"
                     " the name used to save your callback output"
                     " (if applicable): ")
 
                 output_dict["run_name"] = run_name
 
-                options_list.remove(20)
+                options_list.remove(21)
 
         print_options_dict(output_dict)
 
