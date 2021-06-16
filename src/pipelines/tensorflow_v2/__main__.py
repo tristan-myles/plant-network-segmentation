@@ -144,7 +144,7 @@ def main():
 
             model_cpt = tf.keras.callbacks.ModelCheckpoint(
                 filepath=model_save_path, save_weights_only=True, mode='max',
-                monitor='val_recall', save_best_only=True, save_format="tf")
+                monitor='val_auc', save_best_only=True, save_format="tf")
 
             tb = tf.keras.callbacks.TensorBoard(
                 log_dir=f"{OUTPUTS_DIR}tb_logs/{ANSWERS['run_name']}",
