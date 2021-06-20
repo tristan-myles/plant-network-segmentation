@@ -145,9 +145,14 @@ def main():
             model_save_path = model_save_path + "/"
             Path(model_save_path).mkdir(parents=True, exist_ok=True)
 
+            if ANSWERS["model_choice"] == 2:
+                monitor = "val_output_1_auc"
+            else:
+                monitor = "val_auc"
+
             model_cpt = tf.keras.callbacks.ModelCheckpoint(
                 filepath=model_save_path, save_weights_only=True, mode='max',
-                monitor='val_auc', save_best_only=True, save_format="tf")
+                monitor=monitor, save_best_only=True, save_format="tf")
 
             tb = tf.keras.callbacks.TensorBoard(
                 log_dir=f"{OUTPUTS_DIR}tb_logs/{ANSWERS['run_name']}",
