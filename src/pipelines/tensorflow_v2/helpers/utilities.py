@@ -588,17 +588,17 @@ def interactive_prompt():
                 options_list.remove(20)
 
             if 21 in options_list:
-                initializer = input(
+                activation = input(
                     "\n21. Please choose the activation you want to use:"
                     "Options:\n"
                     "0: ReLU\n"
                     "1: SELU\n"
                 )
 
-                if initializer == 0:
-                    output_dict["initializer"] = "relu"
+                if activation == 0:
+                    output_dict["activation"] = "relu"
                 else:
-                    output_dict["initializer"] = "selu"
+                    output_dict["activation"] = "selu"
 
                 options_list.remove(21)
 
