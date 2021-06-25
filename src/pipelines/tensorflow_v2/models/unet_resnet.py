@@ -35,26 +35,26 @@ class ResBlock(tf.keras.Model):
             # 1x1 convolution
             # using for input that's been activated already
             self.conv3 = Conv2D(channels, 1, stride)
-            self.bn3 = BatchNormalization()
 
     def call(self, x):
         x1 = self.conv1(x)
-        x1 = self.bn1(x1)
         x1 = self.activation(x1)
+        x1 = self.bn1(x1)
 
+
+        # apply activation before bn - differs from BN paper
         x1 = self.conv2(x1)
-        x1 = self.bn2(x1)
+        x1 = self.activation(x1)
 
         # Matching dims (i.e. projection shortcut)
         # No need to activate
         if self.flag or self.decode:
             x = self.conv3(x)
-            x = self.bn3(x)
+            x = self.activation(x)
 
         x1 += x
+        x1 = self.bn2(x1)
 
-        # Addition is before the activation...
-        x1 = self.activation(x1)
 
         return x1
 
@@ -199,8 +199,8 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
 
     def call(self, x):
         x = self.down_conv1(x)
-        x = self.down_bn(x)
-        down_conv1 = self.activation(x)
+        x = self.activation(x)
+        down_conv1 = self.down_bn(x)
         x = self.mp1(down_conv1)
 
         x = self.down_block_2_1(x)
@@ -249,8 +249,8 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
         x = self.conv_up4(x)
         x = self.conv_up_concat_4([x, down_conv1])
         x = self.up_conv4(x)
-        x = self.up_bn(x)
         x = self.activation(x)
+        x = self.up_bn(x)
 
         # For each layer with a stride of 2 there will be both an activation
         # and a transposed convolution (with no activation)
