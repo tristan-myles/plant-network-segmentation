@@ -1,23 +1,10 @@
-import json
-import logging
-from pathlib import Path
-
-import numpy as np
-import os
 import random
 
 from src.helpers.utilities import classification_report
 from src.pipelines.tensorflow_v2.callbacks.lr_range_test import LRRangeTest
 from src.pipelines.tensorflow_v2.callbacks.one_cycle import OneCycleLR
 from src.pipelines.tensorflow_v2.helpers.train_test import get_tf_dataset
-from src.pipelines.tensorflow_v2.helpers.utilities import (
-                                                        parse_arguments,
-                                                        interactive_prompt,
-                                                        im2_lt_im1,
-                                                        save_compilation_dict,
-                                                        tune_model,
-                                                        save_lrt_results,
-                                                        get_class_weight)
+from src.pipelines.tensorflow_v2.helpers.utilities import *
 from src.pipelines.tensorflow_v2.losses.custom_losses import *
 from src.pipelines.tensorflow_v2.models.unet import Unet
 from src.pipelines.tensorflow_v2.models.hyper_unet import HyperUnet
@@ -59,7 +46,7 @@ def main():
 
     # get dataset
     # train
-    train_dataset = get_tf_dataset(
+    train_dataset, _ = get_tf_dataset(
         base_dir=ANSWERS["train_base_dir"],
         leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
         incl_aug=ANSWERS['incl_aug'], batch_size=ANSWERS['batch_size'],
@@ -70,7 +57,7 @@ def main():
         transform_uint8=ANSWERS['transform_uint8'])
 
     # val
-    val_dataset = get_tf_dataset(
+    val_dataset, val_leaf_names = get_tf_dataset(
         base_dir=ANSWERS["val_base_dir"],
         leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
         batch_size=ANSWERS['batch_size'],
@@ -222,10 +209,16 @@ def main():
             LOGGER.info("Confirming that best model saved correctly: ")
             model.evaluate(val_dataset)
 
+        # Get val dataset predictions using the best model
+        val_predictions = model.predict(val_dataset)
+        for val_pred, file_path in zip(val_predictions,
+                                       val_leaf_names):
+            save_predictions(val_pred, ANSWERS["val_base_dir"], file_path)
+
         # check test_set
         if ANSWERS["test_dir"]:
             # test
-            test_dataset = get_tf_dataset(
+            test_dataset, test_leaf_names = get_tf_dataset(
                 base_dir=ANSWERS["test_dir"],
                 leaf_ext=ANSWERS['leaf_ext'], mask_ext=ANSWERS['mask_ext'],
                 batch_size=1,
@@ -243,6 +236,11 @@ def main():
             # the masks in memory at the same time, possibly better to use a
             # generator in the classification report...
             predictions = model.predict(test_dataset)
+
+            for test_pred, file_path in zip(predictions,
+                                           test_leaf_names):
+                save_predictions(test_pred, ANSWERS["test_dir"], file_path)
+
 
             masks = []
             leaves = []

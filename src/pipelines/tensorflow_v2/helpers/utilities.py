@@ -4,11 +4,11 @@ from glob import glob
 import pprint
 from pathlib import Path
 import logging
+import os
 
 import cv2
 import numpy as np
 import tensorflow as tf
-import tensorflow_addons as tfa
 
 from kerastuner import Objective
 from kerastuner.tuners import BayesianOptimization
@@ -18,6 +18,19 @@ LOGGER.setLevel(logging.INFO)
 
 
 # *================================= general =================================*
+def save_predictions(prediction, folder_path, filename):
+    output_folder_path = os.path.join(folder_path, "../predictions")
+    folderpath = filename.split("/", 5)[5]
+    folderpath = folderpath.rsplit("/", 2)[0]
+    output_folder_path = os.path.join(output_folder_path, folderpath)
+    Path(output_folder_path).mkdir(parents=True, exist_ok=True)
+
+    filename=filename.rsplit("/", 1)[1]
+    filepath = os.path.join(output_folder_path, filename)
+
+    cv2.imwrite(filepath, prediction)
+
+
 def save_compilation_dict(answers, lr, save_path):
     model_choices = ["unet", "unet_resnet", "wnet"]
     loss_choices = ["bce", "wce", "focal", "dice"]
