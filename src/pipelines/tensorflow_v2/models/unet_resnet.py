@@ -34,7 +34,8 @@ class ResBlock(tf.keras.Model):
         if self.decode or self.flag:
             # 1x1 convolution
             # using for input that's been activated already
-            self.conv3 = Conv2D(channels, 1, stride)
+            self.conv3 = Conv2D(channels, 1, stride,
+                                kernel_initializer=initializer)
 
     def call(self, x):
         x1 = self.conv1(x)

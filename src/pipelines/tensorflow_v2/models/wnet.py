@@ -24,8 +24,8 @@ class ConvBridgeBlock(tf.keras.Model):
 
     def call(self, x):
         x1 = self.conv(x)
-        x1 = self.bn(x1)
         x1 = self.activation(x1)
+        x1 = self.bn(x1)
 
         return x1
 
