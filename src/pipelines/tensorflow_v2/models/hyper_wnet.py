@@ -26,8 +26,8 @@ class ConvBridgeBlock(tf.keras.layers.Layer):
 
     def call(self, x):
         x1 = self.conv(x)
-        x1 = self.bn(x1)
         x1 = self.activation(x1)
+        x1 = self.bn(x1)
 
         return x1
 
@@ -47,10 +47,10 @@ class HyperWnet(HyperModel):
         # create the search space
         initializer = hp.Choice("initializer", ["he_normal", "glorot_uniform"])
         activation = hp.Choice("activation", ["relu", "selu"])
-        filter = hp.Choice("filters", [0, 1, 2, 3])
-        kernel_size = hp.Choice("kernel_size", [3, 5])
+        filter = hp.Choice("filters", [0, 1, 2])
+        kernel_size = hp.Choice("kernel_size", [3])
         optimizer = hp.Choice("optimizer", ["adam", "sgd"])
-        wnets = hp.Choice("num_wnets", [1, 2, 3, 4, 5])
+        wnets = hp.Choice("num_wnets", [2])
         loss_choice = hp.Choice("loss", ["focal", "wce", "bce"])
 
         if optimizer == "adam":
@@ -127,7 +127,8 @@ class HyperWnet(HyperModel):
                                     activation=activation,
                                     initializer=initializer)(trans_conv1[i]))
             bridge1.append(ConvBridgeBlock(
-                16*filter, kernel_size=kernel_size, activation=activation,
+                16 * 2**filter, kernel_size=kernel_size,
+                activation=activation,
                 initializer=initializer)(res_down2[i]))
             concat1.append(concatenate([res_up1[i], bridge1[i]]))
 

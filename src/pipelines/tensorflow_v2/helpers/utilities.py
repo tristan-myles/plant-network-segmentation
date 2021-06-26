@@ -26,6 +26,10 @@ def save_compilation_dict(answers, lr, save_path):
     compilation_dict = {"model": model_choices[answers["model_choice"]],
                         "loss": loss_choices[answers["loss_choice"]],
                         "opt": opt_choices[answers["opt_choice"]],
+                        "filters": answers["filters"],
+                        "loss_weight": answers["loss_weight"],
+                        "initializer":  answers["initializer"],
+                        "activation": answers["activation"],
                         "lr": str(lr)}
 
     save_path = save_path + "compilation.json"
@@ -65,7 +69,7 @@ def tune_model(hyperModel, train_dataset, val_dataset, results_dir, run_name,
 
     tuner.search(
         x=train_dataset,
-        epochs=30,
+        epochs=50,
         validation_data=val_dataset,
         callbacks=[tf.keras.callbacks.EarlyStopping(monitor='val_loss',
                                                     patience=10,
@@ -270,7 +274,10 @@ def print_user_input(answers):
           f"15. {'Metric choices':<40}: {answers['metric_choices']}\n"
           f"16. {'Run name':<40}: {answers['run_name']}\n"
           f"17. {'Test directory':<40}: {answers['test_dir']}\n"
-          f"18. {'Filter multiple':<40}: {answers['filters']}\n")
+          f"18. {'Filter multiple':<40}: {answers['filters']}\n"
+          f"19. {'Loss weight':<40}: {answers['loss_weight']}\n",
+          f"20. {'Initializer':<40}: {answers['initializer']}\n",
+          f"21. {'Activation':<40}: {answers['activation']}\n")
 
 
 def print_options_dict(output_dict):
@@ -315,7 +322,7 @@ def interactive_prompt():
             output_dict["which"] = ["tuning", "training"][operation-1]
 
             # list options = 1 - 18
-            options_list.update(range(1, 20))
+            options_list.update(range(1, 23))
 
             options_list.remove(-1)
 
@@ -555,14 +562,55 @@ def interactive_prompt():
                 options_list.remove(18)
 
             if 19 in options_list:
+                loss_weight = input(
+                    "\n19. Please enter a loss weight (leave this blank to "
+                    "skip, or used balanced weighting): ")
+                if loss_weight:
+                    output_dict["loss_weight"] = float(loss_weight)
+                else:
+                    output_dict["loss_weight"] = None
+
+                options_list.remove(19)
+
+            if 20 in options_list:
+                initializer = input(
+                    "\n20. Please choose the intializer you want to use:"
+                    "Options:\n"
+                    "0: He Normal\n"
+                    "1: Glorot Uniform\n"
+                )
+
+                if initializer == 0:
+                    output_dict["initializer"] = "he_normal"
+                else:
+                    output_dict["initializer"] = "glorot_uniform"
+
+                options_list.remove(20)
+
+            if 21 in options_list:
+                activation = input(
+                    "\n21. Please choose the activation you want to use:"
+                    "Options:\n"
+                    "0: ReLU\n"
+                    "1: SELU\n"
+                )
+
+                if activation == 0:
+                    output_dict["activation"] = "relu"
+                else:
+                    output_dict["activation"] = "selu"
+
+                options_list.remove(21)
+
+            if 22 in options_list:
                 run_name = input(
-                    "\n18. Please enter the run name, this will be"
+                    "\n22. Please enter the run name, this will be"
                     " the name used to save your callback output"
                     " (if applicable): ")
 
                 output_dict["run_name"] = run_name
 
-                options_list.remove(19)
+                options_list.remove(22)
 
         print_options_dict(output_dict)
 

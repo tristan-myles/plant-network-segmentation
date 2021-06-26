@@ -9,8 +9,8 @@ class UnetBlock(tf.keras.Model):
     def __init__(self, num_filters: int, kernel_size: int,
                  decode: bool = False, encode: bool = False,
                  batch_norm: bool = False, padding: str = "same",
-                 activation: str = "relu", initializer: str =
-                 'glorot_uniform', name: str = ""):
+                 activation="relu", initializer='he_normal',
+                 name: str = ""):
         """
         A building block to be used when constructing a U-Net model
 
@@ -55,6 +55,7 @@ class UnetBlock(tf.keras.Model):
             self.conv_trans = Conv2DTranspose(filters=num_filters,
                                               kernel_size=2, strides=2,
                                               padding=padding,
+                                              activation=activation,
                                               kernel_initializer=initializer)
         elif decode and encode:
             raise ValueError("Decode and Encode can't both be True")
@@ -127,36 +128,46 @@ class UnetBlock(tf.keras.Model):
 # *================================== U-Net ==================================*
 class Unet(tf.keras.Model, _TfPnsMixin):
     # Olaf Ronneberger et al. U-Net
-    def __init__(self, output_channels, filters=3):
+    def __init__(self, output_channels, activation="relu",
+                 initializer="he_normal", filters=3):
         super().__init__()
 
-        he_initializer = tf.keras.initializers.he_normal(seed=3141)
+        if initializer == "he_normal":
+            initializer = tf.keras.initializers.he_normal(seed=3141)
+        else: 
+            initializer = tf.keras.initializers.glorot_uniform(seed=3141)
+
+        if activation == "relu":
+            activation = tf.nn.relu
+        else:
+            activation = tf.nn.selu
+        self.activation = activation
 
         # Contracting
         # Layer 1
         self.conv_down1 = UnetBlock(num_filters=8 * 2**filters, kernel_size=3,
-                                    decode=True,
-                                    initializer=he_initializer, name="down1")
+                                    decode=True, activation=activation,
+                                    initializer=initializer, name="down1")
 
         # Layer 2
         self.conv_down2 = UnetBlock(num_filters=16 * 2**filters, kernel_size=3,
-                                    decode=True,
-                                    initializer=he_initializer, name="down2")
+                                    decode=True,  activation=activation,
+                                    initializer=initializer, name="down2")
 
         # Layer 3
         self.conv_down3 = UnetBlock(num_filters=32 * 2**filters, kernel_size=3,
-                                    decode=True,
-                                    initializer=he_initializer, name="down3")
+                                    decode=True,  activation=activation,
+                                    initializer=initializer, name="down3")
 
         # Layer 4
         self.conv_down4 = UnetBlock(num_filters=64 * 2**filters, kernel_size=3,
-                                    decode=True,
-                                    initializer=he_initializer, name="down4")
+                                    decode=True,  activation=activation,
+                                    initializer=initializer, name="down4")
 
         # Bottleneck
         self.conv_bottle = UnetBlock(num_filters=128 * 2**filters,
-                                     kernel_size=3,
-                                     initializer=he_initializer,
+                                     kernel_size=3,  activation=activation,
+                                     initializer=initializer,
                                      name="bottleneck")
 
         # Expanding
@@ -164,20 +175,23 @@ class Unet(tf.keras.Model, _TfPnsMixin):
         # Layer 1
         # No activation ... Since skip happens before the activation
         self.conv_up1 = UnetBlock(num_filters=64 * 2**filters, kernel_size=3,
-                                  encode=True, initializer=he_initializer,
+                                  encode=True,  activation=activation,
+                                  initializer=initializer,
                                   name="up1")
         # Layer 2
         self.conv_up2 = UnetBlock(num_filters=32 * 2**filters, kernel_size=3,
-                                  encode=True, initializer=he_initializer,
+                                  encode=True,  activation=activation,
+                                  initializer=initializer,
                                   name="up2")
         # Layer 3
         self.conv_up3 = UnetBlock(num_filters=16 * 2**filters, kernel_size=3,
-                                  encode=True, initializer=he_initializer,
+                                  encode=True,  activation=activation,
+                                  initializer=initializer,
                                   name="up3")
         # Layer 4
         self.conv_up4 = UnetBlock(num_filters=8 * 2**filters, kernel_size=3,
-                                  encode=True,
-                                  initializer=he_initializer, name="up4")
+                                  encode=True,  activation=activation,
+                                  initializer=initializer, name="up4")
 
         # Output
         self.output_layer = Conv2D(output_channels, 1, strides=1,

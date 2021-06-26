@@ -93,11 +93,14 @@ def main():
 
     elif ANSWERS["which"] == "training":
         if ANSWERS["model_choice"] == 0:
-            model = Unet(1, ANSWERS['filters'])
+            model = Unet(1, ANSWERS["activation"],
+                         ANSWERS["initializer"], ANSWERS['filters'])
         elif ANSWERS["model_choice"] == 1:
-            model = UnetResnet(1, ANSWERS['filters'])
+            model = UnetResnet(1, ANSWERS["activation"],
+                               ANSWERS["initializer"], ANSWERS['filters'])
         else:
-            model = WNet(1, ANSWERS['filters'])
+            model = WNet(1, ANSWERS["activation"],
+                         ANSWERS["initializer"], ANSWERS['filters'])
 
         model_save_path = (f"{OUTPUTS_DIR}saved_models/"
                            f"{ANSWERS['run_name']}")
@@ -108,13 +111,15 @@ def main():
         if ANSWERS["loss_choice"] == 0:
             loss = tf.keras.losses.binary_crossentropy
         elif ANSWERS["loss_choice"] == 1:
-            class_weight = get_class_weight(ANSWERS["train_base_dir"],
-                                            ANSWERS['incl_aug'])
-            loss = WeightedCE(1-class_weight)
+            if not ANSWERS["loss_weight"]:
+                ANSWERS["loss_weight"] = 1 - get_class_weight(
+                   ANSWERS["train_base_dir"], ANSWERS['incl_aug'])
+            loss = WeightedCE(ANSWERS["loss_weight"])
         elif ANSWERS["loss_choice"] == 2:
-            class_weight = get_class_weight(ANSWERS["train_base_dir"],
-                                            ANSWERS['incl_aug'])
-            loss = FocalLoss(1-class_weight)
+            if not ANSWERS["loss_weight"]:
+                ANSWERS["loss_weight"] = 1 - get_class_weight(
+                    ANSWERS["train_base_dir"], ANSWERS['incl_aug'])
+            loss = FocalLoss(ANSWERS["loss_weight"])
         else:
             loss = SoftDiceLoss()
 
@@ -140,9 +145,14 @@ def main():
             model_save_path = model_save_path + "/"
             Path(model_save_path).mkdir(parents=True, exist_ok=True)
 
+            if ANSWERS["model_choice"] == 2:
+                monitor = "val_output_1_auc"
+            else:
+                monitor = "val_auc"
+
             model_cpt = tf.keras.callbacks.ModelCheckpoint(
                 filepath=model_save_path, save_weights_only=True, mode='max',
-                monitor='val_recall', save_best_only=True, save_format="tf")
+                monitor=monitor, save_best_only=True, save_format="tf")
 
             tb = tf.keras.callbacks.TensorBoard(
                 log_dir=f"{OUTPUTS_DIR}tb_logs/{ANSWERS['run_name']}",
@@ -186,7 +196,7 @@ def main():
 
         if 0 in ANSWERS['callback_choices']:
             lrt_save_path = f"{OUTPUTS_DIR}lrt/"f"{ANSWERS['run_name']}"
-            Path(lrt_save_path ).mkdir(parents=True, exist_ok=True)
+            Path(lrt_save_path).mkdir(parents=True, exist_ok=True)
             save_lrt_results(lr_range_test, lrt_save_path)
 
         if 4 in ANSWERS["callback_choices"]:
@@ -194,11 +204,14 @@ def main():
             # recall as the best val recall achieved during training
             del model
             if ANSWERS["model_choice"] == 0:
-                model = Unet(1)
+                model = Unet(1,  ANSWERS["activation"],
+                             ANSWERS["initializer"], ANSWERS['filters'])
             elif ANSWERS["model_choice"] == 1:
-                model = UnetResnet(1)
+                model = UnetResnet(1, ANSWERS["activation"],
+                                   ANSWERS["initializer"], ANSWERS['filters'])
             else:
-                model = WNet()
+                model = WNet(1, ANSWERS["activation"],
+                             ANSWERS["initializer"], ANSWERS['filters'])
 
             # load model with best val recall
             model.load_workaround(ANSWERS["mask_shape"], ANSWERS['leaf_shape'],

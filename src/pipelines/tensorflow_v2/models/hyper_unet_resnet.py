@@ -33,26 +33,26 @@ class ResBlock(tf.keras.layers.Layer):
         if self.decode or self.flag:
             # 1x1 convolution
             # using for input that's been activated already
-            self.conv3 = Conv2D(channels, 1, stride)
-            self.bn3 = BatchNormalization()
+            self.conv3 = Conv2D(channels, 1, stride,
+                                kernel_initializer=initializer)
 
     def call(self, x):
         x1 = self.conv1(x)
-        x1 = self.bn1(x1)
         x1 = self.activation(x1)
+        x1 = self.bn1(x1)
 
         x1 = self.conv2(x1)
-        x1 = self.bn2(x1)
+        x1 = self.activation(x1)
 
         # Matching dims (i.e. projection shortcut)
         if self.flag or self.decode:
             x = self.conv3(x)
-            x = self.bn3(x)
+            x = self.activation(x)
 
         x1 += x
+        x1 = self.bn2(x1)
 
         # Addition is before the activation...
-        x1 = self.activation(x1)
 
         return x1
 
@@ -67,8 +67,8 @@ class HyperUnetResnet(HyperModel):
         # create the search space
         initializer = hp.Choice("initializer", ["he_normal", "glorot_uniform"])
         activation = hp.Choice("activation", ["relu", "selu"])
-        filter = hp.Choice("filters", [0, 1, 2, 3, 4])
-        kernel_size = hp.Choice("kernel_size", [3, 5])
+        filter = hp.Choice("filters", [0, 1, 2, 3])
+        kernel_size = hp.Choice("kernel_size", [3])
         optimizer = hp.Choice("optimizer", ["adam", "sgd"])
         loss_choice = hp.Choice("loss", ["focal", "wce", "bce"])
 
@@ -103,10 +103,10 @@ class HyperUnetResnet(HyperModel):
         # valid padding since down sampling
         down_conv1 = Conv2D(filters=8 * 2**filter, kernel_size=7, strides=2,
                             padding='same')(input)
-        down1_bn = BatchNormalization()(down_conv1)
-        down1_activated = activation(down1_bn)
+        down1_activated = activation(down_conv1)
+        down1_bn = BatchNormalization()(down1_activated)
         # Changed strides to pool size to 2
-        mp1 = MaxPool2D(pool_size=2, strides=2)(down1_activated)
+        mp1 = MaxPool2D(pool_size=2, strides=2)(down1_bn)
 
         down_block_2_1 = ResBlock(channels=8 * 2**filter,
                                   kernel_size=kernel_size,
@@ -269,13 +269,13 @@ class HyperUnetResnet(HyperModel):
         up_conv4 = Conv2D(filters=8 * 2**filter, kernel_size=7, strides=1,
                           kernel_initializer=initializer,
                           padding="same")(conv_up_concat_4)
-        up4_bn = BatchNormalization()(up_conv4)
-        up4_activated = activation(up4_bn)
+        up4_activated = activation(up_conv4)
+        up4_bn = BatchNormalization()(up4_activated)
 
         # Think about whether this needs to be activated
         conv_up5 = Conv2DTranspose(filters=8 * 2**filter, kernel_size=2, strides=2,
                                    kernel_initializer=initializer)(
-            up4_activated)
+            up4_bn)
         output_layer = Conv2D(self.output_channels, 1, strides=1,
                               padding='same',
                               activation="sigmoid")(conv_up5)

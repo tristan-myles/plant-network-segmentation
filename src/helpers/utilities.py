@@ -20,11 +20,17 @@ LOGGER = logging.getLogger(__name__)
 def get_workaround_details(compilation_dict):
     # model:
     if compilation_dict["model"] == "unet":
-        model = Unet(1)
+        model = Unet(1, compilation_dict["activation"],
+                     compilation_dict["initializer"],
+                     compilation_dict["filters"])
     elif compilation_dict["model"] == "unet_resnet":
-        model = UnetResnet(1)
+        model = UnetResnet(1, compilation_dict["activation"],
+                           compilation_dict["initializer"],
+                           compilation_dict["filters"])
     elif compilation_dict["model"] == "wnet":
-        model = WNet()
+        model = WNet(1,  compilation_dict["activation"],
+                     compilation_dict["initializer"],
+                     compilation_dict["filters"])
     else:
         raise ValueError("Please provide a valid answer for model choice, "
                          "options are unet, unet_resnet, or wnet")
@@ -32,11 +38,11 @@ def get_workaround_details(compilation_dict):
     if compilation_dict["loss"] == "bce":
         loss = keras.losses.binary_crossentropy
     elif compilation_dict["loss"] == "wce":
-        loss = weighted_CE(0.5)
+        loss = WeightedCE(compilation_dict["loss_weight"])
     elif compilation_dict["loss"] == "focal":
-        loss = focal_loss(0.5)
+        loss = FocalLoss(compilation_dict["loss_weight"])
     elif compilation_dict["loss"] == "dice":
-        loss = soft_dice_loss
+        loss = SoftDiceLoss()
     else:
         raise ValueError("Please provide a valid answer for loss choice, "
                          "options are bce, wce, focal, or dice")
@@ -49,9 +55,9 @@ def get_workaround_details(compilation_dict):
         raise ValueError("Please provide a valid answer for optimiser choice, "
                          "options are adam or sgd")
 
-    metrics = [ keras.metrics.BinaryAccuracy(name='accuracy'),
-                keras.metrics.Precision(name='precision'),
-                keras.metrics.Recall(name='recall')]
+    metrics = [keras.metrics.BinaryAccuracy(name='accuracy'),
+               keras.metrics.Precision(name='precision'),
+               keras.metrics.Recall(name='recall')]
 
     return model, loss, opt, metrics
 
