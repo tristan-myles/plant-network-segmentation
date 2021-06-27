@@ -8,7 +8,9 @@ import os
 
 import cv2
 import numpy as np
+import pandas as pd
 import tensorflow as tf
+from sklearn.metrics import precision_recall_curve
 
 from kerastuner import Objective
 from kerastuner.tuners import BayesianOptimization
@@ -18,6 +20,26 @@ LOGGER.setLevel(logging.INFO)
 
 
 # *================================= general =================================*
+def save_prcurve_csv(run_name, mask, pred, type):
+    y_true = np.array(mask).flatten()
+    y_pred = np.array(pred).flatten()
+
+    precision, recall, thresholds = precision_recall_curve(y_true, y_pred)
+    pr_json = {"precision": list(precision.astype("str")),
+               "recall": list(recall.astype("str")),
+               "thresholds": list(thresholds.astype("str"))}
+
+    # Output path is handled differently compared to rest of file
+    project_root = Path(os.getcwd())
+    output_path = output_path = project_root.joinpath("data", "run_data",
+                                                      "pr_curves")
+    output_path.mkdir(parents=True, exist_ok=True)
+    filename = output_path.joinpath(run_name+"_" + type + "_pr_curve.json")
+
+    with open(filename, "w") as file:
+        json.dump(pr_json, file)
+
+
 def save_predictions(prediction, folder_path, filename):
     output_folder_path = os.path.join(folder_path, "../predictions")
     folderpath = filename.split("/", 5)[5]
