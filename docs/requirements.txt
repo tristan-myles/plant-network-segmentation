@@ -1,3 +1,10 @@
 sphinx-autodoc-typehints
 sphinx-prompt
 sphinx-rtd-theme
+opencv-python
+matplotlib
+sklearn
+tensorflow
+tqdm
+pandas
+tensorflow_addons
