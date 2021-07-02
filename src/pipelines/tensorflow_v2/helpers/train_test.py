@@ -61,7 +61,7 @@ def get_tf_dataset(base_dir, leaf_ext, mask_ext,
     if cfp:
         dataset = configure_for_performance(dataset, batch_size, buffer_size)
 
-    return dataset
+    return dataset, data_x
 
 
 # *================================ TF Mixin =================================*

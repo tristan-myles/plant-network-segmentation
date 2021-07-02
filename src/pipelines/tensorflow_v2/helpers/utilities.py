@@ -4,11 +4,13 @@ from glob import glob
 import pprint
 from pathlib import Path
 import logging
+import os
 
 import cv2
 import numpy as np
+import pandas as pd
 import tensorflow as tf
-import tensorflow_addons as tfa
+from sklearn.metrics import precision_recall_curve
 
 from kerastuner import Objective
 from kerastuner.tuners import BayesianOptimization
@@ -18,6 +20,39 @@ LOGGER.setLevel(logging.INFO)
 
 
 # *================================= general =================================*
+def save_prcurve_csv(run_name, mask, pred, type):
+    y_true = np.array(mask).flatten()
+    y_pred = np.array(pred).flatten()
+
+    precision, recall, thresholds = precision_recall_curve(y_true, y_pred)
+    pr_json = {"precision": list(precision.astype("str")),
+               "recall": list(recall.astype("str")),
+               "thresholds": list(thresholds.astype("str"))}
+
+    # Output path is handled differently compared to rest of file
+    project_root = Path(os.getcwd())
+    output_path = output_path = project_root.joinpath("data", "run_data",
+                                                      "pr_curves")
+    output_path.mkdir(parents=True, exist_ok=True)
+    filename = output_path.joinpath(run_name+"_" + type + "_pr_curve.json")
+
+    with open(filename, "w") as file:
+        json.dump(pr_json, file)
+
+
+def save_predictions(prediction, folder_path, filename):
+    output_folder_path = os.path.join(folder_path, "../predictions")
+    folderpath = filename.split("/", 5)[5]
+    folderpath = folderpath.rsplit("/", 2)[0]
+    output_folder_path = os.path.join(output_folder_path, folderpath)
+    Path(output_folder_path).mkdir(parents=True, exist_ok=True)
+
+    filename=filename.rsplit("/", 1)[1]
+    filepath = os.path.join(output_folder_path, filename)
+
+    cv2.imwrite(filepath, prediction)
+
+
 def save_compilation_dict(answers, lr, save_path):
     model_choices = ["unet", "unet_resnet", "wnet"]
     loss_choices = ["bce", "wce", "focal", "dice"]
