@@ -8,3 +8,4 @@ tensorflow
 tqdm
 pandas
 tensorflow_addons
+keras-tuner
