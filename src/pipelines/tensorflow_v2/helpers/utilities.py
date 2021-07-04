@@ -234,6 +234,13 @@ def gaussian_blur(img, base=1):
     return img
 
 
+def threshold(img, thresh):
+    img[img >= thresh] = 1
+    img[img < thresh] = 0
+
+    return img
+
+
 # *=============================== load model ================================*
 def check_model_save(model, new_model, new_loss, new_opt, answers, metrics,
                      model_save_path, check_opt=False):
