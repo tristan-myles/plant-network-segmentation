@@ -267,13 +267,16 @@ def main():
             predictions = [im2_lt_im1(pred, leaf) for pred, leaf
                            in zip(predictions, leaves)]
 
+            save_prcurve_csv(ANSWERS["run_name"], masks,
+                             predictions, "pp_test")
+
+            predictions = [gaussian_blur(pred, 1) for pred in predictions]
+            masks = [gaussian_blur(mask, 1) for mask in masks]
+
             csv_save_path = (csv_save_path.rsplit(".", 1)[0] +
                              "_post_processed.csv")
             _ = classification_report(predictions, masks,
                                       save_path=csv_save_path)
-
-            save_prcurve_csv(ANSWERS["run_name"], masks,
-                             predictions, "pp_test")
 
 
 if __name__ == "__main__":

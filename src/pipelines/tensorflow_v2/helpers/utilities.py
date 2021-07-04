@@ -226,6 +226,14 @@ def im2_lt_im1(pred, input_image):
     return pred
 
 
+def gaussian_blur(img, base=1):
+    # reducing false positives, i.e trying to improve precision
+    img = cv2.GaussianBlur(img, (3, 3), 1)
+    img[img > 0] = base
+
+    return img
+
+
 # *=============================== load model ================================*
 def check_model_save(model, new_model, new_loss, new_opt, answers, metrics,
                      model_save_path, check_opt=False):
