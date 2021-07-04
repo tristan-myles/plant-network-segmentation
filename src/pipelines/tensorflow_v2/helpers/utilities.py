@@ -226,11 +226,11 @@ def im2_lt_im1(pred, input_image):
     return pred
 
 
-def gaussian_blur(img, base=1):
+def gaussian_blur(img, kernel=(5, 5), base=1):
     # reducing false positives, i.e trying to improve precision
-    img = cv2.GaussianBlur(img, (3, 3), 1)
+    img = cv2.GaussianBlur(img.astype(np.float32), kernel, 1)
     img[img > 0] = base
-
+    img = img.astype(np.uint8)
     return img
 
 
