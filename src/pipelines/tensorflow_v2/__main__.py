@@ -273,10 +273,11 @@ def main():
             save_prcurve_csv(ANSWERS["run_name"], masks,
                              predictions, "pp_test")
 
+            predictions = [threshold(pred, 0.7) for pred in predictions]
+
             predictions = [gaussian_blur(pred) for pred in predictions]
             masks = [gaussian_blur(mask) for mask in masks]
 
-            predictions = [threshold(pred, 0.7) for pred in predictions]
             for test_pred, file_path in zip(predictions, test_leaf_names):
                 save_predictions(test_pred, ANSWERS["test_dir"], file_path)
 
