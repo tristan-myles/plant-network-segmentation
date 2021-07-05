@@ -228,7 +228,7 @@ def main():
         save_prcurve_csv(ANSWERS["run_name"], val_masks, val_predictions,
                          "pp_val")
 
-        val_predictions = [threshold(pred, 0.7) for pred in val_predictions]
+        val_predictions = [threshold(pred, ANSWERS["threshold"]) for pred in val_predictions]
         for val_pred, file_path in zip(val_predictions, val_leaf_names):
             save_predictions(val_pred, ANSWERS["val_base_dir"], file_path)
 
@@ -276,7 +276,8 @@ def main():
             save_prcurve_csv(ANSWERS["run_name"], masks,
                              predictions, "pp_test")
 
-            predictions = [threshold(pred, 0.7) for pred in predictions]
+            predictions = [threshold(pred, ANSWERS["threshold"]) for pred in
+                           predictions]
 
             for test_pred, file_path in zip(predictions, test_leaf_names):
                 save_predictions(test_pred, ANSWERS["test_dir"], file_path)
