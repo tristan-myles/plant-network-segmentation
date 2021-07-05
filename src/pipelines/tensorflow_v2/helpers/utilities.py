@@ -320,18 +320,20 @@ def parse_arguments() -> argparse.Namespace:
 # *--------------------------- interactive prompt ----------------------------*
 def print_user_input(answers):
     print(f"\nYour chosen configuration is:\n"
-          f"1.  {'Training base directory':<40}: {answers['train_base_dir']}\n"
+          f"1 .  {'Training base directory':<40}:"
+          f" {answers['train_base_dir']}\n"
           f"    {'Shift 256':<40}: {answers['shift_256']}\n"
           f"    {'Transform uint8':<40}: {answers['transform_uint8']}\n"
-          f"2.  {'Validation base directory':<40}: {answers['val_base_dir']}\n"
-          f"3.  {'Leaf, Mask extension':<40}: {answers['leaf_ext']},"
+          f"2 .  {'Validation base directory':<40}:"
+          f" {answers['val_base_dir']}\n"
+          f"3 .  {'Leaf, Mask extension':<40}: {answers['leaf_ext']},"
           f" {answers['mask_ext']}\n"
-          f"4.  {'Include augmented images':<40}: {answers['incl_aug']}\n"
-          f"5.  {'Leaf shape':<40}: {answers['leaf_shape']}\n"
-          f"6.  {'Mask shape':<40}: {answers['mask_shape']}\n"
-          f"7.  {'Batch size':<40}: {answers['batch_size']}\n"
-          f"8.  {'Buffer size':<40}: {answers['buffer_size']}\n"
-          f"9.  {'Model choice':<40}: {answers['model_choice']}\n"
+          f"4 .  {'Include augmented images':<40}: {answers['incl_aug']}\n"
+          f"5 .  {'Leaf shape':<40}: {answers['leaf_shape']}\n"
+          f"6 .  {'Mask shape':<40}: {answers['mask_shape']}\n"
+          f"7 .  {'Batch size':<40}: {answers['batch_size']}\n"
+          f"8 .  {'Buffer size':<40}: {answers['buffer_size']}\n"
+          f"9 .  {'Model choice':<40}: {answers['model_choice']}\n"
           f"10. {'Loss function choice':<40}: {answers['loss_choice']}\n"
           f"11. {'Optimiser choice':<40}: {answers['opt_choice']}\n"
           f"12. {'Learning rate':<40}: {answers['lr']}\n"
@@ -343,7 +345,8 @@ def print_user_input(answers):
           f"18. {'Filter multiple':<40}: {answers['filters']}\n"
           f"19. {'Loss weight':<40}: {answers['loss_weight']}\n",
           f"20. {'Initializer':<40}: {answers['initializer']}\n",
-          f"21. {'Activation':<40}: {answers['activation']}\n")
+          f"21. {'Activation':<40}: {answers['activation']}\n",
+          f"22. {'Threshold':<40}: {answers['threshold']}\n")
 
 
 def print_options_dict(output_dict):
@@ -388,7 +391,7 @@ def interactive_prompt():
             output_dict["which"] = ["tuning", "training"][operation-1]
 
             # list options = 1 - 18
-            options_list.update(range(1, 23))
+            options_list.update(range(1, 24))
 
             options_list.remove(-1)
 
@@ -669,14 +672,27 @@ def interactive_prompt():
                 options_list.remove(21)
 
             if 22 in options_list:
+                threshold = input(
+                    "\n22. Please enter the threshold to use for predictions "
+                    "(leave blank to use 0.5): "
+                )
+
+                if threshold:
+                    output_dict["threshold"] = float(threshold)
+                else:
+                    output_dict["threshold"] = 0.5
+
+                options_list.remove(22)
+
+            if 23 in options_list:
                 run_name = input(
-                    "\n22. Please enter the run name, this will be"
+                    "\n23. Please enter the run name, this will be"
                     " the name used to save your callback output"
                     " (if applicable): ")
 
                 output_dict["run_name"] = run_name
 
-                options_list.remove(22)
+                options_list.remove(23)
 
         print_options_dict(output_dict)
 
