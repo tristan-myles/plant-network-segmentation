@@ -25,13 +25,29 @@ def save_prcurve_csv(run_name, mask, pred, type):
     y_pred = np.array(pred).flatten()
 
     precision, recall, thresholds = precision_recall_curve(y_true, y_pred)
-    pr_json = {"precision": list(precision.astype("str")),
-               "recall": list(recall.astype("str")),
-               "thresholds": list(thresholds.astype("str"))}
+
+    if len(thresholds) > 1000000:
+        reduced_p = []
+        reduced_r = []
+        reduced_t = []
+
+    for i in range(1, len(thresholds), 1000):
+        reduced_p.append(precision[i])
+        reduced_r.append(recall[i])
+        reduced_t.append(thresholds[i])
+    else:
+        reduced_p = precision
+        reduced_r = recall
+        reduced_t = threshold
+
+    pr_json = {"precision": list(np.array(reduced_p).astype("str")),
+               "recall": list(np.array(reduced_r).astype("str")),
+               "thresholds": list(np.array(reduced_t).astype("str"))}
+
 
     # Output path is handled differently compared to rest of file
     project_root = Path(os.getcwd())
-    output_path = output_path = project_root.joinpath("data", "run_data",
+    output_path = project_root.joinpath("data", "run_data",
                                                       "pr_curves")
     output_path.mkdir(parents=True, exist_ok=True)
     filename = output_path.joinpath(run_name+"_" + type + "_pr_curve.json")
