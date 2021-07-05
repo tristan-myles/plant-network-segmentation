@@ -31,10 +31,11 @@ def save_prcurve_csv(run_name, mask, pred, type):
         reduced_r = []
         reduced_t = []
 
-    for i in range(1, len(thresholds), 1000):
-        reduced_p.append(precision[i])
-        reduced_r.append(recall[i])
-        reduced_t.append(thresholds[i])
+        for i in range(1, len(thresholds), 1000):
+            reduced_p.append(precision[i])
+            reduced_r.append(recall[i])
+            reduced_t.append(thresholds[i])
+
     else:
         reduced_p = precision
         reduced_r = recall
