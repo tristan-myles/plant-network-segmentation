@@ -213,16 +213,23 @@ def main():
         val_predictions = model.predict(val_dataset)
 
         val_masks = []
+        val_leaves = []
         for imageset in val_dataset.as_numpy_iterator():
-            for image in imageset[1]:
-                 val_masks.append(image)
+            for leaf, mask in zip(imageset[0], imageset[1]):
+                val_masks.append(mask)
+                val_leaves.append(leaf)
 
-        save_prcurve_csv(ANSWERS["run_name"], val_masks,
-                         val_predictions, "val")
+        save_prcurve_csv(ANSWERS["run_name"], val_masks, val_predictions,
+                         "val")
+
+        val_predictions = [im2_lt_im1(pred, leaf) for pred, leaf in
+                           zip(val_predictions, val_leaves)]
+
+        save_prcurve_csv(ANSWERS["run_name"], val_masks, val_predictions,
+                         "pp_val")
 
         val_predictions = [threshold(pred, 0.7) for pred in val_predictions]
-        for val_pred, file_path in zip(val_predictions,
-                                       val_leaf_names):
+        for val_pred, file_path in zip(val_predictions, val_leaf_names):
             save_predictions(val_pred, ANSWERS["val_base_dir"], file_path)
 
         csv_save_path = (f"{OUTPUTS_DIR}classification_reports/"
@@ -263,10 +270,6 @@ def main():
             save_prcurve_csv(ANSWERS["run_name"], masks,
                              predictions, "test")
 
-            test_save_path = (csv_save_path.rsplit(".", 1)[0] + "_test.csv")
-            _ = classification_report(predictions, masks,
-                                      save_path=test_save_path)
-
             predictions = [im2_lt_im1(pred, leaf) for pred, leaf
                            in zip(predictions, leaves)]
 
@@ -275,11 +278,12 @@ def main():
 
             predictions = [threshold(pred, 0.7) for pred in predictions]
 
-            predictions = [gaussian_blur(pred) for pred in predictions]
-            masks = [gaussian_blur(mask) for mask in masks]
-
             for test_pred, file_path in zip(predictions, test_leaf_names):
                 save_predictions(test_pred, ANSWERS["test_dir"], file_path)
+
+            test_save_path = (csv_save_path.rsplit(".", 1)[0] + "_test.csv")
+            _ = classification_report(predictions, masks,
+                                      save_path=test_save_path)
 
             test_pp_save_path = (csv_save_path.rsplit(".", 1)[0] +
                                  "_test_pp.csv")
