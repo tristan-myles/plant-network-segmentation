@@ -226,16 +226,17 @@ def main():
                            zip(val_predictions, val_leaves)]
 
         save_prcurve_csv(ANSWERS["run_name"], val_masks, val_predictions,
-                         "pp_val")
+                         "val_pp")
 
-        val_predictions = [threshold(pred, ANSWERS["threshold"]) for pred in val_predictions]
+        val_predictions = [threshold(pred, ANSWERS["threshold"]) for pred
+                           in val_predictions]
         for val_pred, file_path in zip(val_predictions, val_leaf_names):
             save_predictions(val_pred, ANSWERS["val_base_dir"], file_path)
 
         csv_save_path = (f"{OUTPUTS_DIR}classification_reports/"
                          f"{ANSWERS['run_name']}.csv")
 
-        val_save_path = (csv_save_path.rsplit(".", 1)[0] + "_val.csv")
+        val_save_path = (csv_save_path.rsplit(".", 1)[0] + "_val_pp.csv")
         _ = classification_report(val_predictions, val_masks,
                                   save_path=val_save_path)
 
@@ -274,7 +275,7 @@ def main():
                            in zip(predictions, leaves)]
 
             save_prcurve_csv(ANSWERS["run_name"], masks,
-                             predictions, "pp_test")
+                             predictions, "test_pp")
 
             predictions = [threshold(pred, ANSWERS["threshold"]) for pred in
                            predictions]
