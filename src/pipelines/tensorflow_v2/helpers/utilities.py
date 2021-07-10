@@ -59,9 +59,9 @@ def save_prcurve_csv(run_name, mask, pred, type):
 
 def save_predictions(prediction, folder_path, filename):
     output_folder_path = os.path.join(folder_path, "../predictions")
-    folderpath = filename.split("/", 5)[5]
-    folderpath = folderpath.rsplit("/", 2)[0]
-    output_folder_path = os.path.join(output_folder_path, folderpath)
+    folder_path_1, folder_path_2 = filename.rsplit("/", 4)[1:3]
+    output_folder_path = os.path.join(output_folder_path, folder_path_1,
+                                      folder_path_2)
     Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 
     filename=filename.rsplit("/", 1)[1]
