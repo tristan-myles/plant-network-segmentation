@@ -10,12 +10,12 @@ __email__ = "ndxtri015@myuct.ac.za"
 __status__ = "development"
 
 import logging
-import numpy as np
+from typing import List
+
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
-import PIL.Image
-from typing import List
 
 LOGGER = logging.getLogger(__name__)
 
@@ -61,8 +61,9 @@ def get_unique_leaf_range(images: List[np.array]) -> np.array:
     return unique_range
 
 
-def binarise_image(image: np.array, lower_bound_255: int = 200,
-                   upper_bound_0: int = 55) -> np.array :
+def binarise_image(image: np.array,
+                   lower_bound_255: int = 200,
+                   upper_bound_0: int = 55) -> np.array:
     """
     Converts all pixels intensities within range of (lower_bound_255; 255)
     to 255 and all pixels intensities between (0; upper_bound_0) to 0. The aim
@@ -80,8 +81,8 @@ def binarise_image(image: np.array, lower_bound_255: int = 200,
     return image
 
 
-def get_intersection(image: np.array, combined_image: np.array) -> \
-        (int, np.array):
+def get_intersection(image: np.array,
+                     combined_image: np.array) -> (int, np.array):
     """
     Calculates the intersection between the current mask and all embolisms
     contained in previous masks
@@ -99,16 +100,25 @@ def get_intersection(image: np.array, combined_image: np.array) -> \
     return intersection, combined_image
 
 
-def plot_embolism_profile(embolism_percentages, intersections, leaf_name=None,
-                          output_path=None, show=True, **kwargs):
+def plot_embolism_profile(embolism_percentages: List[float],
+                          leaf_name: str = None,
+                          output_path: str = None,
+                          show: bool = True,
+                          **kwargs) -> None:
     """
-    :param embolism_percentages:
-    :param intersections:
-    :param kwargs:
-    :return:
+     Plots an embolism profile. There are two plots. The first shows the
+     VC for the series. The second plot shows the embolism percentage per
+     mask. There is an option to save the plot.
+    :param embolism_percentages: list of embolism percentages
+    :param leaf_name: name of the leaf
+    :param output_path: path to save the plot, if None, the plot will not be
+     saved
+    :param show: whether the plot should be shown; if the plot is
+     being saved, the user may not want to display the plot
+    :param kwargs: subplot kwargs
+    :return: None
     """
-    unique_embolism = np.array(embolism_percentages) - np.array(intersections)
-    cum_embolism_percentages = np.cumsum(unique_embolism)
+    cum_embolism_percentages = np.cumsum(embolism_percentages)
 
     if leaf_name:
         title = f"Embolism Profile of Leaf {leaf_name}"
@@ -120,9 +130,7 @@ def plot_embolism_profile(embolism_percentages, intersections, leaf_name=None,
     fig.suptitle(title, fontsize=18, y=1)
 
     axs[0].plot(cum_embolism_percentages)
-    axs[1].plot(unique_embolism, color="orange")
-
-    axs[2].plot(embolism_percentages, color="orange")
+    axs[1].plot(embolism_percentages, color="orange")
 
     axs[0].set_xlabel('Steps', fontsize=14)
     axs[0].set_ylabel('% Embolism', fontsize=14)
@@ -132,10 +140,6 @@ def plot_embolism_profile(embolism_percentages, intersections, leaf_name=None,
     axs[1].set_ylabel('% Embolism', fontsize=14)
     axs[1].set_title('Total Embolism % per Mask', fontsize=16)
 
-    axs[2].set_xlabel('Steps', fontsize=14)
-    axs[2].set_ylabel('% Embolism', fontsize=14)
-    axs[2].set_title('Unique Embolism % per Mask', fontsize=16)
-
     if output_path:
         fig.savefig(output_path)
 
@@ -143,9 +147,30 @@ def plot_embolism_profile(embolism_percentages, intersections, leaf_name=None,
         plt.show()
 
 
-def plot_embolisms_per_leaf(summary_df=None, has_embolism_lol=None,
-                            leaf_names_list=None, output_path=None,
-                            show=True, percent=False, **kwargs):
+def plot_embolisms_per_leaf(summary_df: pd.DataFrame = None,
+                            has_embolism_lol: List[List[float]] = None,
+                            leaf_names_list: List[str] = None,
+                            output_path: str = None,
+                            show: bool = True,
+                            percent: bool = False,
+                            **kwargs):
+    """
+    Creates a bar plot showing the number of leaves with and without
+    embolisms for a leaf. The input can either be a summary df, of list of
+    embolism percentage lists.
+    :param summary_df: a summary dataframe created using the code base; if this
+     is None, then has_embolism_lol must be provided
+    :param has_embolism_lol: list of embolism percentage lists; if this is
+    None, then summary df must be provided
+    :param leaf_names_list: the list of leaf names for the x-axis
+    :param output_path: path to save the plot, if None, the plot will not be
+     saved
+    :param show: whether the plot should be shown; if the plot is
+     being saved, the user may not want to display the plot
+    :param percent: Use percent on the y-axis
+    :param kwargs: subplot kwargs
+    :return: None
+    """
     leaf_names = []
     has_embolism_list = []
 
