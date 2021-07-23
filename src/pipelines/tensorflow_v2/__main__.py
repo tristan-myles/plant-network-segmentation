@@ -211,17 +211,34 @@ def main():
 
         # Get val dataset predictions using the best model
         val_predictions = model.predict(val_dataset)
-        for val_pred, file_path in zip(val_predictions,
-                                       val_leaf_names):
-            save_predictions(val_pred, ANSWERS["val_base_dir"], file_path)
 
         val_masks = []
+        val_leaves = []
         for imageset in val_dataset.as_numpy_iterator():
-            for image in imageset[1]:
-                 val_masks.append(image)
+            for leaf, mask in zip(imageset[0], imageset[1]):
+                val_masks.append(mask)
+                val_leaves.append(leaf)
 
-        save_prcurve_csv(ANSWERS["run_name"], val_masks,
-                         val_predictions, "val")
+        save_prcurve_csv(ANSWERS["run_name"], val_masks, val_predictions,
+                         "val")
+
+        val_predictions = [im2_lt_im1(pred, leaf) for pred, leaf in
+                           zip(val_predictions, val_leaves)]
+
+        save_prcurve_csv(ANSWERS["run_name"], val_masks, val_predictions,
+                         "val_pp")
+
+        val_predictions = [threshold(pred, ANSWERS["threshold"]) for pred
+                           in val_predictions]
+        for val_pred, file_path in zip(val_predictions, val_leaf_names):
+            save_predictions(val_pred, ANSWERS["val_base_dir"], file_path)
+
+        csv_save_path = (f"{OUTPUTS_DIR}classification_reports/"
+                         f"{ANSWERS['run_name']}.csv")
+
+        val_save_path = (csv_save_path.rsplit(".", 1)[0] + "_val_pp.csv")
+        _ = classification_report(val_predictions, val_masks,
+                                  save_path=val_save_path)
 
         # check test_set
         if ANSWERS["test_dir"]:
@@ -245,10 +262,6 @@ def main():
             # generator in the classification report...
             predictions = model.predict(test_dataset)
 
-            for test_pred, file_path in zip(predictions,
-                                           test_leaf_names):
-                save_predictions(test_pred, ANSWERS["test_dir"], file_path)
-
             masks = []
             leaves = []
             for imageset in test_dataset.as_numpy_iterator():
@@ -258,22 +271,26 @@ def main():
             save_prcurve_csv(ANSWERS["run_name"], masks,
                              predictions, "test")
 
-            csv_save_path = (f"{OUTPUTS_DIR}classification_reports/"
-                             f"{ANSWERS['run_name']}.csv")
-
-            _ = classification_report(predictions, masks,
-                                      save_path=csv_save_path)
-
             predictions = [im2_lt_im1(pred, leaf) for pred, leaf
                            in zip(predictions, leaves)]
 
-            csv_save_path = (csv_save_path.rsplit(".", 1)[0] +
-                             "_post_processed.csv")
-            _ = classification_report(predictions, masks,
-                                      save_path=csv_save_path)
-
             save_prcurve_csv(ANSWERS["run_name"], masks,
-                             predictions, "pp_test")
+                             predictions, "test_pp")
+
+            predictions = [threshold(pred, ANSWERS["threshold"]) for pred in
+                           predictions]
+
+            for test_pred, file_path in zip(predictions, test_leaf_names):
+                save_predictions(test_pred, ANSWERS["test_dir"], file_path)
+
+            test_save_path = (csv_save_path.rsplit(".", 1)[0] + "_test.csv")
+            _ = classification_report(predictions, masks,
+                                      save_path=test_save_path)
+
+            test_pp_save_path = (csv_save_path.rsplit(".", 1)[0] +
+                                 "_test_pp.csv")
+            _ = classification_report(predictions, masks,
+                                      save_path=test_pp_save_path)
 
 
 if __name__ == "__main__":

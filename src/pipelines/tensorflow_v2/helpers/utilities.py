@@ -25,13 +25,30 @@ def save_prcurve_csv(run_name, mask, pred, type):
     y_pred = np.array(pred).flatten()
 
     precision, recall, thresholds = precision_recall_curve(y_true, y_pred)
-    pr_json = {"precision": list(precision.astype("str")),
-               "recall": list(recall.astype("str")),
-               "thresholds": list(thresholds.astype("str"))}
+
+    if len(thresholds) > 1000000:
+        reduced_p = []
+        reduced_r = []
+        reduced_t = []
+
+        for i in range(1, len(thresholds), 1000):
+            reduced_p.append(precision[i])
+            reduced_r.append(recall[i])
+            reduced_t.append(thresholds[i])
+
+    else:
+        reduced_p = precision
+        reduced_r = recall
+        reduced_t = threshold
+
+    pr_json = {"precision": list(np.array(reduced_p).astype("str")),
+               "recall": list(np.array(reduced_r).astype("str")),
+               "thresholds": list(np.array(reduced_t).astype("str"))}
+
 
     # Output path is handled differently compared to rest of file
     project_root = Path(os.getcwd())
-    output_path = output_path = project_root.joinpath("data", "run_data",
+    output_path = project_root.joinpath("data", "run_data",
                                                       "pr_curves")
     output_path.mkdir(parents=True, exist_ok=True)
     filename = output_path.joinpath(run_name+"_" + type + "_pr_curve.json")
@@ -42,9 +59,9 @@ def save_prcurve_csv(run_name, mask, pred, type):
 
 def save_predictions(prediction, folder_path, filename):
     output_folder_path = os.path.join(folder_path, "../predictions")
-    folderpath = filename.split("/", 5)[5]
-    folderpath = folderpath.rsplit("/", 2)[0]
-    output_folder_path = os.path.join(output_folder_path, folderpath)
+    folder_path_1, folder_path_2 = filename.rsplit("/", 4)[1:3]
+    output_folder_path = os.path.join(output_folder_path, folder_path_1,
+                                      folder_path_2)
     Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 
     filename=filename.rsplit("/", 1)[1]
@@ -226,6 +243,21 @@ def im2_lt_im1(pred, input_image):
     return pred
 
 
+def gaussian_blur(img, kernel=(5, 5), base=1):
+    # reducing false positives, i.e trying to improve precision
+    img = cv2.GaussianBlur(img.astype(np.float32), kernel, 1)
+    img[img > 0] = base
+    img = img.astype(np.uint8)
+    return img
+
+
+def threshold(img, thresh):
+    img[img >= thresh] = 1
+    img[img < thresh] = 0
+
+    return img
+
+
 # *=============================== load model ================================*
 def check_model_save(model, new_model, new_loss, new_opt, answers, metrics,
                      model_save_path, check_opt=False):
@@ -289,18 +321,20 @@ def parse_arguments() -> argparse.Namespace:
 # *--------------------------- interactive prompt ----------------------------*
 def print_user_input(answers):
     print(f"\nYour chosen configuration is:\n"
-          f"1.  {'Training base directory':<40}: {answers['train_base_dir']}\n"
+          f"1 .  {'Training base directory':<40}:"
+          f" {answers['train_base_dir']}\n"
           f"    {'Shift 256':<40}: {answers['shift_256']}\n"
           f"    {'Transform uint8':<40}: {answers['transform_uint8']}\n"
-          f"2.  {'Validation base directory':<40}: {answers['val_base_dir']}\n"
-          f"3.  {'Leaf, Mask extension':<40}: {answers['leaf_ext']},"
+          f"2 .  {'Validation base directory':<40}:"
+          f" {answers['val_base_dir']}\n"
+          f"3 .  {'Leaf, Mask extension':<40}: {answers['leaf_ext']},"
           f" {answers['mask_ext']}\n"
-          f"4.  {'Include augmented images':<40}: {answers['incl_aug']}\n"
-          f"5.  {'Leaf shape':<40}: {answers['leaf_shape']}\n"
-          f"6.  {'Mask shape':<40}: {answers['mask_shape']}\n"
-          f"7.  {'Batch size':<40}: {answers['batch_size']}\n"
-          f"8.  {'Buffer size':<40}: {answers['buffer_size']}\n"
-          f"9.  {'Model choice':<40}: {answers['model_choice']}\n"
+          f"4 .  {'Include augmented images':<40}: {answers['incl_aug']}\n"
+          f"5 .  {'Leaf shape':<40}: {answers['leaf_shape']}\n"
+          f"6 .  {'Mask shape':<40}: {answers['mask_shape']}\n"
+          f"7 .  {'Batch size':<40}: {answers['batch_size']}\n"
+          f"8 .  {'Buffer size':<40}: {answers['buffer_size']}\n"
+          f"9 .  {'Model choice':<40}: {answers['model_choice']}\n"
           f"10. {'Loss function choice':<40}: {answers['loss_choice']}\n"
           f"11. {'Optimiser choice':<40}: {answers['opt_choice']}\n"
           f"12. {'Learning rate':<40}: {answers['lr']}\n"
@@ -312,7 +346,8 @@ def print_user_input(answers):
           f"18. {'Filter multiple':<40}: {answers['filters']}\n"
           f"19. {'Loss weight':<40}: {answers['loss_weight']}\n",
           f"20. {'Initializer':<40}: {answers['initializer']}\n",
-          f"21. {'Activation':<40}: {answers['activation']}\n")
+          f"21. {'Activation':<40}: {answers['activation']}\n",
+          f"22. {'Threshold':<40}: {answers['threshold']}\n")
 
 
 def print_options_dict(output_dict):
@@ -357,7 +392,7 @@ def interactive_prompt():
             output_dict["which"] = ["tuning", "training"][operation-1]
 
             # list options = 1 - 18
-            options_list.update(range(1, 23))
+            options_list.update(range(1, 24))
 
             options_list.remove(-1)
 
@@ -638,14 +673,27 @@ def interactive_prompt():
                 options_list.remove(21)
 
             if 22 in options_list:
+                threshold = input(
+                    "\n22. Please enter the threshold to use for predictions "
+                    "(leave blank to use 0.5): "
+                )
+
+                if threshold:
+                    output_dict["threshold"] = float(threshold)
+                else:
+                    output_dict["threshold"] = 0.5
+
+                options_list.remove(22)
+
+            if 23 in options_list:
                 run_name = input(
-                    "\n22. Please enter the run name, this will be"
+                    "\n23. Please enter the run name, this will be"
                     " the name used to save your callback output"
                     " (if applicable): ")
 
                 output_dict["run_name"] = run_name
 
-                options_list.remove(22)
+                options_list.remove(23)
 
         print_options_dict(output_dict)
 
