@@ -1,6 +1,6 @@
 Extraction
 ==========
 
-.. automodule:: src.action.extraction
+.. automodule:: src.actions.extraction
    :members:
 
