@@ -6,7 +6,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-import tqdm
+from tqdm import tqdm
 
 LOGGER = logging.getLogger(__name__)
 
@@ -20,8 +20,9 @@ def plot_embolism_profile(embolism_percentages: List[float],
      Plots an embolism profile. There are two plots. The first shows the
      VC for the series. The second plot shows the embolism percentage per
      mask. There is an option to save the plot.
+
     :param embolism_percentages: list of embolism percentages
-    :param leaf_name: name of the leaf
+    :param leaf_name: name of the leaf to use in the title
     :param output_path: path to save the plot, if None, the plot will not be
      saved
     :param show: whether the plot should be shown; if the plot is
@@ -69,6 +70,7 @@ def plot_embolisms_per_leaf(summary_df: pd.DataFrame = None,
     Creates a bar plot showing the number of leaves with and without
     embolisms for a leaf. The input can either be a summary df, of list of
     embolism percentage lists.
+
     :param summary_df: a summary dataframe created using the code base; if this
      is None, then has_embolism_lol must be provided
     :param has_embolism_lol: list of embolism percentage lists; if this is
@@ -78,7 +80,8 @@ def plot_embolisms_per_leaf(summary_df: pd.DataFrame = None,
      saved
     :param show: whether the plot should be shown; if the plot is
      being saved, the user may not want to display the plot
-    :param percent: Use percent on the y-axis
+    :param percent: Annotate the bars using percentages; if this is false,
+     counts will be used
     :param kwargs: subplot kwargs
     :return: None
     """
@@ -140,7 +143,21 @@ def plot_embolisms_per_leaf(summary_df: pd.DataFrame = None,
 
 
 # *============================ embolism profile =============================*
-def plot_mseq_profiles(mseqs, show, output_path_list, leaf_name_list):
+def plot_mseq_profiles(mseqs,
+                       show: bool,
+                       output_path_list: List[str],
+                       leaf_name_list: List[str]) -> None:
+    """
+    Plots a sequence of embolism profiles using a list of MaskSequence objects.
+
+    :param mseqs: list of MaskSequence objects to use
+    :param show: whether the plot should be shown; if the plot is
+     being saved, the user may not want to display the plot
+    :param output_path_list: list of file paths to save the plot, if None, the
+     plot will not be saved
+    :param leaf_name_list: list of leaf names to use in the title of each plot
+    :return: None
+    """
     for i, mseq in enumerate(mseqs):
         # less memory intensive for images to be loaded here
         LOGGER.info(f"Creating {mseq.num_files} image objects for "
@@ -155,18 +172,41 @@ def plot_mseq_profiles(mseqs, show, output_path_list, leaf_name_list):
 
         if output_path_list is not None:
             mseq.plot_profile(show=show, output_path=output_path_list[i],
-                              leaf_name=leaf_name_list[i], figsize=(10, 15))
+                              leaf_name=leaf_name_list[i], figsize=(10, 10))
         else:
             mseq.plot_profile(show=show, leaf_name=leaf_name_list[i],
-                              figsize=(10, 15))
+                              figsize=(10, 10))
 
         mseq.unload_extracted_images()
 
 
 # *============================ embolism bar plot ============================*
-def plot_mseq_embolism_counts(mseqs, show, output_path, tiles,
-                              leaf_name_list, leaf_embolism_only=False,
-                              percent=False):
+def plot_mseq_embolism_counts(mseqs,
+                              show: bool,
+                              output_path: str,
+                              tiles: bool,
+                              leaf_names_list: List[str],
+                              leaf_embolism_only: bool = False,
+                              percent: bool = False):
+    """
+    Creates a bar plot showing the number of leaves with and without
+    embolisms for a leaf, using a list of MaskSequence objects
+
+    :param mseqs: list of MaskSequence objects
+    :param show: whether the plot should be shown; if the plot is
+     being saved, the user may not want to display the plot
+    :param output_path: path to save the plot, if None, the plot will not be
+     saved
+    :param tiles: whether the tiles belonging to the MaskSequence should be
+     used
+    :param leaf_names_list: the list of leaf names for the x-axis
+    :param leaf_embolism_only: whether only leaves with embolisms should be
+     counted
+    :param percent: Annotate the bars using percentages; if this is false,
+     counts will be used
+     :return: None
+    """
+
     has_embolism_lol = []
 
     for i, mseq in enumerate(mseqs):
@@ -213,12 +253,10 @@ def plot_mseq_embolism_counts(mseqs, show, output_path, tiles,
     if output_path is not None:
         plot_embolisms_per_leaf(has_embolism_lol=has_embolism_lol,
                                 show=show, output_path=output_path,
-                                leaf_names_list=leaf_name_list,
+                                leaf_names_list=leaf_names_list,
                                 percent=percent, figsize=(15, 10))
     else:
         plot_embolisms_per_leaf(has_embolism_lol=has_embolism_lol,
-                                show=show, leaf_names_list=leaf_name_list,
+                                show=show, leaf_names_list=leaf_names_list,
                                 percent=percent, figsize=(15, 10))
-
-        mseq.unload_extracted_images()
 # *===========================================================================*

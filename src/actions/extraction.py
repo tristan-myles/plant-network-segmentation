@@ -1,10 +1,26 @@
 import logging
+from typing import List, Dict
 
 LOGGER = logging.getLogger(__name__)
 
 
-# *================================= images ==================================*
-def extract_leaf_images(lseq_list, output_path_list, overwrite, format_dict):
+def extract_leaf_images(lseq_list,
+                        output_path_list: List[str],
+                        overwrite: bool,
+                        format_dict: Dict) -> None:
+    """
+    Extract differenced leaf images from a list of LeafSequence objects.
+    No objects are returned, but the LeafSequence objects will be mutated.
+
+    :param lseq_list: list of LeafSequences
+    :param output_path_list: list of file paths of where the differenced
+     images should be saved; this path is enumerated as images are saved
+    :param overwrite: whether leaves that exist at the same file path should
+     be overwritten
+    :param format_dict: what format the leaves should be extracted in,
+     e.g. should they be shifted by 256
+    :return: None
+    """
     LOGGER.info("Extracting differenced leaf images")
     for lseq, output_path in zip(lseq_list, output_path_list):
         LOGGER.info(f"Differencing images in {lseq.folder_path} and saving "
@@ -13,8 +29,23 @@ def extract_leaf_images(lseq_list, output_path_list, overwrite, format_dict):
                                     **format_dict)
 
 
-def extract_multipage_mask_images(mseq_list, output_path_list,
-                                  overwrite, binarise):
+def extract_multipage_mask_images(mseq_list,
+                                  output_path_list: List[str],
+                                  overwrite: bool,
+                                  binarise: bool) -> None:
+    """
+    Extract mask images from a multipage file.
+    No objects are returned, but the MaskSequence objects will be mutated.
+
+    :param mseq_list: list of MaskSequence objects
+    :param output_path_list: list of file paths of where the mask
+     images should be saved; this path is enumerated as images are saved
+    :param overwrite: whether masks that exist at the same file path should
+     be overwritten
+    :param binarise: whether the masks should be saved in a binary format;
+    i.e. 0 for no-embolism and 1 for embolism
+    :return: None
+    """
     LOGGER.info("Extracting mask images from multipage file")
 
     for mseq, output_path in zip(mseq_list, output_path_list):
@@ -28,9 +59,32 @@ def extract_multipage_mask_images(mseq_list, output_path_list,
         mseq.unload_extracted_images()
 
 
-def extract_tiles(seq_objects, length_x, stride_x, length_y,
-                  stride_y, output_path_list=None, overwrite=False,
+def extract_tiles(seq_objects,
+                  length_x: int,
+                  stride_x: int,
+                  length_y: int,
+                  stride_y: int,
+                  output_path_list: List[str] = None,
+                  overwrite: bool = False,
                   **kwargs):
+    """
+    Extract tiles from either a list of mask or leaf sequence objects. The
+    tiles are not stored in the Sequence objects to save memory, hence the
+    sequence images are not mutated when they are returned.
+
+    :param seq_objects: list of either MaskSequence or LeafSequence objects
+    :param length_x: the x-length of the tile
+    :param stride_x: the size of the x stride
+    :param length_y: the y-length of the tile
+    :param stride_y: the size of the y stride
+    :param output_path_list: list of file paths of where the mask
+     images should be saved; if no path is provided, tiles are saved in a
+     default location
+    :param overwrite: whether tiles that exist at the same file path should
+     be overwritten
+    :param kwargs: kwargs for how the sequence object images should be loaded
+    :return: None
+    """
     LOGGER.info(f"Extracting tiles from {seq_objects[0].__class__.__name__} "
                 f"with the following configuration:"
                 f" length (x, y): ({length_x}, {length_y}) |"
@@ -50,66 +104,3 @@ def extract_tiles(seq_objects, length_x, stride_x, length_y,
         seq.unload_extracted_images()
 
 
-# *=============================== DataFrames ================================*
-def extract_full_eda_df(mseqs, options, output_path_list, lseqs=None):
-    for i, (mseq, csv_output_path) in enumerate(zip(mseqs, output_path_list)):
-        # less memory intensive for images to be loaded here
-        LOGGER.info(f"Creating {mseq.num_files} image objects for "
-                    f"{mseq.__class__.__name__} located at {mseq.folder_path}")
-        mseq.load_extracted_images(load_image=True)
-
-        if options["linked_filename"]:
-            mseq.link_sequences(lseqs[i])
-
-        _ = mseq.get_eda_dataframe(options, csv_output_path)
-
-        mseq.unload_extracted_images()
-
-
-def extract_tiles_eda_df(mseqs, options, output_path_list, lseqs=None):
-    for i, (mseq, csv_output_path) in enumerate(zip(mseqs, output_path_list)):
-        LOGGER.info(f"Creating {mseq.num_files} image objects for "
-                    f"{mseq.__class__.__name__} located at {mseq.folder_path}")
-
-        if options["linked_filename"]:
-            mseq.link_sequences(lseqs[i])
-
-        _ = mseq.get_tile_eda_df(options, csv_output_path)
-
-        mseq.unload_extracted_images()
-
-
-def extract_full_databunch_df(lseqs, mseqs, output_path_list,
-                              embolism_only=False):
-    for csv_output_path, lseq, mseq in zip(output_path_list, lseqs, mseqs):
-        mseq.load_extracted_images(load_image=True)
-        mseq.get_embolism_percent_list()
-        mseq.get_has_embolism_list()
-
-        lseq.link_sequences(mseq)
-
-        LOGGER.info(f"Creating DataBunch DataFrame using "
-                    f"{lseq.__class__.__name__} located at {lseq.folder_path} "
-                    f"and {mseq.__class__.__name__} located at"
-                    f" {mseq.folder_path}")
-
-        # get_databunch_dataframe written into of a lseq, i.e. will always
-        # report lseq regardless of whether it is longer or shorter
-        _ = lseq.get_databunch_dataframe(embolism_only, csv_output_path)
-
-
-def extract_tiles_databunch_df(lseqs, mseqs, output_path_list,
-                               tile_embolism_only=False,
-                               leaf_embolism_only=False):
-    for csv_output_path, lseq, mseq in zip(output_path_list, lseqs, mseqs):
-        lseq.link_sequences(mseq)
-
-        LOGGER.info(f"Creating Tile DataBunch DataFrame using "
-                    f"{lseq.__class__.__name__} located at {lseq.folder_path} "
-                    f"and {mseq.__class__.__name__} located at"
-                    f" {mseq.folder_path}")
-
-        _ = lseq.get_tile_databunch_df(mseq, tile_embolism_only,
-                                       leaf_embolism_only,
-                                       csv_output_path)
-# *===========================================================================*
