@@ -4,113 +4,21 @@ import pprint
 
 import matplotlib as mpl
 from sklearn import metrics
-from tensorflow import keras
-from tqdm import tqdm
 
-from src.data.data_model import *
-from src.pipelines.tensorflow_v2.losses.custom_losses import *
-from src.pipelines.tensorflow_v2.models.unet import Unet
-from src.pipelines.tensorflow_v2.models.unet_resnet import UnetResnet
-from src.pipelines.tensorflow_v2.models.wnet import WNet
+from src.data_model.data_model import *
 
 LOGGER = logging.getLogger(__name__)
 
 
-# *================================ get model ================================*
-def get_workaround_details(compilation_dict):
-    # model:
-    if compilation_dict["model"] == "unet":
-        model = Unet(1, compilation_dict["activation"],
-                     compilation_dict["initializer"],
-                     compilation_dict["filters"])
-    elif compilation_dict["model"] == "unet_resnet":
-        model = UnetResnet(1, compilation_dict["activation"],
-                           compilation_dict["initializer"],
-                           compilation_dict["filters"])
-    elif compilation_dict["model"] == "wnet":
-        model = WNet(1,  compilation_dict["activation"],
-                     compilation_dict["initializer"],
-                     compilation_dict["filters"])
-    else:
-        raise ValueError("Please provide a valid answer for model choice, "
-                         "options are unet, unet_resnet, or wnet")
-
-    if compilation_dict["loss"] == "bce":
-        loss = keras.losses.binary_crossentropy
-    elif compilation_dict["loss"] == "wce":
-        loss = WeightedCE(compilation_dict["loss_weight"])
-    elif compilation_dict["loss"] == "focal":
-        loss = FocalLoss(compilation_dict["loss_weight"])
-    elif compilation_dict["loss"] == "dice":
-        loss = SoftDiceLoss()
-    else:
-        raise ValueError("Please provide a valid answer for loss choice, "
-                         "options are bce, wce, focal, or dice")
-
-    if compilation_dict["opt"] == "adam":
-        opt = keras.optimizers.Adam
-    elif compilation_dict["opt"] == "sgd":
-        opt = keras.optimizers.SGD
-    else:
-        raise ValueError("Please provide a valid answer for optimiser choice, "
-                         "options are adam or sgd")
-
-    metrics = [keras.metrics.BinaryAccuracy(name='accuracy'),
-               keras.metrics.Precision(name='precision'),
-               keras.metrics.Recall(name='recall')]
-
-    return model, loss, opt, metrics
-
-
-# *=============================== prediction ================================*
-def predict_tensorflow(lseqs, model_weight_path, leaf_shape, cr_csv_list="",
-                       mseqs=None, threshold=0.5, format_dict=None):
-
-    if format_dict is None:
-        format_dict = {}
-
-    with open(model_weight_path + "compilation.json", "r") as json_file:
-        compilation_dict = json.load(json_file)
-
-    model, loss, opt, metrics = get_workaround_details(compilation_dict)
-    model.load_workaround(leaf_shape, leaf_shape, loss,
-                          opt(float(compilation_dict["lr"])), metrics,
-                          model_weight_path)
-
-    memory_saving = True
-    cr_csv_list = cr_csv_list.split(";")
-
-    if cr_csv_list[0]:
-        memory_saving = False
-
-    for i, lseq in enumerate(lseqs):
-        lseq.predict_leaf_sequence(model, leaf_shape[0],
-                                   leaf_shape[1],
-                                   memory_saving=memory_saving,
-                                   leaf_shape=leaf_shape,
-                                   threshold=threshold,
-                                   **format_dict)
-
-        if cr_csv_list[0]:
-            mseqs[i].load_extracted_images(load_image=True)
-
-            temp_pred_list = []
-            temp_mask_list = []
-
-            for leaf, mask in zip(lseq.image_objects, mseqs[i].image_objects):
-                temp_pred_list.append(leaf.prediction_array/255.0)
-                temp_mask_list.append(mask.image_array/255.0)
-
-                # save memory
-                del leaf.image_array
-                del mask.image_array
-
-            _ = classification_report(temp_pred_list, temp_mask_list,
-                                      save_path=cr_csv_list[i])
-
-
 # *================================= metrics =================================*
-def get_iou_score(y_true, y_pred):
+def get_iou_score(y_true: np.array, y_pred: np.array) -> float:
+    """
+    Calculates the Intersection over Union score given a mask and a prediction.
+
+    :param y_true: the true mask corresponding to the prediction
+    :param y_pred: the prediction
+    :return: IoU
+    """
     intersection = np.logical_and(y_true, y_pred)
     union = np.logical_or(y_true, y_pred)
     iou_score = np.sum(intersection) / np.sum(union)
@@ -118,7 +26,21 @@ def get_iou_score(y_true, y_pred):
     return iou_score
 
 
-def classification_report(predictions, masks, save_path=None):
+def classification_report(predictions: List[np.array],
+                          masks: List[np.array],
+                          save_path: str = None) -> pd.DataFrame:
+    """
+    Generates a classification report by comparing each mask and prediction
+    in the input list of predictions and masks. If a save path is provided
+    then the classification report is saved. The metrics returned in the
+    report are: IoU, AUC_PR, Precision, Recall, F1, Accuracy, FN, FP, TN,
+    and TP.
+
+    :param predictions: a list of predictions
+    :param masks: a list of masks corresponding to the predictions
+    :param save_path: the output path to saved the classifcation report
+    :return:
+    """
     metric_df = pd.DataFrame({"IoU": [], "Precision": [], "Recall": [],
                               "F1": [], "Accuracy": [], "AUC_PR": [],
                               "FN": [], "FP": [], "TN": [], "TP": []})
@@ -171,6 +93,20 @@ def classification_report(predictions, masks, save_path=None):
 # *=============================== data model ================================*
 def create_file_name(output_folder_path, output_file_name, i,
                      placeholder_size):
+    """
+    Creates the output folder path if it doesn't exist. The input number,
+    i, is zero padded according to the placeholder size and appended to
+    the output filename. This filename is appened to the output folder path
+    and returned.
+
+    :param output_folder_path: the output folder path
+    :param output_file_name: the filename to which the zero-padded number
+    must be appended
+    :param i: the number to zero pad
+    :param placeholder_size: determines how much to zero pad i; i.e. if
+    placeholder size is 3 and i =1, the number used in the filename will be 001
+    :return: an output file path
+    """
     Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 
     file_name, extension = \
@@ -181,15 +117,20 @@ def create_file_name(output_folder_path, output_file_name, i,
     return final_file_name
 
 
-def trim_image_array(image_array, output_size: int,
-                     axis: str, trim_dir: int):
+def trim_image_array(image_array: np.array,
+                     output_size: int,
+                     axis: str,
+                     trim_dir: int) -> np.array:
     """
+    Trims an image, either from the start or the end, along a single axis.
 
+    :param image_array: the input image
+    :param output_size: the output size of the image; i.e. informs how much
+    of the image to trim
     :param axis: one of either "x", "y" or both
-    :param image_array:
-    :param output_size:
-    :param trim_dir:
-    :return:
+    :param trim_dir: the trim direction, either -1 or 1; 1 trims from the
+    start of the image and -1 trims from the end
+    :return: the trimmed image
     """
     image_shape = image_array.shape
 
@@ -220,7 +161,15 @@ def trim_image_array(image_array, output_size: int,
 
 
 # *================================== plots ==================================*
-def update_plot_format(default: bool = False):
+def update_plot_format(default: bool = False) -> None:
+    """
+    Updates the matplotlib RC. This function can also be used to set the rc
+    back to the default configuration.
+
+    :param default: whether to set the RC to the custom config or to the
+    default config
+    :return: None
+    """
     if default:
         mpl.rcParams.update(mpl.rcParamsDefault)
     else:
@@ -238,7 +187,15 @@ def update_plot_format(default: bool = False):
 
 
 # *================================= dataset =================================*
-def create_subfolders(path, folder):
+def create_subfolders(path: Path, folder: str) -> None:
+    """
+    Creates leaf and mask subfolders at the given base path and folder.
+
+    :param path: base path
+    :param folder: the folder in the path under which the subfolders should
+    be created
+    :return: None
+    """
     path.joinpath(folder, "leaves").mkdir(parents=True,
                                           exist_ok=True)
     path.joinpath(folder, "masks").mkdir(parents=True,
@@ -246,7 +203,15 @@ def create_subfolders(path, folder):
 
 
 # *============================== all __main__ ===============================*
-def create_sequence_objects(sequence_input):
+def create_sequence_objects(sequence_input: dict):
+    """
+    Creates a list of LeafSequence and MaskSequence objects.
+
+    :param sequence_input: a dict with the details of how the sequence
+    should be created; this dict can control in which mode the sequence
+    objects are created in
+    :return: a list of LeafSequence and a list MaskSequence objects
+    """
     lseqs = []
     mseqs = []
 
@@ -267,7 +232,20 @@ def create_sequence_objects(sequence_input):
     return lseqs, mseqs
 
 
-def load_image_objects(seq_objects, load_images=False, **kwargs):
+def load_image_objects(seq_objects,
+                       load_images:bool = False,
+                       **kwargs) -> None:
+    """
+    Creates image object for each sequence object in a list of sequence
+    objects. No object is return but the sequence objects are mutated.
+
+    :param seq_objects: the list of sequence objects whose images need to be
+     created
+    :param load_images: whether image arrays for the created objects should
+     be loaded
+    :param kwargs: kwargs for loading image, if load_images is true
+    :return: None
+    """
     LOGGER.info(f"Creating image objects for "
                 f"{seq_objects[0].__class__.__name__}")
 
@@ -278,9 +256,27 @@ def load_image_objects(seq_objects, load_images=False, **kwargs):
 
 # *============================ package __main__ =============================*
 # *------------------------------- procedures --------------------------------*
-def trim_sequence_images(seq_objects, x_size_dir_list=None,
-                         y_size_dir_list=None, overwrite=False,
-                         **kwargs):
+def trim_sequence_images(seq_objects,
+                         x_size_dir_list: List[Tuple[int, int]] = None,
+                         y_size_dir_list: List[Tuple[int, int]] = None,
+                         overwrite: bool = False,
+                         **kwargs) -> None:
+    """
+    Trims either a images in a list MaskSequence or LeafSequence objects. No
+    object is returned but the trim images are saved.
+
+    :param seq_objects: either a list of MaskSequence or LeafSequence objects
+    :param y_size_dir_list: a list of tuples; each tuple is in the format of
+    (output size, trim_direction), where trim direction is either 1 or -1,
+     which indicates to trim from either the top or bottom respectively
+    :param x_size_dir_list: a list of tuples; each tuple is in the format of
+     (output size, trim_direction), where trim direction is either 1 or -1,
+     which indicates to trim from either the left or right respectively
+    :param overwrite: whether tiles that exist at the same file path should
+     be overwritten
+    :param kwargs: kwargs for loading the images in the sequence object
+    :return: None
+    """
     for seq, x_size_dir, y_size_dir in \
             zip(seq_objects, x_size_dir_list, y_size_dir_list):
         seq.load_image_array(**kwargs)
@@ -292,6 +288,10 @@ def trim_sequence_images(seq_objects, x_size_dir_list=None,
 
 # *-------------------------------- argparse ---------------------------------*
 def parse_arguments() -> argparse.Namespace:
+    """
+     Argument parser
+    :return: An argparse namespace
+    """
     parser = argparse.ArgumentParser("Perform operations using the "
                                      "plant-image-segmentation code base")
 
@@ -496,7 +496,13 @@ def parse_arguments() -> argparse.Namespace:
 
 
 # *--------------------------- interactive prompt ----------------------------*
-def print_options_dict(output_dict):
+def print_options_dict(output_dict: Dict) -> None:
+    """
+    Print a formatted version of the results of the output dict generated by
+    the input prompt
+    :param output_dict: the output dict to print
+    :return: None
+    """
     print(f"\nYour chosen configuration is:\n")
     for i, (key, val) in enumerate(output_dict.items()):
         if i == 0:
@@ -513,6 +519,12 @@ def print_options_dict(output_dict):
 
 
 def requirements(operation: int) -> None:
+    """
+    Used to add the requirements for a particular operation to the input
+    prompt.
+    :param operation: the operation whose requirements should be printed
+    :return: None
+    """
     if operation == 8:
          print("\nNote:"
                "\n - Only one of either Mask or Leaf sequences can be trimmed "
@@ -536,7 +548,14 @@ def requirements(operation: int) -> None:
               "for linking and for naming")
 
 
-def interactive_prompt():
+def interactive_prompt() -> Dict:
+    """
+    Interactive prompt which allows users to interact with the code base.
+    The results are returned as a dict. There is an option, through the
+    prompt, to save the input as a json to be used again.
+
+    :return: None
+    """
     happy = False
     options_list = set((-1,))
     operation_names = ["extract_images", "extract_tiles", "plot_profile",

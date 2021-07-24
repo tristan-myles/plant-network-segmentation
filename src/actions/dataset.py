@@ -1,25 +1,26 @@
+import random
 import shutil
+from typing import Union
 
 import imgaug as ia
+import imgaug.augmenters as iaa
 from sklearn.model_selection import train_test_split
 
-from src.data.data_model import *
+from src.data_model.data_model import *
 from src.helpers.utilities import create_subfolders
-from typing import Union
-import imgaug.augmenters as iaa
 
-from pathlib import Path
-
-import random
 random.seed(3141)
 
 
 # *============================= create dataset ==============================*
 def create_dataset_structure(base_dir: Union[Path, str]) -> None:
     """
-    Creates a skeleton dataset structure
+    Creates a skeleton dataset structure. Train, val, and test folders,
+    each with embolism and no-embolism folders are created. A not-used
+    folder for downsampled images is also created.
+
     :param base_dir: the directory where the dataset should be created,
-    in either a pathlib Path or srt format
+     in either a pathlib Path or srt format
     :return: None
     """
     if not isinstance(base_dir, Path):
@@ -38,17 +39,22 @@ def create_dataset_structure(base_dir: Union[Path, str]) -> None:
     create_subfolders(base_dir, "not_used")
 
 
-def move_data(lseqs, mseqs, dest_root_path,
-                         dest_folder="train") -> [str, str]:
+def move_data(lseq_list: List[LeafSequence],
+              mseq_list: List[MaskSequence],
+              dest_root_path: Union[Path, str],
+              dest_folder: str = "train") -> [str, str]:
     """
     Populates the train folder in the dataset folder, where the dataset 
     folder and its constituents were created using the create_dataset_structure
     function of this module.
 
 
-    :param lseqs: list of leaf sequence objects
-    :param mseqs: list of mask sequence objects
-    :param dest_root_path:
+    :param lseq_list: list of LeafSequence objects
+    :param mseq_list: list of MaskSequence objects
+    :param dest_root_path: destination root path; this can either be a Path
+     object or a string
+    :param dest_folder: destination folder; this is a folder in the
+     destination root path
     :return: None
 
     .. note:: This function requires both leaves and masks to be in the same
@@ -57,7 +63,7 @@ def move_data(lseqs, mseqs, dest_root_path,
     if not isinstance(dest_root_path, Path):
         dest_root_path = Path(dest_root_path)
 
-    for lseq, mseq in zip(lseqs, mseqs):
+    for lseq, mseq in zip(lseq_list, mseq_list):
         lseq.load_extracted_images()
         mseq.load_extracted_images()
 
@@ -87,7 +93,8 @@ def move_data(lseqs, mseqs, dest_root_path,
         embolism_df[~embolism_df.has_embolism].names.map(
             lambda x: shutil.copyfile(
                 mask_chip_folder.joinpath(x),
-                dest_root_path.joinpath(dest_folder, "no-embolism", "masks", x)))
+                dest_root_path.joinpath(dest_folder, "no-embolism", "masks",
+                                        x)))
 
         # Leaves
         LOGGER.info("Moving leaves")
@@ -108,7 +115,7 @@ def move_data(lseqs, mseqs, dest_root_path,
         lseq.unload_extracted_images()
         mseq.unload_extracted_images()
 
-    #Note: All leaf and mask tiles must have the same file extension
+    # Note: All leaf and mask tiles must have the same file extension
     # Get the extension using the filenames of the chips of the last chip
     # paths from the above loop
     mask_file_ext = "*." + str(mask_chip_path.parts[-1]).rsplit(".")[1]
@@ -117,8 +124,23 @@ def move_data(lseqs, mseqs, dest_root_path,
     return [leaf_file_ext, mask_file_ext]
 
 
-def downsample_dataset(dataset_root_path, filename_patterns,
-                       non_embolism_size=0.5):
+def downsample_dataset(dataset_root_path: Union[Path, str],
+                       filename_patterns: [str, str],
+                       non_embolism_size: float = 0.5) -> \
+        ([List[str], List[str]], [List[str], List[str]]):
+    """
+    Downsamples a dataset, where the dataset was created using the
+    create_dataset_structure and move_data functions.
+
+    :param dataset_root_path: the root path of the dataset to downsample
+    :param filename_patterns: the filename patterns of the both the leaves
+    and masks; this list has two elements
+    :param non_embolism_size: the size of the no-embolism samples to keep
+    :return: two lists, the first has as elements a list of the embolism
+     leaves and a list of the embolism masks, and the second as elements a list
+     of the chosen no-embolism leaves and a list of the chosen no-embolism
+     masks
+    """
     if not isinstance(dataset_root_path, Path):
         dataset_root_path = Path(dataset_root_path)
 
@@ -160,24 +182,32 @@ def downsample_dataset(dataset_root_path, filename_patterns,
     LOGGER.info(f"Downsampled by {len(ignored_leaves)} "
                 f"({round(percent_moved * 100)})% non-embolism images")
     LOGGER.info(f"Ratio of embolism to non-embolism leaves has changed from "
-                f"1:{total_ne_images/len(e_masks)} to "
-                f"1:{len(chosen_masks)/len(e_masks)}")
+                f"1:{total_ne_images / len(e_masks)} to "
+                f"1:{len(chosen_masks) / len(e_masks)}")
 
     return [e_leaves, e_masks], [chosen_leaves, chosen_masks]
 
 
-def split_dataset(dataset_root_path, embolism_objects, non_embolism_objects,
-                  test_split=0.2, val_split=0.2):
+def split_dataset(dataset_root_path: Union[Path, str],
+                  embolism_objects: [List[str], List[str]],
+                  non_embolism_objects: [List[str], List[str]],
+                  test_split: float = 0.2,
+                  val_split: float = 0.2) -> None:
     """
+    Splits a dataset into train, val, and test, by moving a portion of the
+    train samples to val and test. The inputs for embolism objects and
+    non-embolism objects are usually the outputs returned from the
+    downsample_dataset function.
 
-    :param dataset_root_path:
+    :param dataset_root_path: the root path of the dataset to split
     :param embolism_objects: a list containing paths to embolism masks and
-    leaves; leaves at item 0 and masks at item 1
+     leaves; leaves at item 0 and masks at item 1
     :param non_embolism_objects:  list containing paths to non-embolism masks
-    and leaves; leaves at item 0 and masks at item 1
-    :param test_size:
-    :param val_size:
-    :return:
+     and leaves; leaves at item 0 and masks at item 1
+    :param test_split: the percentage of the sample to use for the test set
+    :param val_split: the percentage of the remaining sample,
+     after the test set has been removed, to use for the validation set
+    :return: None
     """
     e_leaves = embolism_objects[0]
     e_masks = embolism_objects[1]
@@ -259,27 +289,35 @@ def split_dataset(dataset_root_path, embolism_objects, non_embolism_objects,
     LOGGER.info(
         f"Summary: (% of total number of images used in this split) "
         f"\nTraining set size   :  {train_size} "
-        f"({round((train_size/total_size) * 100)  }%)"
+        f"({round((train_size / total_size) * 100)}%)"
         f"\nValidation set size :  {val_size} "
-        f"({round((val_size/total_size)* 100)}%) "
+        f"({round((val_size / total_size) * 100)}%) "
         f"\nTest set size       :  {test_size} "
-        f"({round((test_size/total_size) * 100)}%)")
+        f"({round((test_size / total_size) * 100)}%)")
 
 
 # *---------------------------- package __main__ -----------------------------*
-def extract_dataset(lseqs: [LeafSequence], mseqs: [MaskSequence],
+def extract_dataset(lseq_list: [LeafSequence],
+                    mseq_list: [MaskSequence],
                     dataset_path: Union[Path, str],
-                    downsample_split: float, test_split: float,
-                    val_split: float, lolo: int=None) -> None:
+                    downsample_split: float,
+                    test_split: float,
+                    val_split: float,
+                    lolo: int = None) -> None:
     """
+    Creates a dataset using a list of LeafSequence and MaskSequence objects
 
-    :param lseqs:
-    :param mseqs:
-    :param dataset_path:
-    :param downsample_split:
-    :param test_split:
-    :param val_split:
-    :return:
+    :param lseq_list: a list of LeafSequence objects
+    :param mseq_list: a list of MaskSequence objects
+    :param dataset_path: the root path of where the dataset should be created
+    :param downsample_split: the percentage to no-embolism samples to keep
+    :param test_split: the percentage of the sample to use for the test set
+    :param val_split: the percentage of the remaining sample,
+     after the test set has been removed, to use for the validation set
+    :param lolo: the index of the leaf to leave out to use for testing,
+     if a complete leaf should be used for testing; the index corresponds to
+     the leafs position in the lseq_list and mseq_list
+    :return: None
     """
     # will create a structure iff one does not exist in the correct
     # format at the specified path
@@ -287,12 +325,12 @@ def extract_dataset(lseqs: [LeafSequence], mseqs: [MaskSequence],
 
     if isinstance(lolo, int):
         # isolate the leaf to leave out
-        lseq_lolo = [lseqs.pop(lolo)]
-        mseq_lolo = [mseqs.pop(lolo)]
+        lseq_lolo = [lseq_list.pop(lolo)]
+        mseq_lolo = [mseq_list.pop(lolo)]
 
         _ = move_data(lseq_lolo, mseq_lolo, dataset_path, "test")
 
-    filename_patterns = move_data(lseqs, mseqs, dataset_path)
+    filename_patterns = move_data(lseq_list, mseq_list, dataset_path)
 
     # non_emb_list will contain the filenames of chosen non-embolism images
     emb_list, non_emb_list = downsample_dataset(dataset_path,
@@ -304,15 +342,18 @@ def extract_dataset(lseqs: [LeafSequence], mseqs: [MaskSequence],
 
 # *============================= augment dataset =============================*
 # *----------------------------- transformations -----------------------------*
-def flip_flop(leaf_image_array, mask_segmap, orientation: str,
-              seed: int = 3141) -> np.array:
+def flip_flop(leaf_image_array: np.array,
+              mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
+              orientation: str,
+              seed: int = 3141) -> \
+        (np.array, ia.augmentables.segmaps.SegmentationMapsOnImage):
     """
-
-    :param leaf_image_array:
-    :param mask_segmap:
-    :param orientation:
-    :param seed:
-    :return:
+    Reflects a sample on either on the x or y-axis
+    :param leaf_image_array: the input image
+    :param mask_segmap: the mask segmentation map
+    :param orientation: whether to flip horizontally or vertically
+    :param seed: the random seed
+    :return: the updated leaf input and mask
     """
     if orientation == "horizontal":
         flip_hr = iaa.Fliplr(seed=seed)
@@ -329,16 +370,21 @@ def flip_flop(leaf_image_array, mask_segmap, orientation: str,
     return flipped_images, mask_segmap
 
 
-def translate_img(leaf_image_array, mask_segmap, x: float, y: float,
-                  seed: int = 3141) -> np.array:
+def translate_img(leaf_image_array: np.array,
+                  mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
+                  x: float,
+                  y: float,
+                  seed: int = 3141) -> \
+        (np.array, ia.augmentables.segmaps.SegmentationMapsOnImage):
     """
+    Translates an image. The padding pixels are black.
 
-    :param leaf_image_array:
-    :param mask_segmap:
-    :param x:
-    :param y:
-    :param seed:
-    :return:
+    :param leaf_image_array: the input image
+    :param mask_segmap: the mask segmentation map
+    :param x: percentage to shift on the x-axis (between -1 and 1)
+    :param y: percentage to shift on the y-axis (between -1 and 1)
+    :param seed: the random seed
+    :return: the updated leaf input and mask
     """
     rotate = iaa.Affine(translate_percent=(x, y), seed=seed)
     leaf_image = rotate.augment_image(leaf_image_array)
@@ -347,16 +393,21 @@ def translate_img(leaf_image_array, mask_segmap, x: float, y: float,
     return leaf_image, mask_segmap
 
 
-def rotate_img(leaf_image_array, mask_segmap, l: float, r: float,
+def rotate_img(leaf_image_array: np.array,
+               mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
+               l: float,
+               r: float,
                seed: int = 3141) -> np.array:
     """
+    Rotates an image a random amount of degrees between (l,r). The padding
+    pixels are black.
 
-    :param leaf_image_array:
-    :param mask_segmap:
-    :param l:
-    :param r:
-    :param seed:
-    :return:
+    :param leaf_image_array: the input image
+    :param mask_segmap: the mask segmentation map
+    :param l: degrees to rotate to the left
+    :param r: degrees to rotate to the right
+    :param seed: the random seed
+    :return: the updated leaf input and mask
     """
     rotate = iaa.Affine(rotate=(l, r), seed=seed)
     leaf_image = rotate.augment_image(leaf_image_array)
@@ -365,16 +416,20 @@ def rotate_img(leaf_image_array, mask_segmap, l: float, r: float,
     return leaf_image, mask_segmap
 
 
-def shear_img(leaf_image_array, mask_segmap, l: float, r: float,
+def shear_img(leaf_image_array: np.array,
+              mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
+              l: float,
+              r: float,
               seed: int = 3141) -> np.array:
     """
-
-    :param leaf_image_array:
-    :param mask_segmap:
-    :param l:
-    :param r:
-    :param seed:
-    :return:
+    Shears an image a random amount of degrees between (l,r). The padding
+    pixels are black.
+    :param leaf_image_array: the input image
+    :param mask_segmap: the mask segmentation map
+    :param l: degrees to shear to the left
+    :param r: degrees to shear to the right
+    :param seed: the random seed
+    :return: the updated leaf input and mask
     """
     # Shear in degrees
     shear = iaa.Affine(shear=(l, r), seed=seed)
@@ -385,16 +440,19 @@ def shear_img(leaf_image_array, mask_segmap, l: float, r: float,
     return leaf_image, mask_segmap
 
 
-def crop_img(leaf_image_array, mask_segmap, v: float, h: float,
+def crop_img(leaf_image_array: np.array,
+             mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
+             v: float,
+             h: float,
              seed: int = 3141) -> np.array:
     """
-
-    :param leaf_image_array:
-    :param mask_segmap:
-    :param v:
-    :param h:
-    :param seed:
-    :return:
+    Crops an image. The padding pixels are black.
+    :param leaf_image_array: the input image
+    :param mask_segmap: the mask segmentation map
+    :param v: the percent to crop vertically
+    :param h: the percent to crop horizontally
+    :param seed: the random seed
+    :return: the updated leaf input and mask
     """
     crop = iaa.Crop(percent=(v, h), seed=seed)
     leaf_image = crop.augment_image(leaf_image_array)
@@ -403,16 +461,19 @@ def crop_img(leaf_image_array, mask_segmap, v: float, h: float,
     return leaf_image, mask_segmap
 
 
-def zoom_in_out(leaf_image_array, mask_segmap, x: float, y: float,
+def zoom_in_out(leaf_image_array: np.array,
+                mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
+                x: float,
+                y: float,
                 seed: int = 3141) -> np.array:
     """
 
-    :param leaf_image_array:
-    :param mask_segmap:
+    :param leaf_image_array: the input image
+    :param mask_segmap: the mask segmentation map
     :param x:
     :param y:
-    :param seed:
-    :return:
+    :param seed: the random seed
+    :return: the updated leaf input and mask
     """
     scale_im = iaa.Affine(scale={"x": x, "y": y}, seed=seed)
     leaf_image = scale_im.augment_image(leaf_image_array)
@@ -422,32 +483,16 @@ def zoom_in_out(leaf_image_array, mask_segmap, x: float, y: float,
 
 
 # *--------------------------------- helpers ---------------------------------*
-def stack_images(leaf_image: np.array, mask_image: np.array) -> np.array:
+def save_image(leaf: Leaf, mask: Mask, aug_type: str) -> None:
     """
+    Saves an augmented Leaf and Mask. The new filename includes the details
+    of the augmentation.
 
-    :param leaf_image:
-    :param mask_image:
-    :return:
-    """
-    # Change back to 0 if not float
-    # Stack leaf and mask together so that they can be augmented uniformly
-    leaf_image = leaf_image[:, :, np.newaxis]
-    mask_image = mask_image[:, :, np.newaxis]
-
-    # leaf first
-    dual_channel = np.concatenate((leaf_image, mask_image), axis=2)
-
-    return dual_channel
-
-
-def save_image(leaf, mask, aug_type: str) -> None:
-    """
-
-    :param image:
-    :param leaf_path:
-    :param mask_path:
-    :param aug_type:
-    :return:
+    :param leaf: A Leaf object, with augmented image
+    :param mask: A Mask object, with augmented image
+    :param aug_type: the details of the augmentation to be added to the new
+     filename
+    :return: None
     """
     old_paths = [leaf.path, mask.path]
     new_paths = ["", ""]
@@ -473,19 +518,29 @@ def save_image(leaf, mask, aug_type: str) -> None:
     cv2.imwrite(str(new_paths[1]), mask.image_array.astype(np.uint8))
 
 
-def augment_image(leaf, mask, df: pd.DataFrame, aug_type: str,
-                  index: int, counts: [int, int], func, **kwargs) -> [int, int]:
+def augment_image(leaf: np.array,
+                  mask: np.array,
+                  df: pd.DataFrame,
+                  aug_type: str,
+                  index: int,
+                  counts: [int, int],
+                  func, **kwargs) -> [int, int]:
     """
+    Applies an augmentation to a sample. The augmented sample is rejected if
+    the augmentation removes all embolisms from the image. If the
+    augmentation is accepted, it is saved, and the aug_df is updated with
+    the details of the augmentation. The updates to the df are made in
+    place, so the df is mutated despite not being returned.
 
-    :param leaf:
-    :param mask:
-    :param df:
-    :param aug_type:
-    :param index:
-    :param counts:
-    :param func:
-    :param kwargs:
-    :return:
+    :param leaf: the input leaf
+    :param mask: the input mask
+    :param df: the augmentation df
+    :param aug_type: the type of augmentation
+    :param index: the index of the sample in the input df
+    :param counts: the counts of augmentation acceptance and rejection
+    :param func: the augmentation function
+    :param kwargs: the kwargs for the augmentation function
+    :return: the updated counts
     """
     segmap = ia.augmentables.segmaps.SegmentationMapsOnImage(
         mask.image_array, mask.image_array.shape)
@@ -508,15 +563,25 @@ def augment_image(leaf, mask, df: pd.DataFrame, aug_type: str,
     return counts
 
 
-def augmentation_algorithm(leaf, mask, aug_df: pd.DataFrame, i: int,
+def augmentation_algorithm(leaf: np.array,
+                           mask: np.array,
+                           aug_df: pd.DataFrame,
+                           i: int,
                            counts: [int, int]) -> (pd.DataFrame, [int, int]):
     """
+    Passes the sample through a series of possible augmentations: flip_flop,
+    translate, zoom, crop, rotate, and shear. These augmentations are each
+    applied with probability of 0.5. The augmented images are saved. The input
+    DataFrame is updated with augmentations that were applied to the image.
+    The count of augmentations is also updated.
 
-    :param leaf:
-    :param mask:
-    :param aug_df:
-    :param i:
-    :param counts:
+    :param leaf: the leaf to augment
+    :param mask: the mask to augment
+    :param aug_df: the augmentation df
+    :param i: the position in the dataframe corresponding to the sample
+    :param counts: a list of counts, the first number is a count of times an
+    augmentation was accepted and the second is the count of times an
+    augmentation was rejected.
     :return:
     """
     # P(flip) = 0.5
@@ -528,7 +593,7 @@ def augmentation_algorithm(leaf, mask, aug_df: pd.DataFrame, i: int,
             orientation = "vertical"
 
         counts = augment_image(leaf, mask, aug_df, "flip", i, counts,
-                              flip_flop, orientation=orientation)
+                               flip_flop, orientation=orientation)
 
     # P(translate) = 0.5
     if random.random() < 0.5:
@@ -537,7 +602,7 @@ def augmentation_algorithm(leaf, mask, aug_df: pd.DataFrame, i: int,
         y_per = round(random.uniform(-0.25, 0.25), 2)
 
         counts = augment_image(leaf, mask, aug_df, "translate", i, counts,
-                               translate_img, x=x_per,  y=y_per)
+                               translate_img, x=x_per, y=y_per)
 
     # P(zoom) = 0.5
     if random.random() < 0.5:
@@ -579,13 +644,18 @@ def augmentation_algorithm(leaf, mask, aug_df: pd.DataFrame, i: int,
 
 
 # *---------------------------- package __main__ -----------------------------*
-def augment_dataset(lseq: LeafSequence, mseq: MaskSequence, **kwargs):
+def augment_dataset(lseq: LeafSequence, mseq: MaskSequence, **kwargs) -> None:
     """
+    Augments a dataset using the provided LeafSequence and MaskSequence.
+    Both the LeafSequence and MaskSequence are usually created using the
+    train folder from the dataset. The augmented files are saved in a folder
+    called augmented at the common root folder of the leaf and mask
+    sequence. A csv with the details of augmentation is also saved.
 
-        :param lseq:
-        :param mseq:
-        :return:
-        """
+    :param lseq: LeafSequence object of the dataset
+    :param mseq: MaskSequence object of the dataset
+    :return: None
+    """
     # linked based on number:  <name>_<image_number>_<tile_number>
     lseq.link_sequences(mseq)
 
