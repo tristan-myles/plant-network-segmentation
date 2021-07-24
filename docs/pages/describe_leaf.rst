@@ -1,6 +1,6 @@
 Describe Leaf
 =============
 
-.. automodule:: src.eda.describe_leaf
+.. automodule:: src.helpers.describe_leaf
    :members:
 
