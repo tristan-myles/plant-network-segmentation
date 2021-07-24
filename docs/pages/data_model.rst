@@ -1,6 +1,6 @@
 Data Model
 ==========
 
-.. automodule:: src.data.data_model
+.. automodule:: src.data_model.data_model
    :members:
 
