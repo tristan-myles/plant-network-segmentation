@@ -8,6 +8,17 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 
 .. toctree::
    :maxdepth: 2
+   :caption: Actions
+
+   pages/dataset
+   pages/eda
+   pages/extraction
+   pages/plotting
+   pages/prediction
+
+
+.. toctree::
+   :maxdepth: 2
    :caption: Helper Modules
    
    pages/describe_leaf
