@@ -1,103 +1,14 @@
-"""
-describe_leaf.py
-Script to provide descriptive information on images of leaves (in the project
-format)
-"""
-__author__ = "Tristan Naidoo"
-__maintainer__ = "Tristan Naidoo"
-__version__ = "0.0.1"
-__email__ = "ndxtri015@myuct.ac.za"
-__status__ = "development"
-
 import logging
+import sys
 from typing import List
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
+import tqdm
 
 LOGGER = logging.getLogger(__name__)
-
-
-def get_embolism_percent(image: np.array) -> int:
-    """
-    Returns the % of the image that are emboli
-    :param image: np.array of a mask
-    :return: percentage of emboli
-    """
-    return np.count_nonzero(image == 255) / image.size
-
-
-def get_unique_range(image: np.array) -> np.array:
-    """
-    Gets the unique list of pixel intensities for an image
-    :param image: np.array of a mask
-    :return: an array of unique pixel intensities
-    """
-    return np.unique(np.array(image))
-
-
-def get_unique_leaf_range(images: List[np.array]) -> np.array:
-    """
-    Gets the unique list of pixel intensities from a list of images
-    :param images: np.array of a mask
-    :return: an array of unique pixel intensities
-    """
-    unique_range = np.array([])
-
-    for i, image in enumerate(images):
-        try:
-            image_range = image
-            pixel_ints_to_add = np.setdiff1d(image_range,
-                                             unique_range)
-
-            if pixel_ints_to_add.size != 0:
-                unique_range = np.append(unique_range, pixel_ints_to_add)
-        except TypeError as e:
-            LOGGER.exception(f"image {i}  had an issue: \t", e)
-            continue
-
-    return unique_range
-
-
-def binarise_image(image: np.array,
-                   lower_bound_255: int = 200,
-                   upper_bound_0: int = 55) -> np.array:
-    """
-    Converts all pixels intensities within range of (lower_bound_255; 255)
-    to 255 and all pixels intensities between (0; upper_bound_0) to 0. The aim
-    is to binarise the image but this depends on the correct choice of boundary
-    parameters.
-    :param image: np.array of a mask
-    :param lower_bound_255: lower bound of the range of values to be casted
-    to 255
-    :param upper_bound_0: upper bound of the range of values to be casted to 0
-    :return: an np.array of a mask with only two pixel intensities: 0 and 255
-    """
-    image[(image > lower_bound_255) & (image < 255)] = 255
-    image[(image > 0) & (image < upper_bound_0)] = 0
-
-    return image
-
-
-def get_intersection(image: np.array,
-                     combined_image: np.array) -> (int, np.array):
-    """
-    Calculates the intersection between the current mask and all embolisms
-    contained in previous masks
-    :param image: np.array of a mask
-    :param combined_image: np.array of a combined mask
-    :return: the intersection as a % of the image size and an updated
-    combined image
-    """
-
-    intersection = np.count_nonzero((combined_image == 255) & (image == 255))
-    intersection = (intersection / image.size)
-
-    combined_image[image == 255] = 255
-
-    return intersection, combined_image
 
 
 def plot_embolism_profile(embolism_percentages: List[float],
@@ -226,3 +137,88 @@ def plot_embolisms_per_leaf(summary_df: pd.DataFrame = None,
 
     if show:
         plt.show()
+
+
+# *============================ embolism profile =============================*
+def plot_mseq_profiles(mseqs, show, output_path_list, leaf_name_list):
+    for i, mseq in enumerate(mseqs):
+        # less memory intensive for images to be loaded here
+        LOGGER.info(f"Creating {mseq.num_files} image objects for "
+                    f"{mseq.__class__.__name__} located at {mseq.folder_path}")
+        mseq.load_extracted_images(load_image=True)
+
+        LOGGER.info("Extracting the intersection list")
+        mseq.get_intersection_list()
+
+        LOGGER.info("Extracting the embolism percent list")
+        mseq.get_embolism_percent_list()
+
+        if output_path_list is not None:
+            mseq.plot_profile(show=show, output_path=output_path_list[i],
+                              leaf_name=leaf_name_list[i], figsize=(10, 15))
+        else:
+            mseq.plot_profile(show=show, leaf_name=leaf_name_list[i],
+                              figsize=(10, 15))
+
+        mseq.unload_extracted_images()
+
+
+# *============================ embolism bar plot ============================*
+def plot_mseq_embolism_counts(mseqs, show, output_path, tiles,
+                              leaf_name_list, leaf_embolism_only=False,
+                              percent=False):
+    has_embolism_lol = []
+
+    for i, mseq in enumerate(mseqs):
+        has_embolism_lol.append([])
+
+        # less memory intensive for images to be loaded here
+        LOGGER.info(f"Creating {mseq.num_files} image objects for "
+                    f"{mseq.__class__.__name__} located at {mseq.folder_path}")
+        mseq.load_extracted_images()
+
+        if not tiles or leaf_embolism_only:
+            mseq.load_image_array()
+
+            LOGGER.info("Extracting the embolism percent list")
+            mseq.get_embolism_percent_list()
+
+            LOGGER.info("Extracting the has_embolism list")
+            mseq.get_has_embolism_list()
+
+            mseq.unload_extracted_images()
+
+        if not tiles:
+            has_embolism_lol[i] = has_embolism_lol[i] + mseq.has_embolism_list
+
+        if tiles:
+            with tqdm(total=len(mseq.image_objects), file=sys.stdout) as pbar:
+                for mask_image in mseq.image_objects:
+                    if leaf_embolism_only:
+                        # Assumes linked sequences have been provided.
+                        if not mask_image.has_embolism:
+                            # Skip this image if the mask has no embolism
+                            continue
+
+                    mask_image.load_tile_paths()
+                    mask_image.load_extracted_images(load_image=True,
+                                                     disable_pb=True)
+                    mask_image.get_embolism_percent_list(disable_pb=True)
+                    mask_image.get_has_embolism_list(disable_pb=True)
+                    has_embolism_lol[i] = \
+                        has_embolism_lol[i] + mask_image.has_embolism_list
+                    mask_image.unload_extracted_images()
+                    pbar.update(1)
+
+    if output_path is not None:
+        plot_embolisms_per_leaf(has_embolism_lol=has_embolism_lol,
+                                show=show, output_path=output_path,
+                                leaf_names_list=leaf_name_list,
+                                percent=percent, figsize=(15, 10))
+    else:
+        plot_embolisms_per_leaf(has_embolism_lol=has_embolism_lol,
+                                show=show, leaf_names_list=leaf_name_list,
+                                percent=percent, figsize=(15, 10))
+
+        mseq.unload_extracted_images()
+# *===========================================================================*

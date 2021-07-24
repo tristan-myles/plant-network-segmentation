@@ -2,7 +2,7 @@ import argparse
 
 from fastai.vision import *
 
-from src.data.data_model import *
+from src.data_model.data_model import *
 from src.pipelines.fast_ai_v1.model.fastai_models import FastaiUnetLearner
 
 LOGGER = logging.getLogger(__name__)
