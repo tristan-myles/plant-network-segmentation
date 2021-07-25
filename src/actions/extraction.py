@@ -43,7 +43,7 @@ def extract_multipage_mask_images(mseq_list,
     :param overwrite: whether masks that exist at the same file path should
      be overwritten
     :param binarise: whether the masks should be saved in a binary format;
-    i.e. 0 for no-embolism and 1 for embolism
+     i.e. 0 for no-embolism and 1 for embolism
     :return: None
     """
     LOGGER.info("Extracting mask images from multipage file")
@@ -66,7 +66,7 @@ def extract_tiles(seq_objects,
                   stride_y: int,
                   output_path_list: List[str] = None,
                   overwrite: bool = False,
-                  **kwargs):
+                  **kwargs) -> None:
     """
     Extract tiles from either a list of mask or leaf sequence objects. The
     tiles are not stored in the Sequence objects to save memory, hence the
