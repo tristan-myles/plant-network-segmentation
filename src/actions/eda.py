@@ -17,11 +17,11 @@ def extract_full_eda_df(mseq_list: List[MaskSequence],
 
     :param mseq_list: A list of MaskSequence objects
     :param options: the options of what should be included in the dataframe;
-    the option name should be the key and the value should be either true or
-    false
+     the option name should be the key and the value should be either true or
+     false
     :param output_path_list: the list of output csv file paths
     :param lseq_list: A list of LeafSequence objects; this is only required if
-    the linked filename option is used
+     the linked filename option is used
     :return: None
     """
     for i, (mseq, csv_output_path) in enumerate(zip(mseq_list,
@@ -42,18 +42,18 @@ def extract_full_eda_df(mseq_list: List[MaskSequence],
 def extract_tiles_eda_df(mseq_list: List[MaskSequence],
                          options: Dict,
                          output_path_list: List[str],
-                         lseq_list: List[LeafSequence] = None):
+                         lseq_list: List[LeafSequence] = None) -> None:
     """
     Creates and saves a list of tile image EDA dataframes from a list
     MaskSequences.
 
     :param mseq_list: A list of MaskSequence objects
     :param options: the options of what should be included in the dataframe;
-    the option name should be the key and the value should be either true or
-    false
+     the option name should be the key and the value should be either true or
+     false
     :param output_path_list: the list of output csv file paths
     :param lseq_list: A list of LeafSequence objects; this is only required if
-    the linked filename option is used
+     the linked filename option is used
     :return: None
     """
     for i, (mseq, csv_output_path) in enumerate(zip(mseq_list, output_path_list)):
@@ -68,8 +68,10 @@ def extract_tiles_eda_df(mseq_list: List[MaskSequence],
         mseq.unload_extracted_images()
 
 
-def extract_full_databunch_df(lseq_list, mseq_list, output_path_list,
-                              embolism_only=False):
+def extract_full_databunch_df(lseq_list:  List[LeafSequence],
+                              mseq_list:  List[MaskSequence],
+                              output_path_list: List[str],
+                              embolism_only=False) -> None:
     """
     Extracts a databunch dataframe of full size images. The first field is
     the leaf path and the second field is the mask name.  This is useful for
@@ -79,7 +81,7 @@ def extract_full_databunch_df(lseq_list, mseq_list, output_path_list,
     :param mseq_list: A list of MaskSequence objects
     :param output_path_list: the list of output csv file paths
     :param embolism_only: whether only leaves with embolisms should be used
-    :return:
+    :return: None
     """
     for csv_output_path, lseq, mseq in zip(output_path_list,
                                            lseq_list, mseq_list):
@@ -99,9 +101,11 @@ def extract_full_databunch_df(lseq_list, mseq_list, output_path_list,
         _ = lseq.get_databunch_dataframe(embolism_only, csv_output_path)
 
 
-def extract_tiles_databunch_df(lseq_list, mseq_list, output_path_list,
-                               tile_embolism_only=False,
-                               leaf_embolism_only=False):
+def extract_tiles_databunch_df(lseq_list:  List[LeafSequence],
+                               mseq_list:  List[MaskSequence],
+                               output_path_list: List[str],
+                               tile_embolism_only: bool = False,
+                               leaf_embolism_only: bool = False) -> None:
     """
     Extracts a databunch dataframe of full size images. The first field is
     the leaf path and the second field is the mask name.  This is useful for
@@ -112,8 +116,8 @@ def extract_tiles_databunch_df(lseq_list, mseq_list, output_path_list,
     :param output_path_list: the list of output csv file paths
     :param tile_embolism_only: whether only tiles with embolisms should be used
     :param leaf_embolism_only: whether only leaves with embolisms should be
-    used
-    :return:
+     used
+    :return: None
     """
     for csv_output_path, lseq, mseq in zip(output_path_list,
                                            lseq_list, mseq_list):
