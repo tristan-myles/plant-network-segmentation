@@ -47,7 +47,9 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
-    'sphinx_autodoc_typehints',
+    'sphinx_toolbox.more_autodoc.typehints',
+    # 'sphinx_autodoc_typehints',
+    'sphinx_toolbox.more_autodoc.typevars',
     'sphinx-prompt'
 ]
 # Add any paths that contain templates here, relative to this directory.
@@ -195,6 +197,7 @@ todo_include_todos = True
 
 
 # -- Options for autodoc typehints extension ---------------------------------
-typehints_fully_qualified = True
+typehints_fully_qualified = False
 # typehints_document_rtype = False
 
+autodoc_member_order = 'bysource'
