@@ -15,19 +15,18 @@ LOGGER = logging.getLogger(__name__)
 
 
 # *================================ get model ================================*
-def get_workaround_details(compilation_dict: Dict) -> \
-        (tf.keras.Model, keras.losses.Loss, keras.optimizers,  keras.metrics):
+def get_workaround_details(compilation_dict: Dict):
     """
     Creates a model using the saved compliation dict from training the TF
     model.
 
     :param compilation_dict: the compilation dict with the details to
-    recreate the tensorflow model
+     recreate the tensorflow model
 
-    :return: a model, a loss, an optimiser, and TF metrics
+    :return: a TF model, a TF loss, a TF optimiser, and TF metrics
 
     .. note::  This workaround is used since normal model saving for TF
-    subclassed models did not work at the time of writing.
+     subclassed models did not work at the time of writing.
 
     """
     # model:
@@ -99,7 +98,7 @@ def predict_tensorflow(lseq_list: List[LeafSequence],
      classification report, this must be provided if cr_csv_list is provided,
      and it must be the same length as lseq_list
     :param threshold: the threshold to use when saving predictions; i.e. a
-     pixel is saved as an embolism if p(embolism) > threshold
+      pixel is saved as an embolism if p(embolism) > threshold
     :param format_dict: the format to use when loading the LeafSequence Leaf
      images; these images are used as inputs for the predictions
     :return: None

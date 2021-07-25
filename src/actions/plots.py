@@ -65,7 +65,7 @@ def plot_embolisms_per_leaf(summary_df: pd.DataFrame = None,
                             output_path: str = None,
                             show: bool = True,
                             percent: bool = False,
-                            **kwargs):
+                            **kwargs) -> None:
     """
     Creates a bar plot showing the number of leaves with and without
     embolisms for a leaf. The input can either be a summary df, of list of
@@ -74,7 +74,7 @@ def plot_embolisms_per_leaf(summary_df: pd.DataFrame = None,
     :param summary_df: a summary dataframe created using the code base; if this
      is None, then has_embolism_lol must be provided
     :param has_embolism_lol: list of embolism percentage lists; if this is
-    None, then summary df must be provided
+     None, then summary df must be provided
     :param leaf_names_list: the list of leaf names for the x-axis
     :param output_path: path to save the plot, if None, the plot will not be
      saved
@@ -187,7 +187,7 @@ def plot_mseq_embolism_counts(mseqs,
                               tiles: bool,
                               leaf_names_list: List[str],
                               leaf_embolism_only: bool = False,
-                              percent: bool = False):
+                              percent: bool = False) -> None:
     """
     Creates a bar plot showing the number of leaves with and without
     embolisms for a leaf, using a list of MaskSequence objects
@@ -204,7 +204,7 @@ def plot_mseq_embolism_counts(mseqs,
      counted
     :param percent: Annotate the bars using percentages; if this is false,
      counts will be used
-     :return: None
+    :return: None
     """
 
     has_embolism_lol = []

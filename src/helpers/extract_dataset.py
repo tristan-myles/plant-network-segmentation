@@ -18,8 +18,10 @@ LOGGER = logging.getLogger(__name__)
 
 # =============================================================================
 # *------------------------- extracting image tiles --------------------------*
-def chip_range(start: int, end: int,
-               length: int, step: int = 1) -> Tuple[int, int]:
+def chip_range(start: int,
+               end: int,
+               length: int,
+               step: int = 1) -> Tuple[int, int]:
     """
     A generator which is used to to generate the start and end locations for a
     to extract a chip for a given image. E.g. for a image of size 1024x1024,
@@ -27,9 +29,9 @@ def chip_range(start: int, end: int,
     single axis at a time.
 
     :param start: the starting location of the where to start tiling from;
-    this is usually set to 0
+     this is usually set to 0
     :param end: the end location where to stop chip; this is usually set to
-    the length of the image at the relevant axis
+     the length of the image at the relevant axis
     :param length: the length of the chip
     :param step: the size of the step to chip image.
     :return: (start pixel, end pixel)
@@ -76,7 +78,7 @@ def pad_chip(img_chip: np.array,
 
     :param length_x: the target x length
     :param length_y: the target y length
-    :param img_chip:the image chip to be padded
+    :param img_chip: the image chip to be padded
     :param target_colour: the colour to use when padding
     :return: a padded image chip
     """

@@ -6,7 +6,7 @@ from glob import glob
 from itertools import chain
 from math import log10, floor, ceil
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Union
 
 import PIL.Image
 import PIL.ImageSequence
@@ -45,9 +45,9 @@ class _ImageSequence(ABC):
         :param folder_path: path that contains the image sequence
         :param filename_pattern: the filename pattern of image files
         :param file_list: a list of filenames, this can be used instead of
-        providing a folder path and filename pattern
+         providing a folder path and filename pattern
         :param creation_mode: whether the image sequence object should be
-        instantiated in creation mode
+         instantiated in creation mode
         """
         if file_list is not None:
             self.file_list = file_list
@@ -101,11 +101,11 @@ class _ImageSequence(ABC):
          ImageClass being created
         :param disable_pb: whether the progress bar should be disabled
         :param kwargs: kwargs for loading the image; applies if load_image is
-        true
+         true
         :return:
 
         .. note:: This function is intended to load extracted images and
-        will only work if the image is not instantiated in creation_mode.
+         will only work if the image is not instantiated in creation_mode.
         """
         if self.creation_mode:
             raise Exception("The file list contains original images, "
@@ -129,7 +129,7 @@ class _ImageSequence(ABC):
 
         :param disable_pb: whether the progress bar should be disabled
         :param kwargs: kwargs for loading the image
-        :return:
+        :return: None
         """
         with tqdm(total=len(self.file_list), file=sys.stdout,
                   disable=disable_pb) as pbar:
@@ -147,8 +147,8 @@ class _ImageSequence(ABC):
 
         :param SequenceObject: the sequence object to link
         :param sort_by_filename: whether the image objects should be sorted
-        by filename before linking; using this parameter assumes that the
-        leaf and mask files to be linked are in the correct order once sorted
+         by filename before linking; using this parameter assumes that the
+         leaf and mask files to be linked are in the correct order once sorted
         :return: None
         """
         self.link = SequenceObject
@@ -181,15 +181,15 @@ class _ImageSequence(ABC):
     def trim_image_sequence(self, x_size_dir: Optional[Tuple[int, int]] = None,
                             y_size_dir: Optional[Tuple[int, int]] = None,
                             overwrite: bool = True, disable_pb=False) -> None:
-        """trim
+        """
         Trims all images in an image sequence.
 
         :param disable_pb: whether the progress bar should be disabled
         :param y_size_dir: a tuple of (output size, trim_direction), where
-        trim direction is either 1 or -1, which indicates to trim from
-        either the top or bottom respectively
+         trim direction is either 1 or -1, which indicates to trim from
+         either the top or bottom respectively
         :param x_size_dir: a tuple of (output size, trim_direction), where
-        trim direction is either 1 or -1, which indicates to trim from
+         trim direction is either 1 or -1, which indicates to trim from
          either the left or right respectively
         :param overwrite: whether images that exist at the same file path
          should be overwritten
@@ -485,7 +485,7 @@ class _CurveSequenceMixin:
         :param overwrite: whether tiles that exist at the same file path should
          be overwritten
         :param memory_saving: whether the tiles should be unloaded from the
-        their parent Image objects once they have been created
+         their parent Image objects once they have been created
         :return: None
         """
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
@@ -524,8 +524,8 @@ class _CurveSequenceMixin:
         This requires the images to first be linked.
 
         :param sort_by_filename: whether the tile objects should be sorted
-        by filename before linking; using this parameter assumes that the
-        leaf and mask tiles to be linked are in the correct order once sorted
+         by filename before linking; using this parameter assumes that the
+         leaf and mask tiles to be linked are in the correct order once sorted
         :return: None
         """
         # Requires images to be linked
@@ -668,11 +668,11 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
         :param folder_path: path that contains the image sequence
         :param filename_pattern: the filename pattern of image files
         :param file_list: a list of filenames, this can be used instead of
-        providing a folder path and filename pattern
+         providing a folder path and filename pattern
         :param creation_mode: whether the image sequence object should be
-        instantiated in creation mode; this attribute allows the user to
-        determine whether the file list pertains to raw images or
-        differenced images
+         instantiated in creation mode; this attribute allows the user to
+         determine whether the file list pertains to raw images or
+         differenced images
         """
         _ImageSequence.__init__(self, folder_path, filename_pattern,
                                 file_list, creation_mode)
@@ -684,8 +684,9 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
                                output_path: str,
                                dif_len: int = 1,
                                overwrite: bool = False,
-                               shift_256=False,
-                               combination_function=ImageChops.subtract_modulo):
+                               shift_256: bool=False,
+                               combination_function=ImageChops.subtract_modulo)\
+            -> None:
         """
         Extracts and saves changed leaf images. This uses the filepath
         list created when the leaf sequence is instantiated.
@@ -697,7 +698,7 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
         :param shift_256: whether images should be shifted by 256; this also
          means that images will saved as uint16
         :param combination_function: the combination function to be used;
-        the default is to difference leaves
+         the default is to difference leaves
         :return: None
         """
         output_folder_path, output_file_name = output_path.rsplit("/", 1)
@@ -733,8 +734,8 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
     def load_extracted_images(self,
                               load_image: bool = False,
                               disable_pb: bool = False,
-                              shift_256=False,
-                              transform_uint8=False) -> None:
+                              shift_256: bool = False,
+                              transform_uint8: bool = False) -> None:
         """
         Instantiates Leaf objects using the file_list attribute and appends
         these objects to the image_objects attribute.
@@ -743,17 +744,19 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
          Leaf being created
         :param disable_pb: whether the progress bar should be disabled
         :param shift_256: whether images should be shifted by 256; applies
-        if load_image is true
+         if load_image is true
         :param transform_uint8: whether images transformed to a uint8 format;
-        applies if load_image is true
+         applies if load_image is true
         :return: None
         """
         super().load_extracted_images(Leaf, load_image, disable_pb,
                                       shift_256=shift_256,
                                       transform_uint8=transform_uint8)
 
-    def load_image_array(self, disable_pb=False, shift_256=False,
-                         transform_uint8=False):
+    def load_image_array(self,
+                         disable_pb: bool = False,
+                         shift_256: bool = False,
+                         transform_uint8: bool = False) -> None:
         """
         Loads all image arrays belonging to the Leaf objects in the sequence.
 
@@ -769,9 +772,9 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
     def load_tile_sequence(self,
                            load_image: bool = False,
                            folder_path: str = None,
-                           filename_pattern=None,
-                           shift_256=False,
-                           transform_uint8=False) -> None:
+                           filename_pattern: str = None,
+                           shift_256: bool = False,
+                           transform_uint8: bool = False) -> None:
         """
         Loads all tile objects belonging to the Leaf objects in the sequence.
 
@@ -779,9 +782,9 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
         :param folder_path: the folder path of the tiles
         :param filename_pattern: the filename pattern of the tiles
         :param shift_256: whether images should be shifted by 256; applies
-        if load_image is true
+         if load_image is true
         :param transform_uint8: whether images transformed to a uint8 format;
-        applies if load_image is true
+         applies if load_image is true
         :return: None
         """
         super().load_tile_sequence(load_image, folder_path, filename_pattern,
@@ -798,7 +801,7 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
                               shift_256: bool = False,
                               transform_uint8: bool = False,
                               threshold: float = 0.5,
-                              **kwargs):
+                              **kwargs) -> None:
         """
         Predicts segmentation maps using the Leaves in the sequence. The
         model used should implement a predict tile method. If memory saving
@@ -808,9 +811,9 @@ class LeafSequence(_CurveSequenceMixin, _ImageSequence):
         :param model: a model which inherits Model and hence implements a
          predict tile method
         :param x_tile_length: the x length of the tile used in the original
-        training
+         training
         :param y_tile_length: the y length of the tile used in the original
-        training
+         training
         :param memory_saving: if set to True, both the image array and
          prediction array are set to None; this should only be set to true
          if the predictions are being saved
@@ -899,13 +902,13 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
         Instantiates a MaskSequence object.
 
         :param mpf_path: a multipage file path; this used when this object
-        is instantiated in creation mode
+         is instantiated in creation mode
         :param folder_path: path that contains the image sequence
         :param filename_pattern: the filename pattern of image files
         :param file_list: a list of filenames, this can be used instead of
          providing a folder path and filename pattern
         :param creation_mode: whether the image sequence object should be
-        instantiated in creation mode
+         instantiated in creation mode
         """
         # Adds an additional way to create a sequence object - i.e. using a
         # multi-page file
@@ -1013,7 +1016,8 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
     # *______________________________ utilities ______________________________*
     def get_databunch_dataframe(self,
                                 embolism_only: bool = False,
-                                csv_name: str = None):
+                                csv_name: str = None) -> \
+            Tuple[pd.DataFrame, str]:
         """
         Extracts a databunch dataframe using the images in this sequence. The
         first field is the leaf path and the second field is the mask name.
@@ -1033,7 +1037,8 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
                               lseq,
                               tile_embolism_only: bool = False,
                               leaf_embolism_only: bool = False,
-                              csv_name: str = None):
+                              csv_name: str = None)  -> \
+            Tuple[pd.DataFrame, List[str]]:
         """
         Extracts a combined databunch df using all tiles belonging to the
         Image objects in the sequence.  The first field is the leaf tile path
@@ -1053,7 +1058,7 @@ class MaskSequence(_CurveSequenceMixin, _ImageSequence):
                                       leaf_embolism_only=leaf_embolism_only,
                                       csv_name=csv_name)
 
-    def binarise_sequence(self, disable_pb=False):
+    def binarise_sequence(self, disable_pb: bool = False) -> None:
         """
         Binarises all masks in the sequence.
 
@@ -1116,7 +1121,7 @@ class _Image(ABC):
 
     # *___________________________ pre-processing ____________________________*
     @abstractmethod
-    def binarise_self(self, image: np.array):
+    def binarise_self(self, image: np.array) -> np.array:
         """
         Binarises the input image.
 
@@ -1134,7 +1139,7 @@ class _Image(ABC):
 
         :param y_size_dir: a tuple of (output size, trim_direction), where
          trim direction is either 1 or -1, which indicates to trim from
-         either the top or bottom respectively
+          either the top or bottom respectively
         :param x_size_dir: a tuple of (output size, trim_direction), where
          trim direction is either 1 or -1, which indicates to trim from
          either the left or right respectively
@@ -1184,7 +1189,7 @@ class _Image(ABC):
 
         :param image: an image array
         :param embolism_px: the pixel intensity which indicates a pixel is
-        an embolism
+         an embolism
         :return: the embolism percent
         """
         self.embolism_percent = (np.count_nonzero(image == embolism_px) /
@@ -1196,6 +1201,7 @@ class _Image(ABC):
         """
         Update the unique_range attribute, which is a list of the unique
         pixels in the image
+
         :param image: an image array
         :return: unique range list
         """
@@ -1214,7 +1220,7 @@ class _Image(ABC):
 
         :param image: an image array
         :param combined_image: a combined image array to which the image
-        should be compared
+         should be compared
         :return: an updated combined image
         """
         self.intersection = np.count_nonzero((combined_image == 255) & (
@@ -1229,8 +1235,10 @@ class _Image(ABC):
         """
         Updates the has_embolism attribute, which is a boolean that
         indicates whether the current image has any embolisms.
-        :param embolism_px:
-        :return:
+
+        :param embolism_px: the pixel intensity which indicates a pixel is
+         an embolism
+        :return: None
         """
         if self.embolism_percent > 0:
             self.has_embolism = True
@@ -1302,7 +1310,7 @@ class _LeafImage(_Image):
 
         :param prediction: whether the prediction array should be binarised
         :param embolism_px: the pixel intensity which indicates a pixel is
-        an embolism
+         an embolism
         :return: None
         """
         if prediction:
@@ -1429,7 +1437,7 @@ class _MaskImage(_Image):
         and the updated combined image is returned.
 
         :param combined_image: a combined image array to which the image
-        should be compared
+         should be compared
         :return: updated combined image
         """
         return super().extract_intersection(self.image_array, combined_image)
@@ -1558,8 +1566,8 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
         :param filename_pattern: the filename pattern of the tiles;
          this can be left blank unless tiles are also being loaded
         :param file_list: a file list of tile paths;
-        this can be used instead of folder_path and filename pattern,
-        but it can be left blank unless tiles are also being loaded
+         this can be used instead of folder_path and filename pattern,
+         but it can be left blank unless tiles are also being loaded
         """
         # Can create a Leaf using parents or path
         # Issue with using super is passing the arguments ... could find a
@@ -1636,9 +1644,9 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
          LeafTile being created
         :param disable_pb: whether the progress bar should be disabled
         :param shift_256: whether images should be shifted by 256; applies
-        if load_image is true
+         if load_image is true
         :param transform_uint8: whether images transformed to a uint8 format;
-        applies if load_image is true
+         applies if load_image is true
         :return: None
         """
         _ImageSequence.load_extracted_images(self, LeafTile, load_image,
@@ -1680,7 +1688,7 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
                      save_prediction: bool = True,
                      shift_256: bool = False,
                      transform_uint8: bool = False,
-                     threshold: float = 0.5, **kwargs):
+                     threshold: float = 0.5, **kwargs) -> None:
         """
         Predict segmentation maps using the Leaf objects image_array. The
         model used should implement a predict tile method. If memory saving
@@ -1689,9 +1697,9 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
         :param model: a model which inherits Model and hence implements a
          predict tile method
         :param x_tile_length: the x length of the tile used in the original
-        training
+         training
         :param y_tile_length: the y length of the tile used in the original
-        training
+         training
         :param memory_saving: if set to True, both the image array and
          prediction array are set to None; this should only be set to true
          if the predictions are being saved
@@ -1819,8 +1827,8 @@ class Mask(_FullImageMixin, _MaskImage, _ImageSequence):
         :param filename_pattern: the filename pattern of the tiles;
          this can be left blank unless tiles are also being loaded
         :param file_list: a file list of tile paths;
-        this can be used instead of folder_path and filename pattern,
-        but it can be left blank unless tiles are also being loaded
+         this can be used instead of folder_path and filename pattern,
+         but it can be left blank unless tiles are also being loaded
         """
         _MaskImage.__init__(self, path, sequence_parent)
         _ImageSequence.__init__(self, folder_path, filename_pattern,
@@ -1828,8 +1836,8 @@ class Mask(_FullImageMixin, _MaskImage, _ImageSequence):
 
     # *_____________________________ extraction ______________________________*
     def create_mask(self,
-                    filepath: os.path,
-                    image: PIL.Image,
+                    filepath: Union[Path, str],
+                    image,
                     overwrite: bool = False,
                     binarise: bool = False) -> None:
         """
@@ -1837,13 +1845,14 @@ class Mask(_FullImageMixin, _MaskImage, _ImageSequence):
         path are stored in the image_array and path attributes
         respectively.
 
-        :param filepath: the filepath to save the extracted image
-        :param image: the mask image
+        :param filepath: the filepath to save the extracted image (as a
+         Path, or string)
+        :param image: the mask image (as a PIL image)
         :param overwrite: whether an image that exist at the same file path
          should be overwritten
         :param binarise: whether the mask should be binarised; this assumes
-        that embolisms are indicated by a pixel intensity of 255
-        :return:
+         that embolisms are indicated by a pixel intensity of 255
+        :return: None
         """
         self.image_array = np.array(image)
 
