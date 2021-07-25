@@ -1,4 +1,5 @@
 sphinx-autodoc-typehints
+sphinx_toolbox
 sphinx-prompt
 sphinx-rtd-theme
 opencv-python
