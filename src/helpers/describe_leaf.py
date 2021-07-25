@@ -1,5 +1,4 @@
 """
-describe_leaf.py
 Script to provide descriptive information on images of leaves (in the project
 format)
 """
@@ -10,7 +9,7 @@ __email__ = "ndxtri015@myuct.ac.za"
 __status__ = "development"
 
 import logging
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 
@@ -19,9 +18,10 @@ LOGGER = logging.getLogger(__name__)
 
 def get_embolism_percent(image: np.array) -> int:
     """
-    Returns the % of the image that are emboli
+    Returns the % of the image that are embolisms
+
     :param image: np.array of a mask
-    :return: percentage of emboli
+    :return: percentage of embolisms
     """
     return np.count_nonzero(image == 255) / image.size
 
@@ -29,6 +29,7 @@ def get_embolism_percent(image: np.array) -> int:
 def get_unique_range(image: np.array) -> np.array:
     """
     Gets the unique list of pixel intensities for an image
+
     :param image: np.array of a mask
     :return: an array of unique pixel intensities
     """
@@ -38,6 +39,7 @@ def get_unique_range(image: np.array) -> np.array:
 def get_unique_leaf_range(images: List[np.array]) -> np.array:
     """
     Gets the unique list of pixel intensities from a list of images
+
     :param images: np.array of a mask
     :return: an array of unique pixel intensities
     """
@@ -66,9 +68,10 @@ def binarise_image(image: np.array,
     to 255 and all pixels intensities between (0; upper_bound_0) to 0. The aim
     is to binarise the image but this depends on the correct choice of boundary
     parameters.
+
     :param image: np.array of a mask
     :param lower_bound_255: lower bound of the range of values to be casted
-    to 255
+     to 255
     :param upper_bound_0: upper bound of the range of values to be casted to 0
     :return: an np.array of a mask with only two pixel intensities: 0 and 255
     """
@@ -79,14 +82,15 @@ def binarise_image(image: np.array,
 
 
 def get_intersection(image: np.array,
-                     combined_image: np.array) -> (int, np.array):
+                     combined_image: np.array) -> Tuple[int, np.array]:
     """
     Calculates the intersection between the current mask and all embolisms
     contained in previous masks
+
     :param image: np.array of a mask
     :param combined_image: np.array of a combined mask
-    :return: the intersection as a % of the image size and an updated
-    combined image
+    :return: intersection as a % of the image size and an updated
+     combined image
     """
 
     intersection = np.count_nonzero((combined_image == 255) & (image == 255))
