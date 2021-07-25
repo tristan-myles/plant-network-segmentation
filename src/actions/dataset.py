@@ -42,7 +42,7 @@ def create_dataset_structure(base_dir: Union[Path, str]) -> None:
 def move_data(lseq_list: List[LeafSequence],
               mseq_list: List[MaskSequence],
               dest_root_path: Union[Path, str],
-              dest_folder: str = "train") -> [str, str]:
+              dest_folder: str = "train") -> List[str]:
     """
     Populates the train folder in the dataset folder, where the dataset 
     folder and its constituents were created using the create_dataset_structure
@@ -125,21 +125,21 @@ def move_data(lseq_list: List[LeafSequence],
 
 
 def downsample_dataset(dataset_root_path: Union[Path, str],
-                       filename_patterns: [str, str],
+                       filename_patterns: List[str],
                        non_embolism_size: float = 0.5) -> \
-        ([List[str], List[str]], [List[str], List[str]]):
+        Tuple[List[List[str]], List[List[str]]]:
     """
     Downsamples a dataset, where the dataset was created using the
     create_dataset_structure and move_data functions.
 
     :param dataset_root_path: the root path of the dataset to downsample
     :param filename_patterns: the filename patterns of the both the leaves
-    and masks; this list has two elements
+     and masks; this list has two elements
     :param non_embolism_size: the size of the no-embolism samples to keep
     :return: two lists, the first has as elements a list of the embolism
-     leaves and a list of the embolism masks, and the second as elements a list
-     of the chosen no-embolism leaves and a list of the chosen no-embolism
-     masks
+     leaves and a list of the embolism masks, and the second as elements a
+     list of the chosen no-embolism leaves and a list of the chosen
+     no-embolism masks
     """
     if not isinstance(dataset_root_path, Path):
         dataset_root_path = Path(dataset_root_path)
@@ -189,8 +189,8 @@ def downsample_dataset(dataset_root_path: Union[Path, str],
 
 
 def split_dataset(dataset_root_path: Union[Path, str],
-                  embolism_objects: [List[str], List[str]],
-                  non_embolism_objects: [List[str], List[str]],
+                  embolism_objects: List[List[str]],
+                  non_embolism_objects: List[List[str]],
                   test_split: float = 0.2,
                   val_split: float = 0.2) -> None:
     """
@@ -201,9 +201,9 @@ def split_dataset(dataset_root_path: Union[Path, str],
 
     :param dataset_root_path: the root path of the dataset to split
     :param embolism_objects: a list containing paths to embolism masks and
-     leaves; leaves at item 0 and masks at item 1
+     leaves; list of leaves at item 0 and list of  masks at item 1
     :param non_embolism_objects:  list containing paths to non-embolism masks
-     and leaves; leaves at item 0 and masks at item 1
+     and leaves; list of leaves at item 0 and list of masks at item 1
     :param test_split: the percentage of the sample to use for the test set
     :param val_split: the percentage of the remaining sample,
      after the test set has been removed, to use for the validation set
@@ -297,8 +297,8 @@ def split_dataset(dataset_root_path: Union[Path, str],
 
 
 # *---------------------------- package __main__ -----------------------------*
-def extract_dataset(lseq_list: [LeafSequence],
-                    mseq_list: [MaskSequence],
+def extract_dataset(lseq_list: List[LeafSequence],
+                    mseq_list: List[MaskSequence],
                     dataset_path: Union[Path, str],
                     downsample_split: float,
                     test_split: float,
@@ -346,14 +346,15 @@ def flip_flop(leaf_image_array: np.array,
               mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
               orientation: str,
               seed: int = 3141) -> \
-        (np.array, ia.augmentables.segmaps.SegmentationMapsOnImage):
+        Tuple[np.array, ia.augmentables.segmaps.SegmentationMapsOnImage]:
     """
     Reflects a sample on either on the x or y-axis
+
     :param leaf_image_array: the input image
     :param mask_segmap: the mask segmentation map
     :param orientation: whether to flip horizontally or vertically
     :param seed: the random seed
-    :return: the updated leaf input and mask
+    :return: updated leaf input and mask
     """
     if orientation == "horizontal":
         flip_hr = iaa.Fliplr(seed=seed)
@@ -375,7 +376,7 @@ def translate_img(leaf_image_array: np.array,
                   x: float,
                   y: float,
                   seed: int = 3141) -> \
-        (np.array, ia.augmentables.segmaps.SegmentationMapsOnImage):
+        Tuple[np.array, ia.augmentables.segmaps.SegmentationMapsOnImage]:
     """
     Translates an image. The padding pixels are black.
 
@@ -384,7 +385,7 @@ def translate_img(leaf_image_array: np.array,
     :param x: percentage to shift on the x-axis (between -1 and 1)
     :param y: percentage to shift on the y-axis (between -1 and 1)
     :param seed: the random seed
-    :return: the updated leaf input and mask
+    :return: updated leaf input and mask
     """
     rotate = iaa.Affine(translate_percent=(x, y), seed=seed)
     leaf_image = rotate.augment_image(leaf_image_array)
@@ -397,7 +398,8 @@ def rotate_img(leaf_image_array: np.array,
                mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
                l: float,
                r: float,
-               seed: int = 3141) -> np.array:
+               seed: int = 3141) -> \
+        Tuple[np.array, ia.augmentables.segmaps.SegmentationMapsOnImage]:
     """
     Rotates an image a random amount of degrees between (l,r). The padding
     pixels are black.
@@ -407,7 +409,7 @@ def rotate_img(leaf_image_array: np.array,
     :param l: degrees to rotate to the left
     :param r: degrees to rotate to the right
     :param seed: the random seed
-    :return: the updated leaf input and mask
+    :return: updated leaf input and mask
     """
     rotate = iaa.Affine(rotate=(l, r), seed=seed)
     leaf_image = rotate.augment_image(leaf_image_array)
@@ -420,16 +422,18 @@ def shear_img(leaf_image_array: np.array,
               mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
               l: float,
               r: float,
-              seed: int = 3141) -> np.array:
+              seed: int = 3141) -> \
+        Tuple[np.array, ia.augmentables.segmaps.SegmentationMapsOnImage]:
     """
     Shears an image a random amount of degrees between (l,r). The padding
     pixels are black.
+
     :param leaf_image_array: the input image
     :param mask_segmap: the mask segmentation map
     :param l: degrees to shear to the left
     :param r: degrees to shear to the right
     :param seed: the random seed
-    :return: the updated leaf input and mask
+    :return: updated leaf input and mask
     """
     # Shear in degrees
     shear = iaa.Affine(shear=(l, r), seed=seed)
@@ -444,15 +448,18 @@ def crop_img(leaf_image_array: np.array,
              mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
              v: float,
              h: float,
-             seed: int = 3141) -> np.array:
+             seed: int = 3141) -> \
+        Tuple[np.array, ia.augmentables.segmaps.SegmentationMapsOnImage]:
+
     """
     Crops an image. The padding pixels are black.
+
     :param leaf_image_array: the input image
     :param mask_segmap: the mask segmentation map
     :param v: the percent to crop vertically
     :param h: the percent to crop horizontally
     :param seed: the random seed
-    :return: the updated leaf input and mask
+    :return: updated leaf input and mask
     """
     crop = iaa.Crop(percent=(v, h), seed=seed)
     leaf_image = crop.augment_image(leaf_image_array)
@@ -465,15 +472,17 @@ def zoom_in_out(leaf_image_array: np.array,
                 mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
                 x: float,
                 y: float,
-                seed: int = 3141) -> np.array:
+                seed: int = 3141) ->  \
+        Tuple[np.array, ia.augmentables.segmaps.SegmentationMapsOnImage]:
     """
+    Zooms in or out of an image. The padding pixels are black.
 
     :param leaf_image_array: the input image
     :param mask_segmap: the mask segmentation map
-    :param x:
-    :param y:
+    :param x: % to zoom on the x-axis; 1 is 100%
+    :param y: % to zoom on the x-axis; 1 is 100%
     :param seed: the random seed
-    :return: the updated leaf input and mask
+    :return: updated leaf input and mask
     """
     scale_im = iaa.Affine(scale={"x": x, "y": y}, seed=seed)
     leaf_image = scale_im.augment_image(leaf_image_array)
@@ -523,8 +532,8 @@ def augment_image(leaf: np.array,
                   df: pd.DataFrame,
                   aug_type: str,
                   index: int,
-                  counts: [int, int],
-                  func, **kwargs) -> [int, int]:
+                  counts: List[int],
+                  func, **kwargs) -> List[int]:
     """
     Applies an augmentation to a sample. The augmented sample is rejected if
     the augmentation removes all embolisms from the image. If the
@@ -537,10 +546,11 @@ def augment_image(leaf: np.array,
     :param df: the augmentation df
     :param aug_type: the type of augmentation
     :param index: the index of the sample in the input df
-    :param counts: the counts of augmentation acceptance and rejection
+    :param counts: the counts of augmentation acceptance and rejection; the
+     list has two elements
     :param func: the augmentation function
     :param kwargs: the kwargs for the augmentation function
-    :return: the updated counts
+    :return: updated counts
     """
     segmap = ia.augmentables.segmaps.SegmentationMapsOnImage(
         mask.image_array, mask.image_array.shape)
@@ -567,7 +577,8 @@ def augmentation_algorithm(leaf: np.array,
                            mask: np.array,
                            aug_df: pd.DataFrame,
                            i: int,
-                           counts: [int, int]) -> (pd.DataFrame, [int, int]):
+                           counts: List[int]) -> \
+        Tuple[pd.DataFrame, List[int]]:
     """
     Passes the sample through a series of possible augmentations: flip_flop,
     translate, zoom, crop, rotate, and shear. These augmentations are each
@@ -580,9 +591,9 @@ def augmentation_algorithm(leaf: np.array,
     :param aug_df: the augmentation df
     :param i: the position in the dataframe corresponding to the sample
     :param counts: a list of counts, the first number is a count of times an
-    augmentation was accepted and the second is the count of times an
-    augmentation was rejected.
-    :return:
+     augmentation was accepted and the second is the count of times an
+     augmentation was rejected.
+    :return: None
     """
     # P(flip) = 0.5
     if random.random() < 0.5:
