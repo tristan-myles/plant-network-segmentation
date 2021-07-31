@@ -98,9 +98,9 @@ class LRRangeTest(tf.keras.callbacks.Callback):
 
         :param batch: batch number
         :param logs: TF logs
+        :return: None
 
-        .. Note:: Batch starts at 0
-        .. Note:: Using training loss
+        .. Note:: Batch starts at 0 and using training loss
         """
         current_loss = logs['loss']
 
@@ -141,16 +141,17 @@ class LRRangeTest(tf.keras.callbacks.Callback):
                     batch, self.model.optimizer.lr.read_value()))
 
     def plot_LRTest(self, num_points_excl: int,
-                    figsize: Tuple[int, int] = (5,5)) -> None:
+                    figsize: Tuple[int, int] = (5, 5)) -> None:
         """
         Plot the results of the LR Range test
 
         :param figsize: matplotlib.pyplot figure size
         :param num_points_excl: number of end points to exclude, required
-        due to error with self.model.stop_training = True, present in TF 2.3.0
+         due to error with self.model.stop_training = True, present in TF 2.3.0
+        :return: None
 
-         .. Note:: Requires the instance batch_log_lr and smoothed_losses
-        variables to not be empty.
+        .. Note:: Requires the instance batch_log_lr and smoothed_losses
+         variables to not be empty.
         """
 
         fig, ax = plt.subplots(1, figsize=figsize)
