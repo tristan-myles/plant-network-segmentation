@@ -1,26 +1,41 @@
 import argparse
 import json
-from glob import glob
-import pprint
-from pathlib import Path
 import logging
 import os
+import pprint
+from glob import glob
+from pathlib import Path
+from typing import Dict, List, Tuple
 
 import cv2
+import kerastuner
 import numpy as np
-import pandas as pd
 import tensorflow as tf
-from sklearn.metrics import precision_recall_curve
-
 from kerastuner import Objective
 from kerastuner.tuners import BayesianOptimization
+from sklearn.metrics import precision_recall_curve
 
 LOGGER = logging.getLogger(__name__)
 LOGGER.setLevel(logging.INFO)
 
 
 # *================================= general =================================*
-def save_prcurve_csv(run_name, mask, pred, type):
+def save_prcurve_csv(run_name: str,
+                     mask: List[np.array],
+                     pred: List[np.array],
+                     type: str) -> None:
+    """
+    Saves the result of a precision recall curve as a json. The elements are
+    precision, recall, and the threshold. If there are more than 1000000
+    thresholds, the elements are downsampled to 1000 items.
+
+    :param run_name: the run name to use when saving the file
+    :param mask: the masks
+    :param pred: the predictions
+    :param type: the type of prcurve to be used in the save name; e.g. test
+     or val
+    :return: None
+    """
     y_true = np.array(mask).flatten()
     y_pred = np.array(pred).flatten()
 
@@ -45,32 +60,51 @@ def save_prcurve_csv(run_name, mask, pred, type):
                "recall": list(np.array(reduced_r).astype("str")),
                "thresholds": list(np.array(reduced_t).astype("str"))}
 
-
     # Output path is handled differently compared to rest of file
     project_root = Path(os.getcwd())
     output_path = project_root.joinpath("data", "run_data",
-                                                      "pr_curves")
+                                        "pr_curves")
     output_path.mkdir(parents=True, exist_ok=True)
-    filename = output_path.joinpath(run_name+"_" + type + "_pr_curve.json")
+    filename = output_path.joinpath(run_name + "_" + type + "_pr_curve.json")
 
     with open(filename, "w") as file:
         json.dump(pr_json, file)
 
 
-def save_predictions(prediction, folder_path, filename):
+def save_predictions(prediction: np.array,
+                     folder_path: str,
+                     filename: str) -> None:
+    """
+    Saves a tf model prediction
+
+    :param prediction: the tf model prediction
+    :param folder_path: the folder path to save the image
+    :param filename: the filename to save the image
+    :return: None
+    """
     output_folder_path = os.path.join(folder_path, "../predictions")
     folder_path_1, folder_path_2 = filename.rsplit("/", 4)[1:3]
     output_folder_path = os.path.join(output_folder_path, folder_path_1,
                                       folder_path_2)
     Path(output_folder_path).mkdir(parents=True, exist_ok=True)
 
-    filename=filename.rsplit("/", 1)[1]
+    filename = filename.rsplit("/", 1)[1]
     filepath = os.path.join(output_folder_path, filename)
 
     cv2.imwrite(filepath, prediction)
 
 
-def save_compilation_dict(answers, lr, save_path):
+def save_compilation_dict(answers: Dict, lr: float, save_path: str) -> None:
+    """
+    Saves the a json of the compilation used for a training run.
+
+    :param answers: a dictionary of answers which contains the user choices
+      for the model, loss, optimiser, filter multiple, loss weight,
+      initialiser, and activation
+    :param lr: the learning rate
+    :param save_path: where to save the json
+    :return: None
+    """
     model_choices = ["unet", "unet_resnet", "wnet"]
     loss_choices = ["bce", "wce", "focal", "dice"]
     opt_choices = ["adam", "sgd"]
@@ -80,7 +114,7 @@ def save_compilation_dict(answers, lr, save_path):
                         "opt": opt_choices[answers["opt_choice"]],
                         "filters": answers["filters"],
                         "loss_weight": answers["loss_weight"],
-                        "initializer":  answers["initializer"],
+                        "initializer": answers["initializer"],
                         "activation": answers["activation"],
                         "lr": str(lr)}
 
@@ -89,11 +123,30 @@ def save_compilation_dict(answers, lr, save_path):
         json.dump(compilation_dict, file)
 
 
-def get_sorted_list(search_string):
+def get_sorted_list(search_string: str) -> List[str]:
+    """
+    Returns a sorted list of file paths given a search string.
+
+    :param search_string: the search string to use; this should be a
+     complete path with regex expressions for filenames
+    :return: list of file paths
+    """
     return sorted([str(f) for f in glob(search_string, recursive=True)])
 
 
-def configure_for_performance(ds, batch_size=2, buffer_size=100):
+def configure_for_performance(ds: tf.data.Dataset,
+                              batch_size: int = 2,
+                              buffer_size: int = 100) -> None:
+    """
+    Shuffles a tf dataset and batches it. It also configures the amount of
+    batches to prefetch which improves performance.
+
+    :param ds: the tf dataset
+    :param batch_size: the batch size
+    :param buffer_size: the buffer size; this controls the extent that the
+      dataset will be shuffled
+    :return: tf dataset configured for performance
+    """
     # ds.cache() speeds up performance but uses too much memory in this project
     # ds = ds.cache()
     # Number of batches to use when shuffling (calls x examples sequentially
@@ -107,8 +160,26 @@ def configure_for_performance(ds, batch_size=2, buffer_size=100):
     return ds
 
 
-def tune_model(hyperModel, train_dataset, val_dataset, results_dir, run_name,
-               input_shape, output_channels=1):
+def tune_model(hyperModel: kerastuner.HyperModel,
+               train_dataset: tf.data.Dataset,
+               val_dataset: tf.data.Dataset,
+               results_dir: str,
+               run_name: int,
+               input_shape: Tuple[int],
+               output_channels: int = 1) -> None:
+    """
+    Performs Bayesian hyperparameter optimization using the input HyperModel.
+
+    :param hyperModel: a kerastuner HyperModel
+    :param train_dataset: the training dataset to use in the optimization
+    :param val_dataset: the validation set  to use in the optimization
+    :param results_dir: where the results of the optimisation should be stored
+    :param run_name: the run name, which is used when saving the results
+    :param input_shape: the input shape of HyperModel input
+    :param output_channels: the number of output channels of the HyperModel
+     output
+    :return: None
+    """
     model = hyperModel(input_shape, output_channels)
 
     tuner = BayesianOptimization(
@@ -132,7 +203,15 @@ def tune_model(hyperModel, train_dataset, val_dataset, results_dir, run_name,
     tuner.results_summary()
 
 
-def save_lrt_results(lr_range_test, save_path):
+def save_lrt_results(lr_range_test,
+                     save_path: str) -> None:
+    """
+    Saves the result of a learning rate range test as a json.
+
+    :param lr_range_test: a LRRangeTest object
+    :param save_path: where to save the json
+    :return: None
+    """
     lrt_dict = {"smooth loss": lr_range_test.smoothed_losses,
                 "batch num": lr_range_test.batch_nums,
                 "log lr": lr_range_test.batch_log_lr}
@@ -141,7 +220,15 @@ def save_lrt_results(lr_range_test, save_path):
         json.dump(lrt_dict, file)
 
 
-def get_class_weight(training_path, incl_aug):
+def get_class_weight(training_path: str, incl_aug: bool) -> float:
+    """
+    Gets the % of embolism pixels to use as a class weight in a weighted
+    loss function
+
+    :param training_path: the path to the training images
+    :param incl_aug: whether augmented images should be included
+    :return: the % of embolism pixels
+    """
     embolism_pixels = 0
     total_pixels = 0
 
@@ -163,7 +250,22 @@ def get_class_weight(training_path, incl_aug):
 
 # *============================ image processing =============================*
 # *----------------------------- pre-processing ------------------------------*
-def global_contrast_normalization(img, s=1, lamb=10, eps=10e-8):
+def global_contrast_normalization(img: tf.Tensor,
+                                  s: int = 1,
+                                  lamb: int = 10,
+                                  eps: float = 10e-8) -> tf.Tensor:
+    """
+    Applies global contrast normalisation, which aims to standardise the
+    contrast across pixels in the image.
+
+    :param img: input image
+    :param s: scale parameter; the standard deviation across all pixels is
+     equal to s
+    :param lamb: lambda, which is regularisation parameter
+    :param eps: episilon, the minimum size of the denomintor; this can be used
+     instead of lambda
+    :return: a normalized image
+    """
     total_mean = tf.math.reduce_mean(img)
     contrast = tf.math.reduce_mean(tf.math.pow(img - total_mean, 2))
     biased_contrast = tf.math.sqrt(lamb + contrast)
@@ -177,7 +279,17 @@ def global_contrast_normalization(img, s=1, lamb=10, eps=10e-8):
 
 
 # *------------------------------ image parsing ------------------------------*
-def read_file(img_path, shift_256, transform_uint8):
+def read_file(img_path: str,
+              shift_256: bool,
+              transform_uint8: bool) -> tf.Tensor:
+    """
+    Reads in an image from the file path and converts it to a tf tensor.
+
+    :param img_path: file path of the image to read in
+    :param shift_256: whether to shift the image by 256
+    :param transform_uint8: whether to transform the image to a uint8 format
+    :return: an image as tf.float32 tensor
+    """
     img = cv2.imread(img_path.decode("utf-8"), cv2.IMREAD_UNCHANGED)
 
     if shift_256:
@@ -194,7 +306,16 @@ def read_file(img_path, shift_256, transform_uint8):
     return img
 
 
-def parse_numpy_image(img, batch_shape):
+def parse_numpy_image(img: np.array,
+                      batch_shape: int) -> tf.Tensor:
+    """
+    Converts an np.array to tf.float32 tensor, normalises the image by
+    dividing by 255, and reshapes the image according to the batch shape.
+
+    :param img: the image to be parsed
+    :param batch_shape: the batch shape
+    :return: a parsed image as a tf.float32 tensor
+    """
     img = tf.convert_to_tensor(img, dtype=tf.float32)
     img = tf.cast(img, tf.float32) / 255.0
     img = tf.reshape(img, batch_shape)
@@ -202,8 +323,24 @@ def parse_numpy_image(img, batch_shape):
     return img
 
 
-def parse_image_fc(leaf_shape, mask_shape, test=False, shift_256=False,
-                   transform_uint8=False):
+def parse_image_fc(leaf_shape: Tuple[int, int, int],
+                   mask_shape: Tuple[int, int, int],
+                   test: bool = False,
+                   shift_256: bool = False,
+                   transform_uint8: bool = False):
+    """
+    A function closure which creates leaf, mask samples. This is used as a
+    preparation step for a tf.Dataset.
+
+    :param leaf_shape: the shape of the leaf
+    :param mask_shape: the shape of the leaf
+    :param test: whether test set samples are being parsed (currently this is
+     not used)
+    :param shift_256: whether to shift the image by 256
+    :param transform_uint8: whether to transform the image to a uint8 format
+    :return: the inner function which expects an leaf path and mask path
+    """
+
     def parse_image(img_path: str, mask_path: str):
         # load the raw data from the file as a string
         img = tf.numpy_function(read_file,
@@ -236,14 +373,35 @@ def parse_image_fc(leaf_shape, mask_shape, test=False, shift_256=False,
 
 
 # *----------------------------- post-processing -----------------------------*
-def im2_lt_im1(pred, input_image):
+def im2_lt_im1(pred: np.array, input_image: np.array) -> np.array:
+    """
+    Converts all pixels in the prediction to 0 in locations where the input
+    image pixels are positive
+
+    :param pred: the prediction to process
+    :param input_image: the input image corresponding the prediction
+    :return: a processed prediction
+    """
     # reducing false positives, i.e trying to improve precision
     pred[(input_image >= 0)] = 0
 
     return pred
 
 
-def gaussian_blur(img, kernel=(5, 5), base=1):
+def gaussian_blur(img: np.array,
+                  kernel: Tuple[int] = (5, 5),
+                  base: int = 1) -> np.array:
+    """
+    Applies a Gaussain blur to an image. Pixels which are greater than zero
+    are set the base pixel provided. This is intended to be used to blur
+    masks and predictions.
+
+    :param img: the image to blur
+    :param kernel: Gaussian kernel, the first element is kernel height and
+     the second element is kernel width; both elements must be positive and odd
+    :param base: the value to set pixels greater than zero to, after blurring
+    :return: a blurred image
+    """
     # reducing false positives, i.e trying to improve precision
     img = cv2.GaussianBlur(img.astype(np.float32), kernel, 1)
     img[img > 0] = base
@@ -251,7 +409,15 @@ def gaussian_blur(img, kernel=(5, 5), base=1):
     return img
 
 
-def threshold(img, thresh):
+def threshold(img: np.array, thresh: float) -> np.array:
+    """
+    Thresholds a prediction, by converting all pixels greater than the
+    threshold to 1 and the remainder to 0.
+
+    :param img: the image prediction to threshold
+    :param thresh: the threshold
+    :return: a prediction with pixel intensities of 0 or 1
+    """
     img[img >= thresh] = 1
     img[img < thresh] = 0
 
@@ -259,8 +425,29 @@ def threshold(img, thresh):
 
 
 # *=============================== load model ================================*
-def check_model_save(model, new_model, new_loss, new_opt, answers, metrics,
-                     model_save_path, check_opt=False):
+def check_model_save(model: tf.keras.Model,
+                     new_model: tf.keras.Model,
+                     new_loss: tf.keras.losses.Loss,
+                     new_opt: tf.keras.optimizers.Optimizer,
+                     answers: Dict,
+                     metrics: List[tf.keras.metrics.Metric],
+                     model_save_path: str,
+                     check_opt=False) -> None:
+    """
+    Checks if a model have been saved correctly.
+
+    :param model: the old model to compare to
+    :param new_model: the saved model
+    :param new_loss: an instance of tf loss to attach to the new model
+    :param new_opt: an instance of tf optimiser to attach to the new model;
+     this must be instantiated with the correct learning rate
+    :param answers: the answers from the input prompt used in the training run
+    :param metrics: the metrics to attach to the model
+    :param model_save_path: the save path of the model (where the weights
+     are located)
+    :param check_opt: whether the optimiser state should be checked
+    :return: None
+    """
     old_pred, old_bloss = get_model_pred_batch_loss(
         model, answers["leaf_shape"], answers["mask_shape"])
 
@@ -282,7 +469,18 @@ def check_model_save(model, new_model, new_loss, new_opt, answers, metrics,
         assert old_bloss == new_bloss, "Optimiser state not preserved!"
 
 
-def get_model_pred_batch_loss(model, leaf_shape, mask_shape):
+def get_model_pred_batch_loss(model: tf.keras.Model,
+                              leaf_shape: Tuple[int, int, int],
+                              mask_shape: Tuple[int, int, int]) -> \
+        Tuple[np.array, float]:
+    """
+    Gets the prediction and batch loss for an input and mask of zeros.
+
+    :param model: the model to make a prediction with
+    :param leaf_shape: the leaf shape
+    :param mask_shape: the leaf shape
+    :return: the prediction and the batch loss
+    """
     # Create a blank input image and mask
     x_train_blank = np.zeros((1,) + leaf_shape)
     y_train_blank = np.zeros((1,) + mask_shape)
@@ -301,6 +499,11 @@ def get_model_pred_batch_loss(model, leaf_shape, mask_shape):
 # *=============================== tf __main__ ===============================*
 # *-------------------------------- argparse ---------------------------------*
 def parse_arguments() -> argparse.Namespace:
+    """
+     Argument parser
+
+    :return: An argparse namespace
+    """
     parser = argparse.ArgumentParser("Perform operations using the "
                                      "plant-image-segmentation code base")
 
@@ -319,38 +522,14 @@ def parse_arguments() -> argparse.Namespace:
 
 
 # *--------------------------- interactive prompt ----------------------------*
-def print_user_input(answers):
-    print(f"\nYour chosen configuration is:\n"
-          f"1 .  {'Training base directory':<40}:"
-          f" {answers['train_base_dir']}\n"
-          f"    {'Shift 256':<40}: {answers['shift_256']}\n"
-          f"    {'Transform uint8':<40}: {answers['transform_uint8']}\n"
-          f"2 .  {'Validation base directory':<40}:"
-          f" {answers['val_base_dir']}\n"
-          f"3 .  {'Leaf, Mask extension':<40}: {answers['leaf_ext']},"
-          f" {answers['mask_ext']}\n"
-          f"4 .  {'Include augmented images':<40}: {answers['incl_aug']}\n"
-          f"5 .  {'Leaf shape':<40}: {answers['leaf_shape']}\n"
-          f"6 .  {'Mask shape':<40}: {answers['mask_shape']}\n"
-          f"7 .  {'Batch size':<40}: {answers['batch_size']}\n"
-          f"8 .  {'Buffer size':<40}: {answers['buffer_size']}\n"
-          f"9 .  {'Model choice':<40}: {answers['model_choice']}\n"
-          f"10. {'Loss function choice':<40}: {answers['loss_choice']}\n"
-          f"11. {'Optimiser choice':<40}: {answers['opt_choice']}\n"
-          f"12. {'Learning rate':<40}: {answers['lr']}\n"
-          f"13. {'Epochs':<40}: {answers['epochs']}\n"
-          f"14. {'Callback choices':<40}: {answers['callback_choices']}\n"
-          f"15. {'Metric choices':<40}: {answers['metric_choices']}\n"
-          f"16. {'Run name':<40}: {answers['run_name']}\n"
-          f"17. {'Test directory':<40}: {answers['test_dir']}\n"
-          f"18. {'Filter multiple':<40}: {answers['filters']}\n"
-          f"19. {'Loss weight':<40}: {answers['loss_weight']}\n",
-          f"20. {'Initializer':<40}: {answers['initializer']}\n",
-          f"21. {'Activation':<40}: {answers['activation']}\n",
-          f"22. {'Threshold':<40}: {answers['threshold']}\n")
-
-
 def print_options_dict(output_dict):
+    """
+    Print a formatted version of the results of the output_dict generated by
+    the input prompt
+
+    :param output_dict: the output dict to print
+    :return: None
+    """
     print(f"\nYour chosen configuration is:\n")
     for i, (key, val) in enumerate(output_dict.items()):
         if i == 0:
@@ -360,7 +539,7 @@ def print_options_dict(output_dict):
         elif i == 2 or i == 3:
             num = "  "
         else:
-            num = str(i-2) + "."
+            num = str(i - 2) + "."
 
         if isinstance(val, dict):
             print_str = "\n" + pprint.pformat(val) + "\n"
@@ -371,7 +550,14 @@ def print_options_dict(output_dict):
               f" {print_str}")
 
 
-def interactive_prompt():
+def interactive_prompt() -> None:
+    """
+    Interactive prompt which allows users to interact with the code base.
+    The results are returned as a dict. There is an option, through the
+    prompt, to save the input as a json to be used again.
+
+    :return: None
+    """
     happy = False
     options_list = {-1}
 
@@ -389,7 +575,7 @@ def interactive_prompt():
                   )
 
             operation = int(input("Please select your operation: "))
-            output_dict["which"] = ["tuning", "training"][operation-1]
+            output_dict["which"] = ["tuning", "training"][operation - 1]
 
             # list options = 1 - 18
             options_list.update(range(1, 24))
@@ -581,8 +767,9 @@ def interactive_prompt():
                       "4: Model Checkpoint\n"
                       "5: Tensor Board\n"
                       "6: All\n")
-                callback_choices = input("Choose the relevant number(s) separated"
-                                         " by a space: ")
+                callback_choices = input(
+                    "Choose the relevant number(s) separated"
+                    " by a space: ")
 
                 output_dict["callback_choices"] = [
                     int(size) for size in callback_choices.split()]
@@ -601,7 +788,7 @@ def interactive_prompt():
                       "5: Precision\n"
                       "6: Recall\n"
                       "7: AUC (ROC Curve) \n"
-                      "8: IOU\n" 
+                      "8: IOU\n"
                       "9: All")
 
                 metric_choices = input(
@@ -720,5 +907,4 @@ def interactive_prompt():
             json.dump(output_dict, file)
 
     return output_dict
-
 # *===========================================================================*

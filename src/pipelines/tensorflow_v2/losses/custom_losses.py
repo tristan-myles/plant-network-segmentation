@@ -6,11 +6,27 @@ from tensorflow.python.ops import math_ops, nn_ops
 
 # *========================= weighted cross-entropy ==========================*
 class WeightedCE(tf.keras.losses.Loss):
-    def __init__(self, alpha: float = 0.5, name="WeightedCE"):
+    """Weighted Cross Entropy Loss"""
+    def __init__(self, alpha: float = 0.5, name: str = "WeightedCE"):
+        """
+        Instantiates an instance of Weighted Cross Entropy
+
+        :param alpha: the weight to use; alpha is applied to the true class
+        :param name: the name of this element to be used in the tf graph
+        """
         super().__init__(name=name)
         self.alpha = alpha
 
-    def call(self, y_true, y_pred):
+    def call(self, y_true: tf.Tensor, y_pred: tf.Tensor) -> float:
+        """
+        Function matching the structure expected by tf.keras. This function
+        applies the weighted cross entropy loss to the prediction
+        and the true response.
+
+        :param y_true: the true response
+        :param y_pred: the prediction
+        :return: weighted cross entropy loss score (tf.float32)
+        """
         # For numerical stability
         y_pred = tf.clip_by_value(y_pred, tf.keras.backend.epsilon(),
                                   1 - tf.keras.backend.epsilon())
@@ -27,12 +43,36 @@ class WeightedCE(tf.keras.losses.Loss):
 
 # *=============================== focal loss ================================*
 class FocalLossV2(tf.keras.losses.Loss):
-    def __init__(self, alpha: float = 0.25, gamma=2, name="FocalLossV2"):
+    """
+    Focal Loss (applied to logits)
+    """
+    def __init__(self,
+                 alpha: float = 0.25,
+                 gamma: float = 2,
+                 name: str = "FocalLossV2"):
+        """
+        Instantiates an instance of Focal Loss
+
+        :param alpha: the weight to use; alpha is applied to the true class
+        :param gamma: controls the how much focus should be placed on "hard"
+         samples; gamma is proportional to focus
+        :param name: the name of this element to be used in the tf graph
+        """
         super().__init__(name=name)
         self.alpha = alpha
         self.gamma = gamma
 
-    def call(self, y_true, y_pred):
+    def call(self, y_true: tf.Tensor, y_pred: tf.Tensor) -> float:
+        """
+        Function matching the structure expected by tf.keras. This function
+        applies the focal loss to the prediction and the true response. The
+        call to Focal Loss is applied at the logits for more stability when
+        optimising.
+
+        :param y_true: the true label
+        :param y_pred: the predicted label
+        :return: focal loss score (tf.float32)
+        """
         logits = ops.convert_to_tensor(y_pred.op.inputs[0])
         labels = ops.convert_to_tensor(y_true)
         labels.get_shape().merge_with(logits.get_shape())
@@ -60,25 +100,34 @@ class FocalLossV2(tf.keras.losses.Loss):
 
 
 class FocalLoss(tf.keras.losses.Loss):
-    def __init__(self, alpha: float = 0.25, gamma=2, name="FocalLoss"):
+    """
+    Focal Loss
+    """
+    def __init__(self,
+                 alpha: float = 0.25,
+                 gamma: float = 2,
+                 name: str = "FocalLoss"):
         """
-        :param alpha: controls the weighting of the positive class (1) to the
-         negative class (0) in the cross entropy term
-        :param gamma:
-        :return:
+        Instantiates an instance of Focal Loss
 
+        :param alpha: the weight to use; alpha is applied to the true class
+        :param gamma: controls the how much focus should be placed on "hard"
+         samples; gamma is proportional to focus
+        :param name: the name of this element to be used in the tf graph
         """
         super().__init__(name=name)
         self.alpha = alpha
         self.gamma = gamma
 
-    def call(self, y_true, y_pred):
+    def call(self, y_true: tf.Tensor, y_pred: tf.Tensor) -> float:
         """
-        Function matching the structure expected by Keras
+        Function matching the structure expected by tf.keras. This function
+        applies the focal loss to the prediction
+        and the true response.
 
         :param y_true: the true label
         :param y_pred: the predicted label
-        :return:
+        :return: focal loss score (tf.float32)
         """
         # For numerical stability
         y_pred = tf.clip_by_value(y_pred, tf.keras.backend.epsilon(),
@@ -105,10 +154,27 @@ class FocalLoss(tf.keras.losses.Loss):
 
 # *============================= soft dice loss ==============================*
 class SoftDiceLoss(tf.keras.losses.Loss):
-    def __init__(self, name="SoftDiceLoss"):
+    """
+    Soft Dice Loss
+    """
+    def __init__(self, name: str = "SoftDiceLoss"):
+        """
+        Instantiates an instance of Weighted Cross Entropy
+
+        :param name: the name of this element to be used in the tf graph
+        """
         super().__init__(name=name)
 
-    def call(self, y_true, y_pred):
+    def call(self, y_true: tf.Tensor, y_pred: tf.Tensor) -> float:
+        """
+        Function matching the structure expected by tf.keras. This function
+        applies the weighted cross entropy loss to the prediction
+        and the true response.
+
+        :param y_true: the true response
+        :param y_pred: the prediction
+        :return: soft dice loss score (tf.float32)
+        """
         # reshaping y_pred and y_true
         # more robust to work with flat arrays
         dim = tf.reduce_prod(tf.shape(y_pred)[1:])

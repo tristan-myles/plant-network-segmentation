@@ -268,12 +268,12 @@ def trim_sequence_images(seq_objects,
     :param seq_objects: either a list of MaskSequence or LeafSequence objects
     :param y_size_dir_list: a list of tuples; each tuple is in the format of
      (output size, trim_direction), where trim direction is either 1 or -1,
-      which indicates to trim from either the top or bottom respectively
+     which indicates to trim from either the top or bottom respectively
     :param x_size_dir_list: a list of tuples; each tuple is in the format of
      (output size, trim_direction), where trim direction is either 1 or -1,
      which indicates to trim from either the left or right respectively
     :param overwrite: whether tiles that exist at the same file path should
-      be overwritten
+     be overwritten
     :param kwargs: kwargs for loading the images in the sequence object
     :return: None
     """

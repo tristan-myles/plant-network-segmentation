@@ -130,6 +130,7 @@ class OneCycleLR(tf.keras.callbacks.Callback):
 
         :param batch: batch number
         :param logs: TF logs
+        :return: None
         """
         print(f"Updating LR to callback init LR: {self.init_lr}")
         self.model.optimizer.lr.assign(self.init_lr)
@@ -145,6 +146,7 @@ class OneCycleLR(tf.keras.callbacks.Callback):
 
         :param batch: batch number
         :param logs: TF logs
+        :return: None
         """
         self.steps_list.append(self.iteration_counter)
         self.lr_list.append(self.model.optimizer.lr.read_value().numpy())
@@ -164,7 +166,7 @@ class OneCycleLR(tf.keras.callbacks.Callback):
     @staticmethod
     def get_iterations(train_length: int, batch_size: int, epochs: int) -> int:
         """
-         Gets the number of iterations required to achieve the maximum
+        Gets the number of iterations required to achieve the maximum
         learning rate, provided both the initial learning rate
         and the increment size (which is on a log base 10 scale)
 
@@ -228,8 +230,9 @@ class OneCycleLR(tf.keras.callbacks.Callback):
         plots can either be shown side-by-side or overlaid
 
         :param plot_opt: plot option, 1 indicates that plots should be
-        overlaid while two indicates that plots should be shown side-by-side
+         overlaid while two indicates that plots should be shown side-by-side
         :param figsize:  matplotlib.pyplot figure size
+        :return: None
         """
         if plot_opt == 1:
             fig, ax = plt.subplots(ncols=1, figsize=figsize)
