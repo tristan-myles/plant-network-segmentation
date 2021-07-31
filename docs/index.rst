@@ -32,7 +32,7 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 
 .. toctree::
    :maxdepth: 2
-   :caption: Helper Modules
+   :caption: PNS Helpers
    
    pages/describe_leaf
    pages/extract_dataset
@@ -40,11 +40,46 @@ Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor i
 
 .. toctree::
    :maxdepth: 2
-   :caption: Model Modules
+   :caption: PNS Models
 
    pages/data_model
    pages/model
 
+.. toctree::
+   :maxdepth: 2
+   :caption: TF Models
+
+   pages/tensorflow/u-net
+   pages/tensorflow/u-net_resnet
+   pages/tensorflow/w-net
+
+.. toctree::
+   :maxdepth: 2
+   :caption: TF HyperModels
+
+   pages/tensorflow/hyper_u-net
+   pages/tensorflow/hyper_u-net_resnet
+   pages/tensorflow/hyper_w-net
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Losses
+
+   pages/tensorflow/custom_losses
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Callbacks
+
+   pages/tensorflow/lrt
+   pages/tensorflow/ocp
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Helpers
+
+   pages/tensorflow/utilities
+   pages/tensorflow/train_test
 
 Indices and tables
 ------------------
