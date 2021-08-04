@@ -1,7 +1,7 @@
 .. _how_to_interact:
 
-Package in Interactive Mode
-===========================
+Plant Handler in Interactive Mode
+=================================
 In interactive mode the user will have the option to interactively specify both
 which operation should be performed and what parameters should be used. To
 run the module in interactive mode the following command should be specified
@@ -11,8 +11,8 @@ from the root of `plant-network-segmentation` folder:
 
    python -m src.__main__ -i
 
-The above command runs the package __main__ as a module in interactive mode.
-Invoking the command will present the following screen, which displays an
+The above command runs the plant handler __main__ as a module in interactive
+mode. Invoking the command will present the following screen, which displays an
 interactive menu:
 
 .. image:: ../resources/images/package_interactive_menu.png
@@ -21,20 +21,19 @@ interactive menu:
 
 The possible actions that can be taken are easily viewed by looking at the
 interactive menu. Once an action is selected, further input prompts will be
-presented, which will capture the arguments with which to run the action.
-Once all parameters have been provided by the user, there will be an option
-to re-enter any arguments which need to change. If the user is happy with
-their inputs they will be given the option to save this configuration in a
-json file.
+presented. Once all parameters have been provided by the user, there will be
+an option to re-enter any arguments which need to change. If the user is
+happy with their inputs they will be given the option to save this
+configuration in a json file.
 
 While the interactive mode makes proving arguments to the program easier, it
 can be laborious to do many times - especially if same configuration is to
-be used. To address this concern, the package can also be run using a json
-file saved while using interactive mode. By doing this the package will be
-run with the exact same configuration as was used in the session that the
-json file was saved; of course there is also the option to edit this json.
-To run the package using an interactive mode json the following command
-should be used:
+be used again. To address this, the handler can also be run using a
+json file saved while using interactive mode. By doing this the plant handler
+will be run with the exact same configuration as was used in the session
+that the json file was saved; of course there is also the option to edit
+this json. To run the plant handler using an interactive mode json the following
+command should be used:
 
 .. prompt:: bash $
 
@@ -69,6 +68,9 @@ JSON template
            "*.tif"
          ]
        }
+       "format": {
+         "shift_256": true
+       }
      },
      "masks": {
        "input": {
@@ -83,6 +85,9 @@ JSON template
      "overwrite": true,
      "binarise": false
    }
+
+.. note::
+    If shift_256 is set to false the image will be loaded in a uint8 format
 
 Tiles
 ^^^^^
@@ -116,6 +121,9 @@ JSON template
          "*.png"
        ]
      }
+       "format": {
+         "shift_256": true
+       }
      },
      "masks": {
      "input": {
@@ -160,6 +168,9 @@ JSON template
          "*.png"
        ]
      }
+       "format": {
+         "shift_256": true
+       }
      },
      "masks": {
      "input": {
@@ -199,6 +210,9 @@ JSON template
          "*.png"
        ]
      }
+       "format": {
+         "shift_256": true
+       }
      },
      "masks": {
      "input": {
@@ -243,6 +257,9 @@ JSON template
             "*.png"
           ]
         }
+       "format": {
+         "shift_256": true
+       }
       },
       "masks": {
         "input": {
@@ -268,9 +285,6 @@ JSON template
    }
 
 
-
-
-
 DataBunch DF
 ^^^^^^^^^^^^
 JSON template
@@ -290,6 +304,9 @@ JSON template
             "*.png"
           ]
         }
+       "format": {
+         "shift_256": true
+       }
       },
       "masks": {
         "input": {
@@ -309,6 +326,44 @@ JSON template
       "tile_embolism_only": true
    }
 
+Predict
+-------
+TF 2 Model
+^^^^^^^^^^
+JSON template
+"""""""""""""
+.. code-block:: json
+
+   {
+     "which": "predict",
+     "leaves": {
+       "input": {
+         "folder_path": [
+           "test1/test2/extracted/leaves/"
+         ],
+         "filename_pattern": [
+           "*.png"
+         ]
+       },
+       "format": {
+         "shift_256": true
+       }
+     },
+     "masks": {
+       "input": {
+         "folder_path": [
+           "test1/test2/extracted/masks/"
+         ],
+         "filename_pattern": [
+           "*.png"
+         ]
+       }
+     },
+     "model_path": "test1/data/run_data/saved_models/test_model/",
+     "leaf_shape": "512 512 1",
+     "threshold": 0.5,
+     "csv_path": "test.csv"
+   }
 
 General
 -------
@@ -331,6 +386,9 @@ JSON template
             "*.png"
           ]
         }
+       "format": {
+         "shift_256": true
+       }
       },
       "masks": {
         "input": {
@@ -351,5 +409,77 @@ JSON template
    }
 
 
+Dataset
+-------
+Create Dataset
+^^^^^^^^^^^^^^
+JSON template
+"""""""""""""
+.. code-block:: json
 
+   {
+     "which": "create_dataset",
+     "leaves": {
+       "input": {
+         "folder_path": [
+           "test1/test2/"
+         ],
+         "filename_pattern": [
+           "*.png"
+         ]
+       },
+       "format": {
+         "shift_256": true
+       }
+     },
+     "masks": {
+       "input": {
+         "folder_path": [
+           "/test1/test2/masks/"
+         ],
+         "filename_pattern": [
+           "*.png"
+         ]
+       }
+     },
+     "dataset_path": "/test1/new_dataset/",
+     "downsample_split": 0.6,
+     "val_split": 0.2,
+     "test_split": 0.2,
+     "lolo": ""
+   }
+
+
+Augment Dataset
+^^^^^^^^^^^^^^^
+JSON template
+"""""""""""""
+.. code-block:: json
+
+   {
+     "which": "augment_dataset",
+     "leaves": {
+       "input": {
+         "folder_path": [
+           "test1/test2/leaves/"
+         ],
+         "filename_pattern": [
+           "*.png"
+         ]
+       },
+       "format": {
+         "shift_256": true
+       }
+     },
+     "masks": {
+       "input": {
+         "folder_path": [
+           "/test1/test2/masks/"
+         ],
+         "filename_pattern": [
+           "*.png"
+         ]
+       }
+     }
+   }
 

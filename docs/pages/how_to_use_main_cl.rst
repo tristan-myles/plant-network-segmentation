@@ -1,7 +1,7 @@
 .. _how_to_cl:
 
-Package in Command Line Mode
-============================
+Plant Handler in Command Line Mode
+==================================
 The command line mode allows the user to interact with the plant handler
 component using the command line arguments. In addition to preference, this
 may be helpful if the script needs to be run using a bash script, for example.
@@ -51,7 +51,10 @@ JSON template
         "input": {
         "folder_path": [],
         "filename_pattern": []
-        },
+        }
+       "format": {
+         "shift_256": true
+       }
         "output": {
         "output_path": []
         }
@@ -106,6 +109,9 @@ JSON template
         "folder_path": [],
         "filename_pattern": []
         },
+       "format": {
+         "shift_256": true
+       }
         "output": {
         "output_path": []
         }
@@ -126,6 +132,21 @@ Plotting
 --------
 Embolism profile
 ^^^^^^^^^^^^^^^^
+Python Command
+""""""""""""""
+.. prompt:: bash $
+
+  python -m src.__main__ -fj <input.json> plot_profile
+
+usage: Perform operations using the plant-image-segmentation code base plot_profile
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --output_path, -o    The plot output path
+  --show, -s    flag indicating if the plot should be shown
+  --leaf_names, -ln    leaf names to be used in plot title
+
+
 JSON template
 """""""""""""
 .. code-block:: json
@@ -159,12 +180,44 @@ JSON template
 
 Embolism count
 ^^^^^^^^^^^^^^
+Python Command
+""""""""""""""
+.. prompt:: bash $
+
+  python -m src.__main__ -fj <input.json> plot_embolism_counts
+
+usage: Perform operations using the plant-image-segmentation code base plot_embolism_counts
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --output_path, -o    The plot output path
+  --show, -s    flag indicating if the plot should be shown
+  --leaf_names, -ln    leaf names to be used in plot title
+  --tile, -t    indicates if the plot should be created using tiles
+  --leaf_embolism_only, -leo    should only full leaves with embolisms be used
+  --percent, -p    should the plot y-axis be expressed as a percent
+
 The json template is the same as for the Embolism profile section.
 
 EDA
 ---
 EDA DF
 ^^^^^^
+Python Command
+""""""""""""""
+.. prompt:: bash $
+
+  python -m src.__main__ -fj <input.json> eda_df
+
+usage: Perform operations using the plant-image-segmentation code base eda_df
+
+positional arguments:
+  csv_output_path    output paths, if the paths are in the input json enter "same"
+
+optional arguments:
+  -h, --help    show this help message and exit
+  --tiles, -t    whether tiles should be used
+
 JSON template
 """""""""""""
 .. code-block:: json
@@ -181,6 +234,9 @@ JSON template
             "*.png"
           ]
         }
+       "format": {
+         "shift_256": true
+       }
       },
       "masks": {
         "input": {
@@ -213,6 +269,23 @@ JSON template
 
 DataBunch DF
 ^^^^^^^^^^^^
+Python Command
+""""""""""""""
+.. prompt:: bash $
+
+  python -m src.__main__ -fj <input.json> databunch_df
+
+usage: Perform operations using the plant-image-segmentation code base databunch_df
+
+positional arguments:
+  csv_output_path       output paths, if the paths are in the input json enter "same"
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --tiles, -t    whether tiles should be used
+  --tile_embolism_only, -teo    should only tiles with embolisms be used
+  --leaf_embolism_only, -leo    should only full leaves with embolisms be used
+
 JSON template
 """""""""""""
 .. code-block:: json
@@ -229,6 +302,9 @@ JSON template
             "*.png"
           ]
         }
+       "format": {
+         "shift_256": true
+       }
       },
       "masks": {
         "input": {
@@ -255,6 +331,22 @@ General
 -------
 Trim
 ^^^^
+Python Command
+""""""""""""""
+.. prompt:: bash $
+
+  python -m src.__main__ -fj <input.json> trim_sequence
+
+usage: Perform operations using the plant-image-segmentation code base trim_sequence
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --mask, -m    whether the mask sequence should be trimmed, default is for the leaf sequence to be trimmed
+  --y_size_dir, -ysd    y output size and direction to be passed in as a tuple, where a 1 or -1 indicated to trim either top or bottom respectively
+  --x_size_dir, -xsd    x output size and direction to be passed in as a tuple, where a 1 or -1 indicated to trim either left or right respectively
+  --overwrite, -o    whether or not the image being trimmed should be overwritten
+
+
 JSON template
 """""""""""""
 .. code-block:: json
@@ -271,6 +363,9 @@ JSON template
             "*.png"
           ]
         }
+       "format": {
+         "shift_256": true
+       }
       },
       "masks": {
         "input": {
@@ -295,3 +390,120 @@ JSON template
         ]
       }
     }
+
+Predict
+-------
+TF 2 Model
+^^^^^^^^^^
+Python Command
+""""""""""""""
+.. prompt:: bash $
+
+  python -m src.__main__ -fj <input.json> predict
+
+usage: Perform operations using the plant-image-segmentation code base predict
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --model_path, -mp   the path to the saved model weights to restore
+  --threshold, -t   classification threshold to determine if a pixel is an embolism or not.
+  --csv_path, -cp   csv path of where the classification report should be saved; this flag determines if a classification report is generated
+  --leaf_shape, -ls   leaf shape, please separate each number by a ';'
+
+JSON template
+"""""""""""""
+.. code-block:: json
+
+   {
+    "leaves": {
+        "input": {
+        "folder_path": [],
+        "filename_pattern": []
+        },
+       "format": {
+         "shift_256": true
+       }
+    },
+    "masks": {
+        "input": {
+        "folder_path": [],
+        "filename_pattern": []
+       },
+    }
+   }
+
+Dataset
+-------
+Create Dataset
+^^^^^^^^^^^^^^
+Python Command
+""""""""""""""
+.. prompt:: bash $
+
+  python -m src.__main__ -fj <input.json> create_dataset
+
+usage: Perform operations using the plant-image-segmentation code base create_dataset
+
+optional arguments:
+  -h, --help            show this help message and exit
+  --dataset_path, -dp    the path where the dataset should be created,including the dataset name
+  --downsample_split, -ds    the fraction of non-embolism images to remove
+  --test_split, -ts    the fraction of the data to use for a test set
+  --val_split, -vs    the fraction of the data to use for a val set
+  --lolo, -l    the leaf to leave out for the test set
+
+
+JSON template
+"""""""""""""
+.. code-block:: json
+
+   {
+    "leaves": {
+        "input": {
+        "folder_path": [],
+        "filename_pattern": []
+        },
+       "format": {
+         "shift_256": true
+       }
+    },
+    "masks": {
+        "input": {
+        "folder_path": [],
+        "filename_pattern": []
+       },
+    }
+   }
+
+
+Augment Dataset
+^^^^^^^^^^^^^^^
+Python Command
+""""""""""""""
+.. prompt:: bash $
+
+  python -m src.__main__ -fj <input.json> augment_dataset
+
+There are no optional arguments
+
+JSON template
+"""""""""""""
+.. code-block:: json
+
+   {
+    "leaves": {
+        "input": {
+        "folder_path": [],
+        "filename_pattern": []
+        },
+       "format": {
+         "shift_256": true
+       }
+    },
+    "masks": {
+        "input": {
+        "folder_path": [],
+        "filename_pattern": []
+       },
+    }
+   }
