@@ -33,4 +33,21 @@ with each component. To interact with the model builder use:
 python -m src.pipelines.tensorflow_v2.__main__ -i
 ```
 
+## Models
+The models available are shown below.
+### U-Net
+<p align="center">
+  <img src="docs/resources/images/u-net.png?raw=True">
+<p align="center">
+
+### U-Net (ResNet34)
+<p align="center">
+  <img src="docs/resources/images/u-net-resnet.png?raw=True">
+<p align="center">
+
+### W-Net
+<p align="center">
+  <img src="docs/resources/images/w-net.png?raw=True">
+<p align="center">
+
 For more detailed documentation please visit: https://plant-network-segmentation.readthedocs.io/en/latest/
