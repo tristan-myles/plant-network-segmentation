@@ -23,4 +23,8 @@ The tensorflow model component can be called by running
 src/pipelines/tensorflow_v2/__main__ as a module. This can either be run in
 interactive mode or by supplying a json file with the necessary instructions.
 There is no command line mode in this case as there are many input
-parameters. This is expanded on in this how to page: :ref:`how_to_tf2`.
+parameters. This is expanded on in this how to page: :ref:`how_to_tf2`. The
+following actions are possible with the TF2 model builder package:
+
+#. Tuning
+#. Training
