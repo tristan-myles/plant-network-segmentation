@@ -5,8 +5,8 @@ base can be used to interact with raw leaf images intended to be used as
 input to the Optical Vulnerability (OV) method. 
 
 <p align="center">
-  <img src="docs/resources/images/leaf.gif?raw=True" width="380" height="325" >
-  <img src="docs/resources/images/vc.gif?raw=True" wwidth="325" height="325" >
+  <img src="docs/resources/images/leaf.gif?raw=True" width="400" height="345" >
+  <img src="docs/resources/images/vc.gif?raw=True" wwidth="345" height="345" >
 </p>
 
 The code base is broken into two components: a plant handler component and a 
