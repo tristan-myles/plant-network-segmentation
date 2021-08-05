@@ -750,7 +750,7 @@ def interactive_prompt() -> None:
 
             if 14 in options_list:
                 epochs = float(input(
-                    "\n4. Please provide the number of epochs to run for: "))
+                    "\n14. Please provide the number of epochs to run for: "))
 
                 output_dict["epochs"] = int(epochs)
 
@@ -835,6 +835,7 @@ def interactive_prompt() -> None:
                     "Options:\n"
                     "0: He Normal\n"
                     "1: Glorot Uniform\n"
+                    "Please choose the relevant number: "
                 )
 
                 if initializer == 0:
@@ -850,6 +851,7 @@ def interactive_prompt() -> None:
                     "Options:\n"
                     "0: ReLU\n"
                     "1: SELU\n"
+                    "Please choose the relevant number: "
                 )
 
                 if activation == 0:
