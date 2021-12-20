@@ -6,7 +6,8 @@ from src.actions.extraction import *
 from src.actions.plots import *
 from src.actions.dataset import *
 from src.actions.eda import *
-from src.helpers.utilities import *
+from src.actions.prediction import predict_tensorflow
+from src.helpers.main_utilities import *
 
 abs_path = path.dirname(path.abspath(__file__))
 
