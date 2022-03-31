@@ -64,6 +64,7 @@ def extract_tiles(seq_objects,
                   stride_x: int,
                   length_y: int,
                   stride_y: int,
+                  overlap: bool = False,
                   output_path_list: List[str] = None,
                   overwrite: bool = False,
                   **kwargs) -> None:
@@ -77,6 +78,8 @@ def extract_tiles(seq_objects,
     :param stride_x: the size of the x stride
     :param length_y: the y-length of the tile
     :param stride_y: the size of the y stride
+    :param overlap: whether to overlap tiles when the tile size is larger
+    than the portion of image remaining
     :param output_path_list: list of file paths of where the mask
      images should be saved; if no path is provided, tiles are saved in a
      default location
@@ -98,6 +101,7 @@ def extract_tiles(seq_objects,
 
         seq.tile_sequence(length_x=length_x, stride_x=stride_x,
                           length_y=length_y, stride_y=stride_y,
+                          overlap=overlap,
                           output_path=output_path_list[i],
                           overwrite=overwrite)
 

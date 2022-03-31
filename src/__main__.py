@@ -85,10 +85,11 @@ def main():
                 LEAF_OUTPUT_LIST = str.split(ARGS_DICT["leaf_output_path"],
                                              ";")
 
-            extract_tiles(LSEQS, ARGS_DICT["length_x"], ARGS_DICT["stride_x"],
-                          ARGS_DICT["length_y"], ARGS_DICT["stride_y"],
-                          LEAF_OUTPUT_LIST, ARGS_DICT["overwrite"],
-                          **ARGS_DICT["leaves"]["format"])
+            extract_tiles(
+                LSEQS, ARGS_DICT["length_x"], ARGS_DICT["stride_x"],
+                ARGS_DICT["length_y"], ARGS_DICT["stride_y"],
+                ARGS_DICT["overlap"], LEAF_OUTPUT_LIST,
+                ARGS_DICT["overwrite"], **ARGS_DICT["leaves"]["format"])
 
         if ARGS_DICT["mask_output_path"] is not None:
             load_image_objects(MSEQS)
@@ -104,7 +105,8 @@ def main():
 
             extract_tiles(MSEQS, ARGS_DICT["length_x"], ARGS_DICT["stride_x"],
                           ARGS_DICT["length_y"], ARGS_DICT["stride_y"],
-                          MASK_OUTPUT_LIST, ARGS_DICT["overwrite"])
+                          ARGS_DICT["overlap"], MASK_OUTPUT_LIST,
+                          ARGS_DICT["overwrite"])
 
     if ARGS_DICT["which"] == "trim_sequence":
         if ARGS_DICT["mask"]:

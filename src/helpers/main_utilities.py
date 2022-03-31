@@ -155,6 +155,10 @@ def parse_arguments() -> argparse.Namespace:
                                       type=int, help="tile y length")
 
     parser_extract_tiles.add_argument(
+        "-ov", "--overlap", action="store_true", default=False,
+        help="should the tiles overlap")
+
+    parser_extract_tiles.add_argument(
         "--leaf_output_path", "-lo", metavar="\b",
         help="output paths, if you want to use "
              "the default path enter  \"default\", if the paths are in "
@@ -580,6 +584,19 @@ def interactive_prompt() -> Dict:
                 output_dict["length_y"] = int(ly)
 
                 options_list.remove(9)
+
+            if 10 in options_list:
+                print("\n10. Should the tiles use overlapping regions if the "
+                      "tile size is larger than the remaining portion of the "
+                      "image?\n"
+                      "Options:\n"
+                      "0: False\n"
+                      "1: True")
+                output = input("Please choose a number: ")
+
+                output_dict["overlap"] = int(output) == 1
+
+                options_list.remove(10)
 
         if operation == 3 or operation == 4:
             if 3 in options_list:
