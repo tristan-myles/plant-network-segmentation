@@ -470,6 +470,7 @@ class _CurveSequenceMixin:
                       stride_x: int,
                       length_y: int,
                       stride_y: int,
+                      overlap: bool = False,
                       output_path: str = None,
                       overwrite: bool = False,
                       memory_saving: bool = True) -> None:
@@ -480,6 +481,8 @@ class _CurveSequenceMixin:
         :param stride_x: the size of the x stride
         :param length_y: the y-length of the tile
         :param stride_y: the size of the y stride
+        :param overlap: whether to overlap tiles when the tile size is larger
+        than the portion of image remaining
         :param output_path: output path of where the tiles should be saved;
          if no path is  provided, tiles are saved in a default location
         :param overwrite: whether tiles that exist at the same file path should
@@ -490,7 +493,7 @@ class _CurveSequenceMixin:
         """
         with tqdm(total=len(self.image_objects), file=sys.stdout) as pbar:
             for image in self.image_objects:
-                image.tile_me(length_x, stride_x, length_y, stride_y,
+                image.tile_me(length_x, stride_x, length_y, stride_y, overlap,
                               output_path, overwrite)
                 if memory_saving:
                     image.unload_extracted_images()
@@ -1457,6 +1460,7 @@ class _FullImageMixin:
                 stride_x: int,
                 length_y: int,
                 stride_y: int,
+                overlap: bool = False,
                 output_path: str = None,
                 overwrite: bool = False) -> None:
         """
@@ -1469,6 +1473,8 @@ class _FullImageMixin:
         :param stride_x: the size of the x stride
         :param length_y: the y-length of the tile
         :param stride_y: the size of the y stride
+        :param overlap: whether to overlap tiles when the tile size is larger
+         than the portion of image remaining
         :param output_path: output path of where the tiles should be saved;
          if no path is  provided, tiles are saved in a default location
         :param overwrite: whether tiles that exist at the same file path should
@@ -1496,9 +1502,10 @@ class _FullImageMixin:
         num_tiles = x_num_tiles * y_num_tiles
         placeholder_size = floor(log10(num_tiles)) + 1
 
-        for y_range in chip_range(0, input_y_length, length_y, stride_y):
+        for y_range in chip_range(0, input_y_length, length_y, stride_y,
+                                  overlap):
             for x_range in chip_range(0, input_x_length, length_x,
-                                      stride_x):
+                                      stride_x, overlap):
                 final_filename = utilities.create_file_name(
                     output_folder_path, output_file_name, counter,
                     placeholder_size)
@@ -1659,6 +1666,7 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
                 stride_x: int,
                 length_y: int,
                 stride_y: int,
+                overlap: bool = False,
                 output_path: str = None,
                 overwrite: bool = False) -> None:
         """
@@ -1669,6 +1677,8 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
         :param stride_x: the size of the x stride
         :param length_y: the y-length of the tile
         :param stride_y: the size of the y stride
+        :param overlap: whether to overlap tiles when the tile size is larger
+         than the portion of image remaining
         :param output_path: output path of where the tiles should be saved;
          if no path is  provided, tiles are saved in a default location
         :param overwrite: whether tiles that exist at the same file path should
@@ -1676,7 +1686,7 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
         :return: None
         """
         super().tile_me(LeafTile, length_x, stride_x, length_y, stride_y,
-                        output_path, overwrite)
+                        overlap, output_path, overwrite)
 
     # *_____________________________ prediction ______________________________*
     def predict_leaf(self,
@@ -1727,12 +1737,13 @@ class Leaf(_FullImageMixin, _LeafImage, _ImageSequence):
             y_tile_length, x_tile_length = self.image_objects[0].shape
 
         old_upper_y = 0
-
-        for y_range in chip_range(0, y_length, y_tile_length, y_tile_length):
+        overlap = True
+        for y_range in chip_range(0, y_length, y_tile_length, y_tile_length,
+                                  overlap):
             old_upper_x = 0
 
             for x_range in chip_range(0, x_length, x_tile_length,
-                                      x_tile_length):
+                                      x_tile_length, overlap):
                 temp_tile = LeafTile(sequence_parent=self)
                 temp_tile.create_tile(x_tile_length, y_tile_length,
                                       x_range, y_range)
@@ -1896,6 +1907,7 @@ class Mask(_FullImageMixin, _MaskImage, _ImageSequence):
                 stride_x: int,
                 length_y: int,
                 stride_y: int,
+                overlap: bool = False,
                 output_path: str = None,
                 overwrite: bool = False) -> None:
         """
@@ -1906,6 +1918,8 @@ class Mask(_FullImageMixin, _MaskImage, _ImageSequence):
         :param stride_x: the size of the x stride
         :param length_y: the y-length of the tile
         :param stride_y: the size of the y stride
+        :param overlap: whether to overlap tiles when the tile size is larger
+         than the portion of image remaining
         :param output_path: output path of where the tiles should be saved;
          if no path is  provided, tiles are saved in a default location
         :param overwrite: whether tiles that exist at the same file path should
@@ -1913,7 +1927,7 @@ class Mask(_FullImageMixin, _MaskImage, _ImageSequence):
         :return: None
         """
         super().tile_me(MaskTile, length_x, stride_x, length_y, stride_y,
-                        output_path)
+                        overlap, output_path, overwrite)
 
     # *______________________________ utilities ______________________________*
     def get_databunch_dataframe(self,
