@@ -21,9 +21,10 @@ LOGGER = logging.getLogger(__name__)
 def chip_range(start: int,
                end: int,
                length: int,
-               step: int = 1) -> Tuple[int, int]:
+               step: int = 1,
+               overlap: bool = False) -> Tuple[int, int]:
     """
-    A generator which is used to to generate the start and end locations for a
+    A generator which is used to generate the start and end locations for a
     to extract a chip for a given image. E.g. for a image of size 1024x1024,
     the generator will return (0, 512), (512,1024). This is used for a
     single axis at a time.
@@ -34,6 +35,8 @@ def chip_range(start: int,
      the length of the image at the relevant axis
     :param length: the length of the chip
     :param step: the size of the step to chip image.
+    :param overlap: whether to overlap tiles when the tile size is larger
+    than the portion of image remaining
     :return: (start pixel, end pixel)
     """
     current = start
@@ -45,9 +48,13 @@ def chip_range(start: int,
 
     # In order to maintain equal length we reduce the step size
     rem_pixels = end - (current - step + length)
-    # end - (last within bounds upper boundary)
+
     if rem_pixels != 0:
-        yield (current - step) + rem_pixels, end
+        if overlap:
+            # end - (last within bounds upper boundary)
+            yield (current - step) + rem_pixels, end
+        else:
+            yield current, end
 
 
 def chip_image(img: np.array,
