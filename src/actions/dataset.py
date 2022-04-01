@@ -554,6 +554,10 @@ def augment_image(leaf: np.array,
     """
     segmap = ia.augmentables.segmaps.SegmentationMapsOnImage(
         mask.image_array, mask.image_array.shape)
+
+    original_leaf = leaf.image_array
+    original_mask = mask.image_array
+
     leaf.image_array, segmap = func(leaf.image_array, segmap, **kwargs)
     mask.image_array = segmap.get_arr()
     # only save an image if it has an embolism
@@ -569,6 +573,9 @@ def augment_image(leaf: np.array,
         counts[0] += 1
     else:
         counts[1] += 1
+
+    leaf.image_array = original_leaf
+    mask.image_array = original_mask
 
     return counts
 
