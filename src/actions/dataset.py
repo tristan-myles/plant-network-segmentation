@@ -1,6 +1,5 @@
 import random
 import shutil
-from typing import Union
 
 import imgaug as ia
 import imgaug.augmenters as iaa
