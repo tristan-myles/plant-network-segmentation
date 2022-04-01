@@ -1,6 +1,5 @@
 import random
 import shutil
-from typing import Union
 
 import imgaug as ia
 import imgaug.augmenters as iaa
@@ -357,18 +356,18 @@ def flip_flop(leaf_image_array: np.array,
     :return: updated leaf input and mask
     """
     if orientation == "horizontal":
-        flip_hr = iaa.Fliplr(seed=seed)
-        flipped_images = flip_hr.augment_image(leaf_image_array)
+        flip_hr = iaa.Fliplr(p=1, seed=seed)
+        leaf_image = flip_hr.augment_image(leaf_image_array)
         mask_segmap = flip_hr.augment_segmentation_maps(mask_segmap)
     elif orientation == "vertical":
-        flip_vr = iaa.Flipud(seed=seed)
-        flipped_images = flip_vr.augment_image(leaf_image_array)
+        flip_vr = iaa.Flipud(p=1, seed=seed)
+        leaf_image = flip_vr.augment_image(leaf_image_array)
         mask_segmap = flip_vr.augment_segmentation_maps(mask_segmap)
     else:
         raise ValueError("please provide either 'horizontal' or 'vertical as "
                          "the orientation'")
 
-    return flipped_images, mask_segmap
+    return leaf_image, mask_segmap
 
 
 def translate_img(leaf_image_array: np.array,
@@ -387,17 +386,16 @@ def translate_img(leaf_image_array: np.array,
     :param seed: the random seed
     :return: updated leaf input and mask
     """
-    rotate = iaa.Affine(translate_percent=(x, y), seed=seed)
-    leaf_image = rotate.augment_image(leaf_image_array)
-    mask_segmap = rotate.augment_segmentation_maps(mask_segmap)
+    translate = iaa.Affine(translate_percent={"x": x, "y": y}, seed=seed)
+    leaf_image = translate.augment_image(leaf_image_array)
+    mask_segmap = translate.augment_segmentation_maps(mask_segmap)
 
     return leaf_image, mask_segmap
 
 
 def rotate_img(leaf_image_array: np.array,
                mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
-               l: float,
-               r: float,
+               degrees: float,
                seed: int = 3141) -> \
         Tuple[np.array, ia.augmentables.segmaps.SegmentationMapsOnImage]:
     """
@@ -406,12 +404,11 @@ def rotate_img(leaf_image_array: np.array,
 
     :param leaf_image_array: the input image
     :param mask_segmap: the mask segmentation map
-    :param l: degrees to rotate to the left
-    :param r: degrees to rotate to the right
+    :param degrees: degrees to rotate either to the left(-) or to the right(+)
     :param seed: the random seed
     :return: updated leaf input and mask
     """
-    rotate = iaa.Affine(rotate=(l, r), seed=seed)
+    rotate = iaa.Affine(rotate=degrees, seed=seed)
     leaf_image = rotate.augment_image(leaf_image_array)
     mask_segmap = rotate.augment_segmentation_maps(mask_segmap)
 
@@ -420,8 +417,7 @@ def rotate_img(leaf_image_array: np.array,
 
 def shear_img(leaf_image_array: np.array,
               mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
-              l: float,
-              r: float,
+              degrees: float,
               seed: int = 3141) -> \
         Tuple[np.array, ia.augmentables.segmaps.SegmentationMapsOnImage]:
     """
@@ -430,13 +426,12 @@ def shear_img(leaf_image_array: np.array,
 
     :param leaf_image_array: the input image
     :param mask_segmap: the mask segmentation map
-    :param l: degrees to shear to the left
-    :param r: degrees to shear to the right
+    :param degrees: degrees to rotate either to the left(-) or to the right(+)
     :param seed: the random seed
     :return: updated leaf input and mask
     """
     # Shear in degrees
-    shear = iaa.Affine(shear=(l, r), seed=seed)
+    shear = iaa.Affine(shear=degrees, seed=seed)
 
     leaf_image = shear.augment_image(leaf_image_array)
     mask_segmap = shear.augment_segmentation_maps(mask_segmap)
@@ -461,21 +456,22 @@ def crop_img(leaf_image_array: np.array,
     :param seed: the random seed
     :return: updated leaf input and mask
     """
-    crop = iaa.Crop(percent=(v, h), seed=seed)
+    # (top, right, bottom, left)
+    crop = iaa.Crop(percent=(v, h, v, h), seed=seed)
     leaf_image = crop.augment_image(leaf_image_array)
     mask_segmap = crop.augment_segmentation_maps(mask_segmap)
 
     return leaf_image, mask_segmap
 
 
-def zoom_in_out(leaf_image_array: np.array,
+def zoom_out(leaf_image_array: np.array,
                 mask_segmap: ia.augmentables.segmaps.SegmentationMapsOnImage,
                 x: float,
                 y: float,
                 seed: int = 3141) ->  \
         Tuple[np.array, ia.augmentables.segmaps.SegmentationMapsOnImage]:
     """
-    Zooms in or out of an image. The padding pixels are black.
+    Zooms out of an image. The padding pixels are black.
 
     :param leaf_image_array: the input image
     :param mask_segmap: the mask segmentation map
@@ -554,6 +550,10 @@ def augment_image(leaf: np.array,
     """
     segmap = ia.augmentables.segmaps.SegmentationMapsOnImage(
         mask.image_array, mask.image_array.shape)
+
+    original_leaf = leaf.image_array
+    original_mask = mask.image_array
+
     leaf.image_array, segmap = func(leaf.image_array, segmap, **kwargs)
     mask.image_array = segmap.get_arr()
     # only save an image if it has an embolism
@@ -569,6 +569,9 @@ def augment_image(leaf: np.array,
         counts[0] += 1
     else:
         counts[1] += 1
+
+    leaf.image_array = original_leaf
+    mask.image_array = original_mask
 
     return counts
 
@@ -617,12 +620,12 @@ def augmentation_algorithm(leaf: np.array,
 
     # P(zoom) = 0.5
     if random.random() < 0.5:
-        # zoom in and out between 150% and 50%
-        x_per = round(random.uniform(1.5, 0.5), 2)
-        y_per = round(random.uniform(1.5, 0.5), 2)
+        # zoom in and out between 99% and 50%
+        x_per = round(random.uniform(0.99, 0.5), 2)
+        y_per = round(random.uniform(0.99, 0.5), 2)
 
         counts = augment_image(leaf, mask, aug_df, "zoom", i, counts,
-                               zoom_in_out, x=x_per, y=y_per)
+                               zoom_out, x=x_per, y=y_per)
 
     # P(crop) = 0.5
     if random.random() < 0.5:
@@ -635,21 +638,19 @@ def augmentation_algorithm(leaf: np.array,
 
     # P(rotate) = 0.5
     if random.random() < 0.5:
-        # l element (-90;0) and r element (0;90) (degrees)
-        l_deg = round(random.random() * -90)
-        r_deg = round(random.random() * 90)
+        # left (-90;0) and right (0;90) (degrees)
+        degrees = round(random.uniform(-90, 90))
 
         counts = augment_image(leaf, mask, aug_df, "rotate", i, counts,
-                               rotate_img, l=l_deg, r=r_deg)
+                               rotate_img, degrees=degrees)
 
     # P(sheer) = 0.5
     if random.random() < 0.5:
-        # l element (-30;0) and r element (0;30) (degrees)
-        l_deg = round(random.random() * -30)
-        r_deg = round(random.random() * 30)
+        # left (-30;0) and right (0;30) (degrees)
+        degrees = round(random.uniform(-30, 30))
 
         counts = augment_image(leaf, mask, aug_df, "shear", i, counts,
-                               shear_img, l=l_deg, r=r_deg)
+                               shear_img, degrees=degrees)
 
     return aug_df, counts
 
