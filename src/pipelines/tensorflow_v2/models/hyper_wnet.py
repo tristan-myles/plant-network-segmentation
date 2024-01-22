@@ -90,7 +90,6 @@ class HyperWnet(kerastuner.HyperModel):
         # Search space
         # create the search space
         initializer = hp.Choice("initializer", ["he_normal", "glorot_uniform"])
-        activation = hp.Choice("activation", ["relu", "selu"])
         filter = hp.Choice("filters", [0, 1, 2])
         kernel_size = hp.Choice("kernel_size", [3])
         optimizer = hp.Choice("optimizer", ["adam", "sgd"])
@@ -110,17 +109,14 @@ class HyperWnet(kerastuner.HyperModel):
         elif initializer == "glorot_uniform":
             initializer = tf.keras.initializers.glorot_uniform(seed=3141)
 
-        if activation == "relu":
-            activation = tf.nn.relu
-        elif activation == "selu":
-            activation = tf.nn.selu
-
         if loss_choice == "bce":
             loss = tf.keras.losses.binary_crossentropy
         elif loss_choice == "wce":
             loss = WeightedCE(hp.Float("loss_weight", 0.5, 0.99))
         elif loss_choice == "focal":
             loss = FocalLossV2(hp.Float("loss_weight", 0.5, 0.99))
+
+        activation = tf.nn.relu
 
         input = []
         res_down1 = []

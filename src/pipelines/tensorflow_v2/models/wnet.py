@@ -236,11 +236,7 @@ class WNet(tf.keras.Model, _TfPnsMixin):
 
         super().__init__()
 
-        if activation == "relu":
-            activation = tf.nn.relu
-        else:
-            activation = tf.nn.selu
-        self.activation = activation
+        self.activation = tf.nn.relu
 
         # Channels set for binary prediction
         self.unet1 = MiniUnet(output_channels, activation, initializer,

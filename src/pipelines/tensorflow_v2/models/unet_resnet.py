@@ -113,11 +113,7 @@ class UnetResnet(tf.keras.Model, _TfPnsMixin):
         else:
             initializer = tf.keras.initializers.glorot_uniform(seed=3141)
 
-        if activation == "relu":
-            activation = tf.nn.relu
-        else:
-            activation = tf.nn.selu
-        self.activation = activation
+        self.activation = tf.nn.relu
 
         # Contracting
         # valid padding since down sampling
